@@ -388,11 +388,13 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
       } else {
         viewRef.current = clampView(viewRef.current)
       }
-      requestRedraw()
+      // Draw synchronously: setting the canvas size cleared it, and rAF may be paused in a hidden tab.
+      cancelAnimationFrame(rafRef.current)
+      draw()
     })
     ro.observe(wrap)
     return () => ro.disconnect()
-  }, [clampView, fitView, requestRedraw])
+  }, [clampView, draw, fitView])
 
   // Wheel zoom (non-passive to prevent page scroll)
   useEffect(() => {
