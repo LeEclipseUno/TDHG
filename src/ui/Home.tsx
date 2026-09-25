@@ -1,13 +1,17 @@
-import type { Tier } from '../data'
+import { useMemo } from 'react'
+import type { GameData, Tier } from '../data'
+import { buildDeck, deckStats, loadStates, type Deck } from '../game/learn'
 import { useLang, type Lang } from '../i18n'
 import { MODES, getBest, type ModeId, type Settings } from '../game/session'
 import { Board } from './widgets'
-import { IconSignArrow, PictDrag, PictFind, PictJunction, PictQuiz } from './icons'
+import { IconSignArrow, PictDrag, PictFind, PictJunction, PictLearn, PictQuiz } from './icons'
 
 export interface HomeProps {
+  data: GameData
   settings: Settings
   onSettings: (s: Settings) => void
   onPlay: (mode: ModeId) => void
+  onLearn: () => void
 }
 
 const PICTS: Record<ModeId, typeof PictDrag> = { drag: PictDrag, find: PictFind, junction: PictJunction, quiz: PictQuiz }
@@ -24,9 +28,10 @@ function Seg<T extends string>({ value, options, onChange, label, wide = false }
   )
 }
 
-export function Home({ settings, onSettings, onPlay }: HomeProps) {
+export function Home({ data, settings, onSettings, onPlay, onLearn }: HomeProps) {
   const { t, lang, setLang } = useLang()
   const tiers: Tier[] = ['A', 'AN', 'ALL']
+  const learnStats = useMemo(() => deckStats(buildDeck(data, settings.tier, settings.learnDeck), loadStates()), [data, settings.tier, settings.learnDeck])
   return (
     <div className="home">
       <div className="home-inner">
@@ -63,6 +68,23 @@ export function Home({ settings, onSettings, onPlay }: HomeProps) {
           })}
         </Board>
 
+        <Board className="learn-board">
+          <div className="board-title">{t('learn')}</div>
+          <button type="button" className="sign-row" onClick={onLearn}>
+            <span className="sign-pict">
+              <PictLearn />
+            </span>
+            <span className="sign-text">
+              <span className="sign-name">{t('learnTitle')}</span>
+              <span className="sign-desc">{t('learn_desc')}</span>
+              <span className="sign-best">
+                {learnStats.due} {t('due')} {'\u00b7'} {learnStats.total - learnStats.seen} {t('newCards')} {'\u00b7'} {learnStats.mature} {t('learned')}
+              </span>
+            </span>
+            <IconSignArrow className="sign-arrow" />
+          </button>
+        </Board>
+
         <Board tone="dark" className="settings-board">
           <div className="setting">
             <span className="setting-label">{t('roads')}</span>
@@ -80,6 +102,10 @@ export function Home({ settings, onSettings, onPlay }: HomeProps) {
             </div>
           </div>
           {settings.daily && <span className="setting-hint">{t('dailyHint')}</span>}
+          <div className="setting">
+            <span className="setting-label">{t('learnDeck')}</span>
+            <Seg<Deck> label={t('learnDeck')} value={settings.learnDeck} onChange={(learnDeck) => onSettings({ ...settings, learnDeck })} options={[{ v: 'roads', label: t('deck_roads') }, { v: 'junctions', label: t('deck_junctions') }]} />
+          </div>
         </Board>
 
         <footer className="home-footer">{t('attribution')}</footer>

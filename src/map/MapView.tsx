@@ -264,62 +264,82 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
     ctx.stroke()
 
     const z = Math.log2(scale / minScaleRef.current)
-    const widths: Record<RoadKind, number> = {
-      A: Math.min(9, 2.2 + z * 0.9),
-      N: Math.min(6, 1.5 + z * 0.6),
-      P: Math.min(4, 0.8 + z * 0.45),
-    }
+    // Line widths: a zoom-dependent minimum in px, or the real road width once zoomed in far enough.
+    const basePx: Record<RoadKind, number> = { A: Math.min(9, 2.2 + z * 0.9), N: Math.min(6, 1.5 + z * 0.6), P: Math.min(4, 0.8 + z * 0.45) }
+    const widths: Record<RoadKind, number> = { A: Math.max(basePx.A, 11 * scale), N: Math.max(basePx.N, 8 * scale), P: Math.max(basePx.P, 7 * scale) }
+    const linkWidth: Record<'A' | 'N', number> = { A: Math.max(basePx.A * 0.55, 5.5 * scale), N: Math.max(basePx.N * 0.6, 5 * scale) }
+    const detailed = scale > 0.25 // dark casings so crossings and ramps separate visually
+    const smooth = scale > 0.6 // round off the polyline corners at deep zoom
     const vx0 = cx - w / 2 / scale
     const vy0 = cy - h / 2 / scale
     const vx1 = cx + w / 2 / scale
     const vy1 = cy + h / 2 / scale
-    const visible = (r: Road) => r.bbox[2] >= vx0 && r.bbox[0] <= vx1 && r.bbox[3] >= vy0 && r.bbox[1] <= vy1
+    const inView = (b: readonly number[]) => b[2] >= vx0 && b[0] <= vx1 && b[3] >= vy0 && b[1] <= vy1
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
-    const strokeRoad = (r: Road) => {
-      ctx.beginPath()
-      for (const line of r.lines) {
-        let lx = X(line[0])
-        let ly = Y(line[1])
-        ctx.moveTo(lx, ly)
-        const last = line.length - 2
-        for (let i = 2; i < line.length; i += 2) {
-          const sx = X(line[i])
-          const sy = Y(line[i + 1])
-          if (i !== last && Math.abs(sx - lx) + Math.abs(sy - ly) < MIN_STEP) continue
-          ctx.lineTo(sx, sy)
-          lx = sx
-          ly = sy
-        }
+    const trace = (line: number[]) => {
+      let px = X(line[0])
+      let py = Y(line[1])
+      ctx.moveTo(px, py)
+      const last = line.length - 2
+      for (let i = 2; i < line.length; i += 2) {
+        const sx = X(line[i])
+        const sy = Y(line[i + 1])
+        if (i !== last && Math.abs(sx - px) + Math.abs(sy - py) < MIN_STEP) continue
+        if (smooth) ctx.quadraticCurveTo(px, py, (px + sx) / 2, (py + sy) / 2)
+        else ctx.lineTo(sx, sy)
+        px = sx
+        py = sy
       }
+      if (smooth) ctx.lineTo(px, py)
+    }
+    const strokeLines = (lines: number[][], color: string, width: number, alpha: number) => {
+      ctx.beginPath()
+      for (const line of lines) trace(line)
+      ctx.globalAlpha = alpha
+      if (detailed) {
+        ctx.strokeStyle = COLORS.bg
+        ctx.lineWidth = width + 3
+        ctx.stroke()
+      }
+      ctx.strokeStyle = color
+      ctx.lineWidth = width
       ctx.stroke()
     }
     const later: Road[] = []
-    for (const order of ['P', 'N', 'A'] as const) {
+    const drawKind = (order: RoadKind) => {
       for (const r of data.roads) {
-        if (r.kind !== order || !visible(r)) continue
+        if (r.kind !== order || !inView(r.bbox)) continue
         if (highlights[r.ref]) {
           later.push(r)
           continue
         }
         const inTier = tierIncludes(tier, r.kind)
         if (r.kind === 'P' && !inTier && z < 2.5) continue
-        ctx.globalAlpha = inTier ? 1 : 0.35
-        ctx.strokeStyle = COLORS[r.kind]
-        ctx.lineWidth = widths[r.kind]
-        strokeRoad(r)
+        strokeLines(r.lines, COLORS[r.kind], widths[r.kind], inTier ? 1 : 0.35)
       }
     }
+    drawKind('P')
+    if (z > 1.5) {
+      for (const lk of data.links) {
+        if (!inView(lk.b)) continue
+        strokeLines([lk.l], COLORS[lk.k], linkWidth[lk.k], tierIncludes(tier, lk.k) ? 0.95 : 0.35)
+      }
+    }
+    drawKind('N')
+    drawKind('A')
     ctx.globalAlpha = 1
     for (const r of later) {
       const color = COLORS[highlights[r.ref]]
+      ctx.beginPath()
+      for (const line of r.lines) trace(line)
       ctx.strokeStyle = color
       ctx.globalAlpha = 0.35
       ctx.lineWidth = widths[r.kind] + 10
-      strokeRoad(r)
+      ctx.stroke()
       ctx.globalAlpha = 1
       ctx.lineWidth = widths[r.kind] + 1.5
-      strokeRoad(r)
+      ctx.stroke()
     }
 
     if (showJunctions) {

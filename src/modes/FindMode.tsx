@@ -33,9 +33,13 @@ export function FindMode({ data, session, onFinish, onQuit }: ModeProps) {
     const points = ok ? 100 + timeBonus(remaining, limitMs) + streakBonus(results) : 0
     const res: QuestionResult = { label: target.ref, grade: ok ? 'good' : 'bad', points, ms, detail: ok ? undefined : hitRef ? t('thatWas', { ref: hitRef }) : t('timeUp') }
     setResults((r) => [...r, res])
-    const hl: Record<string, Highlight> = { [target.ref]: ok ? 'correct' : 'active' }
-    const sh: PlacedShield[] = [{ ref: target.ref, x: hitPt && ok ? hitPt.x : target.anchor[0], y: hitPt && ok ? hitPt.y : target.anchor[1], state: ok ? 'correct' : 'neutral' }]
-    if (!ok && hitRef && hitPt) {
+    // A wrong tap only shows what was hit; the correct road stays hidden.
+    const hl: Record<string, Highlight> = {}
+    const sh: PlacedShield[] = []
+    if (ok && hitPt) {
+      hl[target.ref] = 'correct'
+      sh.push({ ref: target.ref, x: hitPt.x, y: hitPt.y, state: 'correct' })
+    } else if (hitRef && hitPt) {
       hl[hitRef] = 'wrong'
       sh.push({ ref: hitRef, x: hitPt.x, y: hitPt.y, state: 'wrong' })
     }
@@ -43,7 +47,6 @@ export function FindMode({ data, session, onFinish, onQuit }: ModeProps) {
     setShields(sh)
     setFeedback({ text: ok ? t('correct') : hitRef ? `${t('wrong')} ${t('thatWas', { ref: hitRef })}` : t('timeUp'), ok })
     setPhase('reveal')
-    if (!ok) mapRef.current?.flyToBounds({ x0: target.bbox[0], y0: target.bbox[1], x1: target.bbox[2], y1: target.bbox[3] }, 60)
   }
 
   useEffect(() => {

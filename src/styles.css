@@ -1043,3 +1043,76 @@ button {
   gap: 10px;
   margin-top: 6px;
 }
+
+/* ---------- learn mode ---------- */
+
+.reveal-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--asphalt);
+  border-top: 3px solid var(--asphalt-3);
+  flex-wrap: wrap;
+}
+.rating {
+  font-family: var(--font-sign);
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 4px;
+  color: var(--white);
+}
+.rating-1 {
+  background: var(--sign-red);
+}
+.rating-2 {
+  background: var(--amber);
+  color: #221a00;
+}
+.rating-3 {
+  background: var(--post-green);
+}
+.rating-4 {
+  background: var(--sign-blue);
+}
+.reveal-answer {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-sign);
+  font-size: 18px;
+}
+.reveal-answer small {
+  color: var(--muted);
+  font-size: 13px;
+}
+.reveal-next {
+  color: var(--muted);
+  font-size: 13px;
+  flex: 1;
+}
+.reveal-bar .btn {
+  margin-left: auto;
+}
+.learn-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px 8px;
+  padding: 18px 14px 8px;
+  width: 100%;
+}
+.learn-stats > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.learn-note {
+  margin: 4px 16px 6px;
+  color: rgba(255, 255, 255, 0.85);
+  text-align: center;
+  font-size: 14px;
+}

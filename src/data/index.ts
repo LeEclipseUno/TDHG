@@ -21,6 +21,13 @@ export interface Junction {
   roads: string[]
 }
 
+/** A ramp or connector road of an interchange. k: A = motorway link, N = trunk link. */
+export interface Link {
+  k: 'A' | 'N'
+  b: [number, number, number, number]
+  l: number[]
+}
+
 export interface LandPoly {
   name: string
   rings: number[][]
@@ -122,11 +129,24 @@ export class SpatialIndex {
 
 export interface GameData {
   roads: Road[]
+  links: Link[]
   land: LandPoly[]
   junctions: Junction[]
   byRef: Map<string, Road>
   world: Bounds
   index: SpatialIndex
+}
+
+/** Polylines are stored delta encoded: [x0, y0, dx1, dy1, ...]. */
+function decode(line: number[]): number[] {
+  const out = new Array<number>(line.length)
+  out[0] = line[0]
+  out[1] = line[1]
+  for (let i = 2; i < line.length; i += 2) {
+    out[i] = out[i - 2] + line[i]
+    out[i + 1] = out[i - 1] + line[i + 1]
+  }
+  return out
 }
 
 export async function loadData(): Promise<GameData> {
@@ -136,7 +156,9 @@ export async function loadData(): Promise<GameData> {
     if (!res.ok) throw new Error(`Failed to load ${name}: ${res.status}`)
     return (await res.json()) as T
   }
-  const [roads, land, junctions] = await Promise.all([get<Road[]>('roads.json'), get<LandPoly[]>('land.json'), get<Junction[]>('junctions.json')])
+  const [roads, links, land, junctions] = await Promise.all([get<Road[]>('roads.json'), get<Link[]>('links.json'), get<LandPoly[]>('land.json'), get<Junction[]>('junctions.json')])
+  for (const r of roads) r.lines = r.lines.map(decode)
+  for (const lk of links) lk.l = decode(lk.l)
   const world: Bounds = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity }
   for (const poly of land) {
     for (const ring of poly.rings) {
@@ -148,7 +170,7 @@ export async function loadData(): Promise<GameData> {
       }
     }
   }
-  return { roads, land, junctions, byRef: new Map(roads.map((r) => [r.ref, r])), world, index: new SpatialIndex(roads) }
+  return { roads, links, land, junctions, byRef: new Map(roads.map((r) => [r.ref, r])), world, index: new SpatialIndex(roads) }
 }
 
 export function roadsForTier(data: GameData, tier: Tier): Road[] {

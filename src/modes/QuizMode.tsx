@@ -35,7 +35,7 @@ export function QuizMode({ data, session, onFinish, onQuit }: ModeProps) {
     if (phase !== 'ask') return
     const ok = pick?.ref === q.road.ref
     const points = ok ? 100 + timeBonus(remaining, limitMs) + streakBonus(results) : 0
-    setResults((r) => [...r, { label: q.road.ref, grade: ok ? 'good' : 'bad', points, ms: Date.now() - qStart, detail: ok ? undefined : pick ? t('thatWas', { ref: q.road.ref }) : t('timeUp') }])
+    setResults((r) => [...r, { label: q.road.ref, grade: ok ? 'good' : 'bad', points, ms: Date.now() - qStart, detail: ok ? undefined : pick ? t('youPicked', { ref: pick.ref }) : t('timeUp') }])
     setChosen(pick?.ref ?? '')
     setPhase('reveal')
   }
@@ -63,7 +63,8 @@ export function QuizMode({ data, session, onFinish, onQuit }: ModeProps) {
   )
 
   const highlights: Record<string, Highlight> = { [q.road.ref]: phase === 'ask' ? 'active' : chosen === q.road.ref ? 'correct' : 'wrong' }
-  const shields: PlacedShield[] = phase === 'reveal' ? [{ ref: q.road.ref, x: q.road.anchor[0], y: q.road.anchor[1], state: chosen === q.road.ref ? 'correct' : 'wrong' }] : []
+  // Only a correct answer reveals the sign on the map.
+  const shields: PlacedShield[] = phase === 'reveal' && chosen === q.road.ref ? [{ ref: q.road.ref, x: q.road.anchor[0], y: q.road.anchor[1], state: 'correct' }] : []
 
   return (
     <div className="game">
@@ -73,8 +74,7 @@ export function QuizMode({ data, session, onFinish, onQuit }: ModeProps) {
         {q.options.map((o) => {
           let cls = 'option'
           if (phase === 'reveal') {
-            if (o.ref === q.road.ref) cls += ' option-correct'
-            else if (o.ref === chosen) cls += ' option-wrong'
+            if (o.ref === chosen) cls += o.ref === q.road.ref ? ' option-correct' : ' option-wrong'
             else cls += ' option-dim'
           }
           return (

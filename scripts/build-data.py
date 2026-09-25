@@ -3,7 +3,8 @@
 Usage:  python scripts/build-data.py            (uses cached downloads in data-raw/ when present)
         python scripts/build-data.py --refresh  (re-downloads everything)
 
-Outputs public/data/roads.json, land.json and junctions.json (fetched by the app at runtime).
+Outputs public/data/roads.json, links.json, land.json and junctions.json (fetched by the app at runtime).
+Polylines are delta encoded: [x0, y0, dx1, dy1, dx2, dy2, ...] in whole metres.
 Coordinates are projected to a local metre grid (x east, y south) so the app never needs a projection library.
 Data (c) OpenStreetMap contributors, ODbL. Land outline: CBS Wijk- en Buurtkaart via PDOK (CC BY 4.0).
 Requires: python 3, curl on the PATH, and the shapely package (pip install shapely).
@@ -41,6 +42,7 @@ def download_all():
         batches[f"N{i}"] = f'^N{i}[0-9]{{2}}$'
     for name, rx in batches.items():
         overpass(f"geom_{name}.json", f'[out:json][timeout:300];{area}relation["type"="route"]["route"="road"]["ref"~"{rx}"]["network"~"^NL:[AN]$"](area.a);out geom;')
+    overpass("links.json", f'[out:json][timeout:300];{area}way["highway"~"^(motorway_link|trunk_link)$"](area.a);out geom;')
     overpass("knooppunten_geo.json", f'[out:json][timeout:180];{area}(node["highway"="motorway_junction"]["name"~"^Knooppunt ",i](area.a);node["junction"="yes"]["name"~"^Knooppunt ",i](area.a);node["highway"="motorway_junction"]["name"~"^(Heerenveen)$"](area.a););out;')
     gem = os.path.join(RAW, "gemeenten.json")
     if REFRESH or not os.path.exists(gem) or os.path.getsize(gem) < 10_000_000:
@@ -88,6 +90,13 @@ def chain(ways):
         out.append(line)
     return out
 
+def encode(line):
+    """Delta encode a flat [x, y, x, y, ...] list of integer metres."""
+    out = [line[0], line[1]]
+    for i in range(2, len(line), 2):
+        out.append(line[i] - line[i - 2]); out.append(line[i + 1] - line[i - 1])
+    return out
+
 def kind(ref):
     if ref[0] == "A": return "A"
     return "N" if len(ref) <= 3 else "P"   # N = national N-road (1-2 digits), P = provincial (3 digits)
@@ -101,7 +110,7 @@ def build_roads():
                     roads[e["tags"]["ref"]].append([proj(p["lon"], p["lat"]) for p in m["geometry"]])
     out = []; total = 0
     for ref, ways in roads.items():
-        k = kind(ref); lines = [dp(l, 2.5 if k == "A" else 4) for l in chain(ways)]
+        k = kind(ref); lines = [dp(l, 1) for l in chain(ways)]
         lines = [[(round(x), round(y)) for x, y in l] for l in lines]
         total += sum(len(l) for l in lines)
         length = sum(math.hypot(l[i + 1][0] - l[i][0], l[i + 1][1] - l[i][1]) for l in lines for i in range(len(l) - 1))
@@ -112,9 +121,28 @@ def build_roads():
                     "bbox": [min(xs), min(ys), max(xs), max(ys)], "anchor": list(mid),
                     "lines": [[c for p in l for c in p] for l in lines]})
     out.sort(key=lambda r: (r["kind"], r["num"]))
-    json.dump(out, open(os.path.join(OUT, "roads.json"), "w"), separators=(",", ":"))
+    packed = [dict(r, lines=[encode(l) for l in r["lines"]]) for r in out]
+    json.dump(packed, open(os.path.join(OUT, "roads.json"), "w"), separators=(",", ":"))
     print("roads:", len(out), "points:", total, dict(collections.Counter(r["kind"] for r in out)))
     return out
+
+def build_links():
+    """Ramps and connector roads of interchanges: motorway_link (drawn like A) and trunk_link (drawn like N)."""
+    d = json.load(open(os.path.join(RAW, "links.json"), encoding="utf-8"))["elements"]
+    groups = {"A": [], "N": []}
+    for e in d:
+        if "geometry" not in e: continue
+        k = "A" if e["tags"].get("highway") == "motorway_link" else "N"
+        groups[k].append([proj(p["lon"], p["lat"]) for p in e["geometry"]])
+    out = []; pts = 0
+    for k, ways in groups.items():
+        for line in chain(ways):
+            line = [(round(x), round(y)) for x, y in dp(line, 1)]
+            if len(line) < 2: continue
+            xs = [p[0] for p in line]; ys = [p[1] for p in line]; pts += len(line)
+            out.append({"k": k, "b": [min(xs), min(ys), max(xs), max(ys)], "l": encode([c for p in line for c in p])})
+    json.dump(out, open(os.path.join(OUT, "links.json"), "w"), separators=(",", ":"))
+    print("links:", len(out), "points:", pts)
 
 def build_land():
     """Dissolve the CBS land-only municipality polygons into one detailed land shape (rivers and lakes stay open)."""
@@ -183,4 +211,4 @@ def build_junctions(roads):
 
 if __name__ == "__main__":
     download_all()
-    roads = build_roads(); build_land(); build_junctions(roads)
+    roads = build_roads(); build_links(); build_land(); build_junctions(roads)

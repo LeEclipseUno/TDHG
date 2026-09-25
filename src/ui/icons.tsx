@@ -134,6 +134,16 @@ export const PictQuiz = (p: P) => (
   </svg>
 )
 
+export const PictLearn = (p: P) => (
+  <svg {...pict} {...p}>
+    <rect x="14" y="8" width="28" height="18" rx="2.5" strokeWidth="2.2" />
+    <rect x="9" y="14" width="28" height="18" rx="2.5" fill="#0d4a9c" strokeWidth="2.2" />
+    <rect x="4" y="20" width="28" height="18" rx="2.5" fill="#0d4a9c" strokeWidth="2.2" />
+    <rect x="9" y="25" width="18" height="8" rx="1.5" fill="#c8102e" stroke="#fff" strokeWidth="1.4" />
+    <path d="M36 40l4 4 6-8" strokeWidth="2.6" />
+  </svg>
+)
+
 /** A hectometre post pictogram, used as the app's small brand mark. */
 export const PictPost = (p: P) => (
   <svg width="16" height="24" viewBox="0 0 16 24" aria-hidden {...p}>

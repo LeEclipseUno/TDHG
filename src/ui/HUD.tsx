@@ -9,6 +9,7 @@ export interface HUDProps {
   total: number
   grades: (Grade | undefined)[]
   score: number
+  scoreLabel?: string
   remainingMs?: number
   limitMs?: number
   elapsedMs?: number
@@ -17,7 +18,7 @@ export interface HUDProps {
   countLabel?: string
 }
 
-export function HUD({ index, total, grades, score, remainingMs, limitMs, elapsedMs, prompt, onQuit, countLabel }: HUDProps) {
+export function HUD({ index, total, grades, score, scoreLabel, remainingMs, limitMs, elapsedMs, prompt, onQuit, countLabel }: HUDProps) {
   const { t } = useLang()
   const [confirm, setConfirm] = useState(false)
   return (
@@ -30,7 +31,7 @@ export function HUD({ index, total, grades, score, remainingMs, limitMs, elapsed
           <span className="hud-count">{countLabel ?? t('question', { n: Math.min(index + 1, total), total })}</span>
           <RouteStrip grades={grades} total={total} current={index} />
         </div>
-        <Matrix value={score} label={t('score')} />
+        <Matrix value={score} label={scoreLabel ?? t('score')} />
         {limitMs && remainingMs !== undefined ? <SpeedSign remainingMs={remainingMs} totalMs={limitMs} /> : elapsedMs !== undefined ? <Matrix value={formatTime(elapsedMs)} label={t('time')} /> : null}
       </div>
       <div className="hud-prompt">{prompt}</div>

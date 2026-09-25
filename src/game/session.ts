@@ -1,6 +1,7 @@
 import type { GameData, Junction, Road, Tier } from '../data'
 import { roadsForTier } from '../data'
 import { translate, type Lang } from '../i18n'
+import type { Deck } from './learn'
 
 export type ModeId = 'drag' | 'find' | 'junction' | 'quiz'
 export const MODES: ModeId[] = ['drag', 'find', 'junction', 'quiz']
@@ -19,6 +20,7 @@ export interface Settings {
   tier: Tier
   timer: boolean
   daily: boolean
+  learnDeck: Deck
 }
 
 export interface Session {
@@ -196,12 +198,12 @@ export function loadSettings(): Settings {
     const raw = localStorage.getItem(SETTINGS_KEY)
     if (raw) {
       const p = JSON.parse(raw) as Partial<Settings>
-      return { tier: p.tier === 'AN' || p.tier === 'ALL' ? p.tier : 'A', timer: p.timer !== false, daily: p.daily === true }
+      return { tier: p.tier === 'AN' || p.tier === 'ALL' ? p.tier : 'A', timer: p.timer !== false, daily: p.daily === true, learnDeck: p.learnDeck === 'junctions' ? 'junctions' : 'roads' }
     }
   } catch {
     /* ignore */
   }
-  return { tier: 'A', timer: true, daily: false }
+  return { tier: 'A', timer: true, daily: false, learnDeck: 'roads' }
 }
 
 export function saveSettings(s: Settings) {

@@ -10,6 +10,8 @@ Ideas and planned modes for The Dutch Highway Guesser. Items at the top are next
 
 ## Other ideas
 
+- Learn mode extras: per-card statistics screen, an optional retention slider, and exporting or importing progress.
+
 - Exit (afrit) mode: name or locate numbered exits on one highway.
 - Multiplayer or "challenge a friend" via a shared seed in the URL.
 - Streak tracking for the daily challenge.

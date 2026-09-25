@@ -37,9 +37,8 @@ export function JunctionMode({ data, session, onFinish, onQuit }: ModeProps) {
     setGuess(pt)
     setFeedback({ text: `${detail} (+${points})`, grade: base.grade })
     setPhase('reveal')
-    const pts: [number, number][] = [[q.x, q.y]]
-    if (pt) pts.push([pt.x, pt.y])
-    mapRef.current?.flyToBounds(boundsOfPoints(pts, 3000), 60)
+    // Only a decent guess reveals where the interchange really is.
+    if (pt && base.grade !== 'bad') mapRef.current?.flyToBounds(boundsOfPoints([[q.x, q.y], [pt.x, pt.y]], 3000), 60)
   }
 
   useEffect(() => {
@@ -71,10 +70,11 @@ export function JunctionMode({ data, session, onFinish, onQuit }: ModeProps) {
   const markers: Marker[] = []
   const lines: [number, number, number, number][] = []
   if (phase === 'reveal') {
-    markers.push({ x: q.x, y: q.y, kind: 'answer', label: q.name })
+    const revealed = results[results.length - 1]?.grade !== 'bad'
+    if (revealed) markers.push({ x: q.x, y: q.y, kind: 'answer', label: q.name })
     if (guess) {
       markers.push({ x: guess.x, y: guess.y, kind: 'guess' })
-      lines.push([guess.x, guess.y, q.x, q.y])
+      if (revealed) lines.push([guess.x, guess.y, q.x, q.y])
     }
   }
 

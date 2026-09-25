@@ -8,8 +8,9 @@ import { DragMode } from './modes/DragMode'
 import { FindMode } from './modes/FindMode'
 import { JunctionMode } from './modes/JunctionMode'
 import { QuizMode } from './modes/QuizMode'
+import { LearnMode } from './modes/LearnMode'
 
-type Screen = { kind: 'home' } | { kind: 'game'; session: Session } | { kind: 'results'; session: Session; newBest: boolean }
+type Screen = { kind: 'home' } | { kind: 'learn' } | { kind: 'game'; session: Session } | { kind: 'results'; session: Session; newBest: boolean }
 
 const MODE_COMPONENTS = { drag: DragMode, find: FindMode, junction: JunctionMode, quiz: QuizMode } as const
 
@@ -53,10 +54,11 @@ function Shell() {
       />
     )
   }
+  if (screen.kind === 'learn') return <LearnMode data={data} settings={settings} onExit={() => setScreen({ kind: 'home' })} />
   if (screen.kind === 'results') {
     return <Results data={data} session={screen.session} newBest={screen.newBest} onAgain={() => play(screen.session.mode)} onHome={() => setScreen({ kind: 'home' })} />
   }
-  return <Home settings={settings} onSettings={setSettings} onPlay={play} />
+  return <Home data={data} settings={settings} onSettings={setSettings} onPlay={play} onLearn={() => setScreen({ kind: 'learn' })} />
 }
 
 export default function App() {
