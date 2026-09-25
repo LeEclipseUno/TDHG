@@ -1,0 +1,248 @@
+import type { GameData, Junction, Road, Tier } from '../data'
+import { roadsForTier } from '../data'
+import { translate, type Lang } from '../i18n'
+
+export type ModeId = 'drag' | 'find' | 'junction' | 'quiz'
+export const MODES: ModeId[] = ['drag', 'find', 'junction', 'quiz']
+
+export type Grade = 'good' | 'partial' | 'bad'
+
+export interface QuestionResult {
+  label: string
+  grade: Grade
+  points: number
+  ms: number
+  detail?: string
+}
+
+export interface Settings {
+  tier: Tier
+  timer: boolean
+  daily: boolean
+}
+
+export interface Session {
+  mode: ModeId
+  tier: Tier
+  timer: boolean
+  daily: boolean
+  seed: number
+  startedAt: number
+  finishedAt: number
+  results: QuestionResult[]
+}
+
+export const QUESTION_COUNT = 10
+/** Seconds. drag is a total budget, the others are per question. */
+export const TIME_LIMITS: Record<ModeId, number> = { find: 20, quiz: 15, junction: 30, drag: 180 }
+export const HINT_COST = 30
+
+export function mulberry32(seed: number): () => number {
+  let a = seed >>> 0
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0
+    let t = a
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+export function dateKey(d = new Date()): string {
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${m}-${day}`
+}
+
+function hashString(s: string): number {
+  let h = 2166136261
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return h >>> 0
+}
+
+export function dailySeed(mode: ModeId, tier: Tier): number {
+  return hashString(`${dateKey()}|${mode}|${tier}`)
+}
+
+export function shuffle<T>(arr: readonly T[], rng: () => number): T[] {
+  const a = arr.slice()
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+export function newSession(mode: ModeId, s: Settings): Session {
+  const seed = s.daily ? dailySeed(mode, s.tier) : Math.floor(Math.random() * 2 ** 31)
+  return { mode, tier: s.tier, timer: s.timer, daily: s.daily, seed, startedAt: Date.now(), finishedAt: 0, results: [] }
+}
+
+/** Pick n roads for a tier. Mixes kinds so that the harder tiers do not drown in provincial roads. */
+export function pickRoads(data: GameData, tier: Tier, n: number, rng: () => number): Road[] {
+  const pool = roadsForTier(data, tier)
+  if (tier === 'A') return shuffle(pool, rng).slice(0, n)
+  const a = shuffle(pool.filter((r) => r.kind === 'A'), rng)
+  const nn = shuffle(pool.filter((r) => r.kind === 'N'), rng)
+  const p = shuffle(pool.filter((r) => r.kind === 'P'), rng)
+  const wantA = Math.round(n * (tier === 'AN' ? 0.6 : 0.4))
+  const wantN = tier === 'AN' ? n - wantA : Math.round(n * 0.25)
+  const picked = [...a.slice(0, wantA), ...nn.slice(0, wantN), ...p.slice(0, n - wantA - wantN)]
+  return shuffle(picked, rng).slice(0, n)
+}
+
+export function pickJunctions(data: GameData, n: number, rng: () => number): Junction[] {
+  return shuffle(data.junctions, rng).slice(0, n)
+}
+
+/** Four options for the quiz: the target plus three lookalikes (close numbers, same colour). */
+export function quizOptions(data: GameData, tier: Tier, target: Road, rng: () => number): Road[] {
+  const pool = roadsForTier(data, tier).filter((r) => r.ref !== target.ref)
+  const sameColour = pool.filter((r) => (r.kind === 'A') === (target.kind === 'A'))
+  const byCloseness = sameColour.slice().sort((x, y) => Math.abs(x.num - target.num) - Math.abs(y.num - target.num))
+  const near = shuffle(byCloseness.slice(0, 8), rng).slice(0, 2)
+  const rest = shuffle(pool.filter((r) => !near.includes(r)), rng)
+  const opts = [target, ...near]
+  for (const r of rest) {
+    if (opts.length >= 4) break
+    opts.push(r)
+  }
+  return shuffle(opts, rng)
+}
+
+export function junctionPoints(distM: number): { points: number; grade: Grade } {
+  if (distM <= 800) return { points: 100, grade: 'good' }
+  if (distM <= 2000) return { points: 80, grade: 'good' }
+  if (distM <= 5000) return { points: 55, grade: 'partial' }
+  if (distM <= 10000) return { points: 30, grade: 'partial' }
+  if (distM <= 20000) return { points: 10, grade: 'bad' }
+  return { points: 0, grade: 'bad' }
+}
+
+/** Bonus for answering quickly: up to 50 points, linear in the remaining time. */
+export function timeBonus(remainingMs: number, limitMs: number): number {
+  if (limitMs <= 0) return 0
+  return Math.round((Math.max(0, remainingMs) / limitMs) * 50)
+}
+
+export function streakBonus(results: QuestionResult[]): number {
+  let streak = 0
+  for (let i = results.length - 1; i >= 0; i--) {
+    if (results[i].grade === 'good') streak++
+    else break
+  }
+  return streak >= 2 ? Math.min(streak, 5) * 10 : 0
+}
+
+export interface Summary {
+  score: number
+  good: number
+  partial: number
+  bad: number
+  total: number
+  ms: number
+  accuracy: number
+}
+
+export function summarize(s: Session): Summary {
+  const score = s.results.reduce((a, r) => a + r.points, 0)
+  const good = s.results.filter((r) => r.grade === 'good').length
+  const partial = s.results.filter((r) => r.grade === 'partial').length
+  const total = s.results.length
+  return { score, good, partial, bad: total - good - partial, total, ms: Math.max(0, s.finishedAt - s.startedAt), accuracy: total ? (good + partial * 0.5) / total : 0 }
+}
+
+export function emojiGrid(s: Session): string {
+  const e = s.results.map((r) => (r.grade === 'good' ? '\u{1F7E9}' : r.grade === 'partial' ? '\u{1F7E8}' : '\u{1F7E5}'))
+  const rows: string[] = []
+  for (let i = 0; i < e.length; i += 10) rows.push(e.slice(i, i + 10).join(''))
+  return rows.join('\n')
+}
+
+export function formatTime(ms: number): string {
+  const s = Math.floor(ms / 1000)
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+}
+
+export function rankKey(accuracy: number): 'rank_4' | 'rank_3' | 'rank_2' | 'rank_1' {
+  if (accuracy >= 0.9) return 'rank_4'
+  if (accuracy >= 0.65) return 'rank_3'
+  if (accuracy >= 0.35) return 'rank_2'
+  return 'rank_1'
+}
+
+export function shareText(s: Session, lang: Lang, url: string): string {
+  const sum = summarize(s)
+  const modeName = translate(lang, `mode_${s.mode}` as const)
+  const tierName = translate(lang, `tier_${s.tier}_short` as const)
+  const daily = s.daily ? ` · ${dateKey()}` : ''
+  const timer = s.timer ? '' : ` · ${translate(lang, 'timer')} ${translate(lang, 'timerOff').toLowerCase()}`
+  return [
+    `\u{1F6E3}\u{FE0F} The Dutch Highway Guesser`,
+    `${modeName} · ${tierName}${daily}${timer}`,
+    `${translate(lang, 'score')} ${sum.score} · ${sum.good}${sum.partial ? `+${sum.partial}½` : ''}/${sum.total} · ${formatTime(sum.ms)}`,
+    emojiGrid(s),
+    url,
+  ].join('\n')
+}
+
+// ---- persistence ----
+
+const SETTINGS_KEY = 'tdhg:v1:settings'
+
+export function loadSettings(): Settings {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY)
+    if (raw) {
+      const p = JSON.parse(raw) as Partial<Settings>
+      return { tier: p.tier === 'AN' || p.tier === 'ALL' ? p.tier : 'A', timer: p.timer !== false, daily: p.daily === true }
+    }
+  } catch {
+    /* ignore */
+  }
+  return { tier: 'A', timer: true, daily: false }
+}
+
+export function saveSettings(s: Settings) {
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(s))
+  } catch {
+    /* ignore */
+  }
+}
+
+export interface Best {
+  score: number
+  accuracy: number
+  ms: number
+  date: string
+}
+
+function bestKey(mode: ModeId, tier: Tier, timer: boolean) {
+  return `tdhg:v1:best:${mode}:${tier}:${timer ? 't' : 'u'}`
+}
+
+export function getBest(mode: ModeId, tier: Tier, timer: boolean): Best | null {
+  try {
+    const raw = localStorage.getItem(bestKey(mode, tier, timer))
+    return raw ? (JSON.parse(raw) as Best) : null
+  } catch {
+    return null
+  }
+}
+
+/** Stores the session as best score when it beats the previous one. Returns true when it did. */
+export function submitBest(s: Session): boolean {
+  const sum = summarize(s)
+  const prev = getBest(s.mode, s.tier, s.timer)
+  if (prev && prev.score >= sum.score) return false
+  try {
+    localStorage.setItem(bestKey(s.mode, s.tier, s.timer), JSON.stringify({ score: sum.score, accuracy: sum.accuracy, ms: sum.ms, date: dateKey() } satisfies Best))
+  } catch {
+    /* ignore */
+  }
+  return true
+}
