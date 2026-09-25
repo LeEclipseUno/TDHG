@@ -4,12 +4,12 @@ export type Lang = 'nl' | 'en'
 
 const nl = {
   title: 'The Dutch Highway Guesser',
-  tagline: 'Hoe goed ken jij de Nederlandse snelwegen?',
+  tagline: 'Ken jij het wegennet uit je hoofd?',
+  chooseMode: 'Kies je rit',
   loading: 'Kaart laden...',
   loadError: 'De kaart kon niet geladen worden.',
   play: 'Spelen',
-  best: 'Beste',
-  noBest: 'Nog geen score',
+  best: 'Record',
   settings: 'Instellingen',
   roads: 'Wegen',
   tier_A: 'Alleen A-wegen',
@@ -82,12 +82,12 @@ export type Key = keyof typeof nl
 
 const en: Record<Key, string> = {
   title: 'The Dutch Highway Guesser',
-  tagline: 'How well do you know the Dutch highways?',
+  tagline: 'Know the road network by heart?',
+  chooseMode: 'Pick your ride',
   loading: 'Loading map...',
   loadError: 'The map could not be loaded.',
   play: 'Play',
   best: 'Best',
-  noBest: 'No score yet',
   settings: 'Settings',
   roads: 'Roads',
   tier_A: 'A-roads only',

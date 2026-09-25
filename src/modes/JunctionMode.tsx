@@ -3,6 +3,7 @@ import MapView, { type MapHandle, type Marker, type TapInfo } from '../map/MapVi
 import { boundsOfPoints } from '../data'
 import { useLang } from '../i18n'
 import { HUD } from '../ui/HUD'
+import { IconHint } from '../ui/icons'
 import { HINT_COST, junctionPoints, mulberry32, pickJunctions, QUESTION_COUNT, TIME_LIMITS, timeBonus, type QuestionResult } from '../game/session'
 import { useNow, useTimeout } from '../game/hooks'
 import type { ModeProps } from './types'
@@ -82,6 +83,7 @@ export function JunctionMode({ data, session, onFinish, onQuit }: ModeProps) {
       <HUD
         index={i}
         total={questions.length}
+        grades={results.map((r) => r.grade)}
         score={score}
         remainingMs={remaining}
         limitMs={limitMs}
@@ -95,7 +97,7 @@ export function JunctionMode({ data, session, onFinish, onQuit }: ModeProps) {
               </span>
               {phase === 'ask' && !hint && q.roads.length > 0 && (
                 <button type="button" className="btn btn-small" onClick={() => setHint(true)}>
-                  {t('hint')} <small>{t('hintCost')}</small>
+                  <IconHint /> {t('hint')} <small>{t('hintCost')}</small>
                 </button>
               )}
             </div>

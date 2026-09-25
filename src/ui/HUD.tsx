@@ -1,11 +1,13 @@
 import { useState, type ReactNode } from 'react'
 import { useLang } from '../i18n'
-import { TimerRing } from './TimerRing'
-import { formatTime } from '../game/session'
+import { formatTime, type Grade } from '../game/session'
+import { Matrix, RouteStrip, SpeedSign } from './widgets'
+import { IconBack } from './icons'
 
 export interface HUDProps {
   index: number
   total: number
+  grades: (Grade | undefined)[]
   score: number
   remainingMs?: number
   limitMs?: number
@@ -15,32 +17,21 @@ export interface HUDProps {
   countLabel?: string
 }
 
-export function HUD({ index, total, score, remainingMs, limitMs, elapsedMs, prompt, onQuit, countLabel }: HUDProps) {
+export function HUD({ index, total, grades, score, remainingMs, limitMs, elapsedMs, prompt, onQuit, countLabel }: HUDProps) {
   const { t } = useLang()
   const [confirm, setConfirm] = useState(false)
   return (
     <header className="hud">
       <div className="hud-row">
-        <button type="button" className="btn-icon" aria-label={t('quit')} onClick={() => setConfirm(true)}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
+        <button type="button" className="sign-btn" aria-label={t('quit')} onClick={() => setConfirm(true)}>
+          <IconBack />
         </button>
-        <div className="hud-progress">
-          <span>{countLabel ?? t('question', { n: Math.min(index + 1, total), total })}</span>
-          <div className="hud-bar">
-            <div className="hud-bar-fill" style={{ width: `${(index / total) * 100}%` }} />
-          </div>
+        <div className="hud-mid">
+          <span className="hud-count">{countLabel ?? t('question', { n: Math.min(index + 1, total), total })}</span>
+          <RouteStrip grades={grades} total={total} current={index} />
         </div>
-        <div className="hud-score">
-          <span className="hud-score-label">{t('score')}</span>
-          <span className="hud-score-value">{score}</span>
-        </div>
-        {limitMs && remainingMs !== undefined ? (
-          <TimerRing remainingMs={remainingMs} totalMs={limitMs} />
-        ) : elapsedMs !== undefined ? (
-          <span className="hud-clock">{formatTime(elapsedMs)}</span>
-        ) : null}
+        <Matrix value={score} label={t('score')} />
+        {limitMs && remainingMs !== undefined ? <SpeedSign remainingMs={remainingMs} totalMs={limitMs} /> : elapsedMs !== undefined ? <Matrix value={formatTime(elapsedMs)} label={t('time')} /> : null}
       </div>
       <div className="hud-prompt">{prompt}</div>
       {confirm && (

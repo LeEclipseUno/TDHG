@@ -36,6 +36,7 @@ function Shell() {
     return (
       <div className="loading">
         <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" className="loading-logo" />
+        <div className="road-loader" />
         <span>{t('loading')}</span>
       </div>
     )

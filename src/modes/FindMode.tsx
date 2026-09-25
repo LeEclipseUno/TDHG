@@ -86,6 +86,7 @@ export function FindMode({ data, session, onFinish, onQuit }: ModeProps) {
       <HUD
         index={i}
         total={questions.length}
+        grades={results.map((r) => r.grade)}
         score={score}
         remainingMs={remaining}
         limitMs={limitMs}

@@ -155,11 +155,9 @@ export function summarize(s: Session): Summary {
   return { score, good, partial, bad: total - good - partial, total, ms: Math.max(0, s.finishedAt - s.startedAt), accuracy: total ? (good + partial * 0.5) / total : 0 }
 }
 
-export function emojiGrid(s: Session): string {
-  const e = s.results.map((r) => (r.grade === 'good' ? '\u{1F7E9}' : r.grade === 'partial' ? '\u{1F7E8}' : '\u{1F7E5}'))
-  const rows: string[] = []
-  for (let i = 0; i < e.length; i += 10) rows.push(e.slice(i, i + 10).join(''))
-  return rows.join('\n')
+/** Compact result marks for sharing: check, tilde, cross. Plain characters, no emoji. */
+export function marksLine(s: Session): string {
+  return s.results.map((r) => (r.grade === 'good' ? '✓' : r.grade === 'partial' ? '~' : '✗')).join(' ')
 }
 
 export function formatTime(ms: number): string {
@@ -176,15 +174,15 @@ export function rankKey(accuracy: number): 'rank_4' | 'rank_3' | 'rank_2' | 'ran
 
 export function shareText(s: Session, lang: Lang, url: string): string {
   const sum = summarize(s)
+  const dot = ' · '
   const modeName = translate(lang, `mode_${s.mode}` as const)
   const tierName = translate(lang, `tier_${s.tier}_short` as const)
-  const daily = s.daily ? ` · ${dateKey()}` : ''
-  const timer = s.timer ? '' : ` · ${translate(lang, 'timer')} ${translate(lang, 'timerOff').toLowerCase()}`
+  const daily = s.daily ? dot + dateKey() : ''
+  const timer = s.timer ? '' : dot + translate(lang, 'timer') + ' ' + translate(lang, 'timerOff').toLowerCase()
   return [
-    `\u{1F6E3}\u{FE0F} The Dutch Highway Guesser`,
-    `${modeName} · ${tierName}${daily}${timer}`,
-    `${translate(lang, 'score')} ${sum.score} · ${sum.good}${sum.partial ? `+${sum.partial}½` : ''}/${sum.total} · ${formatTime(sum.ms)}`,
-    emojiGrid(s),
+    'TDHG' + dot + modeName + dot + tierName + daily + timer,
+    `${sum.score} ${translate(lang, 'points')}` + dot + `${sum.good}${sum.partial ? `+${sum.partial}` : ''}/${sum.total}` + dot + formatTime(sum.ms),
+    marksLine(s),
     url,
   ].join('\n')
 }
@@ -237,6 +235,7 @@ export function getBest(mode: ModeId, tier: Tier, timer: boolean): Best | null {
 /** Stores the session as best score when it beats the previous one. Returns true when it did. */
 export function submitBest(s: Session): boolean {
   const sum = summarize(s)
+  if (sum.score <= 0) return false
   const prev = getBest(s.mode, s.tier, s.timer)
   if (prev && prev.score >= sum.score) return false
   try {

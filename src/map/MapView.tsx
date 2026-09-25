@@ -1,5 +1,6 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { tierIncludes, type Bounds, type GameData, type Road, type RoadKind, type Tier } from '../data'
+import { IconFit, IconMinus, IconPlus } from '../ui/icons'
 
 /** setPointerCapture can throw when the pointer is already gone (synthetic or cancelled events). */
 function capture(el: Element, pointerId: number) {
@@ -87,9 +88,9 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
 }
 
 export function drawShield(ctx: CanvasRenderingContext2D, ref: string, kind: RoadKind, x: number, y: number, state: ShieldState) {
-  ctx.font = '800 13px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
+  ctx.font = '800 15px "Barlow Condensed", "Arial Narrow", system-ui, sans-serif'
   const tw = ctx.measureText(ref).width
-  const bw = tw + 16
+  const bw = tw + 14
   const bh = 22
   const bx = x - bw / 2
   const by = y - bh / 2
@@ -526,17 +527,14 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
         onPointerCancel={onPointerUp}
       />
       <div className="map-zoom">
-        <button type="button" aria-label="Zoom in" onPointerDown={(e) => e.stopPropagation()} onClick={() => zoomAt(sizeRef.current.w / 2, sizeRef.current.h / 2, 1.7, 250)}>
-          +
+        <button type="button" className="sign-btn" aria-label="Zoom in" onPointerDown={(e) => e.stopPropagation()} onClick={() => zoomAt(sizeRef.current.w / 2, sizeRef.current.h / 2, 1.7, 250)}>
+          <IconPlus />
         </button>
-        <button type="button" aria-label="Zoom out" onPointerDown={(e) => e.stopPropagation()} onClick={() => zoomAt(sizeRef.current.w / 2, sizeRef.current.h / 2, 1 / 1.7, 250)}>
-          -
+        <button type="button" className="sign-btn" aria-label="Zoom out" onPointerDown={(e) => e.stopPropagation()} onClick={() => zoomAt(sizeRef.current.w / 2, sizeRef.current.h / 2, 1 / 1.7, 250)}>
+          <IconMinus />
         </button>
-        <button type="button" aria-label="Reset view" onPointerDown={(e) => e.stopPropagation()} onClick={() => animate(fitView())}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 12 12 4l9 8" />
-            <path d="M5 10v10h14V10" />
-          </svg>
+        <button type="button" className="sign-btn" aria-label="Reset view" onPointerDown={(e) => e.stopPropagation()} onClick={() => animate(fitView())}>
+          <IconFit />
         </button>
       </div>
       {props.children}
