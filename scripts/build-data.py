@@ -5,7 +5,8 @@ Usage:  python scripts/build-data.py            (uses cached downloads in data-r
 
 Outputs public/data/roads.json, land.json and junctions.json (fetched by the app at runtime).
 Coordinates are projected to a local metre grid (x east, y south) so the app never needs a projection library.
-Data (c) OpenStreetMap contributors, ODbL. Province outlines: CBS / cartomap.github.io.
+Data (c) OpenStreetMap contributors, ODbL. Land outline: CBS Wijk- en Buurtkaart via PDOK (CC BY 4.0).
+Requires: python 3, curl on the PATH, and the shapely package (pip install shapely).
 """
 import json, os, sys, math, re, glob, time, subprocess, collections
 
@@ -41,9 +42,10 @@ def download_all():
     for name, rx in batches.items():
         overpass(f"geom_{name}.json", f'[out:json][timeout:300];{area}relation["type"="route"]["route"="road"]["ref"~"{rx}"]["network"~"^NL:[AN]$"](area.a);out geom;')
     overpass("knooppunten_geo.json", f'[out:json][timeout:180];{area}(node["highway"="motorway_junction"]["name"~"^Knooppunt ",i](area.a);node["junction"="yes"]["name"~"^Knooppunt ",i](area.a);node["highway"="motorway_junction"]["name"~"^(Heerenveen)$"](area.a););out;')
-    prov = os.path.join(RAW, "provincies.geojson")
-    if REFRESH or not os.path.exists(prov):
-        subprocess.run(["curl", "-sL", "-o", prov, "https://cartomap.github.io/nl/wgs84/provincie_2023.geojson"])
+    gem = os.path.join(RAW, "gemeenten.json")
+    if REFRESH or not os.path.exists(gem) or os.path.getsize(gem) < 10_000_000:
+        print("downloading CBS municipality polygons (about 100 MB)")
+        subprocess.run(["curl", "-sL", "-A", UA, "-o", gem, "https://service.pdok.nl/cbs/wijkenbuurten/2023/wfs/v1_0?request=GetFeature&service=WFS&version=2.0.0&typeName=wijkenbuurten:gemeenten&outputFormat=json&srsName=EPSG:4326&count=2000"])
 
 def dp(pts, tol):
     """Douglas-Peucker line simplification."""
@@ -99,7 +101,7 @@ def build_roads():
                     roads[e["tags"]["ref"]].append([proj(p["lon"], p["lat"]) for p in m["geometry"]])
     out = []; total = 0
     for ref, ways in roads.items():
-        k = kind(ref); lines = [dp(l, 6 if k == "A" else 10) for l in chain(ways)]
+        k = kind(ref); lines = [dp(l, 2.5 if k == "A" else 4) for l in chain(ways)]
         lines = [[(round(x), round(y)) for x, y in l] for l in lines]
         total += sum(len(l) for l in lines)
         length = sum(math.hypot(l[i + 1][0] - l[i][0], l[i + 1][1] - l[i][1]) for l in lines for i in range(len(l) - 1))
@@ -115,20 +117,26 @@ def build_roads():
     return out
 
 def build_land():
-    prov = json.load(open(os.path.join(RAW, "provincies.geojson"), encoding="utf-8"))
-    land = []
-    for f in prov["features"]:
-        g = f["geometry"]; polys = g["coordinates"] if g["type"] == "MultiPolygon" else [g["coordinates"]]
-        for poly in polys:
-            rings = []
-            for ring in poly:
-                flat = []
-                for lon, lat in ring:
-                    x, y = proj(lon, lat); flat.append(round(x)); flat.append(round(y))
-                rings.append(flat)
-            land.append({"name": f["properties"].get("statnaam", ""), "rings": rings})
-    json.dump(land, open(os.path.join(OUT, "land.json"), "w"), separators=(",", ":"))
-    print("land polygons:", len(land))
+    """Dissolve the CBS land-only municipality polygons into one detailed land shape (rivers and lakes stay open)."""
+    from shapely.geometry import shape, mapping
+    from shapely.ops import unary_union, transform
+    d = json.load(open(os.path.join(RAW, "gemeenten.json"), encoding="utf-8"))
+    geoms = [transform(lambda lon, lat, z=None: proj(lon, lat), shape(f["geometry"])) for f in d["features"] if f["properties"].get("water") == "NEE"]
+    land = unary_union(geoms).buffer(0)
+    land = land.simplify(3, preserve_topology=True)
+    polys = list(land.geoms) if land.geom_type == "MultiPolygon" else [land]
+    out = []; pts = 0
+    for poly in polys:
+        if poly.area < 20000: continue   # drop slivers smaller than about 2 hectares
+        rings = []
+        for ring in [poly.exterior, *poly.interiors]:
+            flat = []
+            for x, y in ring.coords:
+                flat.append(round(x)); flat.append(round(y))
+            rings.append(flat); pts += len(flat) // 2
+        out.append({"name": "", "rings": rings})
+    json.dump(out, open(os.path.join(OUT, "land.json"), "w"), separators=(",", ":"))
+    print("land polygons:", len(out), "points:", pts)
 
 def seg_dist(px, py, ax, ay, bx, by):
     dx, dy = bx - ax, by - ay; L2 = dx * dx + dy * dy

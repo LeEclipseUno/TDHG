@@ -238,11 +238,22 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
     ctx.fillStyle = COLORS.bg
     ctx.fillRect(0, 0, w, h)
 
+    // Screen-space decimation: skip vertices that land within a pixel of the previous one.
+    const MIN_STEP = 0.75
     ctx.beginPath()
     for (const poly of data.land) {
       for (const ring of poly.rings) {
-        ctx.moveTo(X(ring[0]), Y(ring[1]))
-        for (let i = 2; i < ring.length; i += 2) ctx.lineTo(X(ring[i]), Y(ring[i + 1]))
+        let lx = X(ring[0])
+        let ly = Y(ring[1])
+        ctx.moveTo(lx, ly)
+        for (let i = 2; i < ring.length; i += 2) {
+          const sx = X(ring[i])
+          const sy = Y(ring[i + 1])
+          if (Math.abs(sx - lx) + Math.abs(sy - ly) < MIN_STEP) continue
+          ctx.lineTo(sx, sy)
+          lx = sx
+          ly = sy
+        }
         ctx.closePath()
       }
     }
@@ -268,8 +279,18 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
     const strokeRoad = (r: Road) => {
       ctx.beginPath()
       for (const line of r.lines) {
-        ctx.moveTo(X(line[0]), Y(line[1]))
-        for (let i = 2; i < line.length; i += 2) ctx.lineTo(X(line[i]), Y(line[i + 1]))
+        let lx = X(line[0])
+        let ly = Y(line[1])
+        ctx.moveTo(lx, ly)
+        const last = line.length - 2
+        for (let i = 2; i < line.length; i += 2) {
+          const sx = X(line[i])
+          const sy = Y(line[i + 1])
+          if (i !== last && Math.abs(sx - lx) + Math.abs(sy - ly) < MIN_STEP) continue
+          ctx.lineTo(sx, sy)
+          lx = sx
+          ly = sy
+        }
       }
       ctx.stroke()
     }
