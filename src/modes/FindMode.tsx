@@ -18,6 +18,7 @@ export function FindMode({ data, session, onFinish, onQuit }: ModeProps) {
   const [qStart, setQStart] = useState(() => Date.now())
   const [highlights, setHighlights] = useState<Record<string, Highlight>>({})
   const [shields, setShields] = useState<PlacedShield[]>([])
+  const [solved, setSolved] = useState<PlacedShield[]>([]) // correct answers stay on the map for the whole round
   const [feedback, setFeedback] = useState<{ text: string; ok: boolean } | null>(null)
   const [toast, showToast] = useToast()
   const now = useNow(true)
@@ -37,8 +38,7 @@ export function FindMode({ data, session, onFinish, onQuit }: ModeProps) {
     const hl: Record<string, Highlight> = {}
     const sh: PlacedShield[] = []
     if (ok && hitPt) {
-      hl[target.ref] = 'correct'
-      sh.push({ ref: target.ref, x: hitPt.x, y: hitPt.y, state: 'correct' })
+      setSolved((s) => [...s, { ref: target.ref, x: hitPt.x, y: hitPt.y, state: 'correct' }])
     } else if (hitRef && hitPt) {
       hl[hitRef] = 'wrong'
       sh.push({ ref: hitRef, x: hitPt.x, y: hitPt.y, state: 'wrong' })
@@ -84,6 +84,10 @@ export function FindMode({ data, session, onFinish, onQuit }: ModeProps) {
     answer(hit.road.ref, { x: hit.px, y: hit.py })
   }
 
+  const allHighlights: Record<string, Highlight> = { ...highlights }
+  for (const s of solved) allHighlights[s.ref] = 'correct'
+  const allShields = [...solved, ...shields]
+
   return (
     <div className="game">
       <HUD
@@ -102,7 +106,7 @@ export function FindMode({ data, session, onFinish, onQuit }: ModeProps) {
           </div>
         }
       />
-      <MapView ref={mapRef} data={data} tier={session.tier} highlights={highlights} shields={shields} onTap={onTap}>
+      <MapView ref={mapRef} data={data} tier={session.tier} highlights={allHighlights} shields={allShields} onTap={onTap}>
         {feedback && <div className={'feedback ' + (feedback.ok ? 'feedback-ok' : 'feedback-bad')}>{feedback.text}</div>}
         {toast && <div className="toast">{toast}</div>}
       </MapView>

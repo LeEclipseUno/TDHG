@@ -20,6 +20,7 @@ export function QuizMode({ data, session, onFinish, onQuit }: ModeProps) {
   const [phase, setPhase] = useState<'ask' | 'reveal'>('ask')
   const [qStart, setQStart] = useState(() => Date.now())
   const [chosen, setChosen] = useState<string | null>(null)
+  const [solved, setSolved] = useState<Road[]>([]) // correct answers stay green for the whole round
   const now = useNow(true)
   const limitMs = session.timer ? TIME_LIMITS.quiz * 1000 : 0
   const remaining = limitMs ? Math.max(0, qStart + limitMs - now) : 0
@@ -37,6 +38,7 @@ export function QuizMode({ data, session, onFinish, onQuit }: ModeProps) {
     const points = ok ? 100 + timeBonus(remaining, limitMs) + streakBonus(results) : 0
     setResults((r) => [...r, { label: q.road.ref, grade: ok ? 'good' : 'bad', points, ms: Date.now() - qStart, detail: ok ? undefined : pick ? t('youPicked', { ref: pick.ref }) : t('timeUp') }])
     setChosen(pick?.ref ?? '')
+    if (ok) setSolved((s) => [...s, q.road])
     setPhase('reveal')
   }
 
@@ -62,9 +64,11 @@ export function QuizMode({ data, session, onFinish, onQuit }: ModeProps) {
     phase + i,
   )
 
-  const highlights: Record<string, Highlight> = { [q.road.ref]: phase === 'ask' ? 'active' : chosen === q.road.ref ? 'correct' : 'wrong' }
-  // Only a correct answer reveals the sign on the map.
-  const shields: PlacedShield[] = phase === 'reveal' && chosen === q.road.ref ? [{ ref: q.road.ref, x: q.road.anchor[0], y: q.road.anchor[1], state: 'correct' }] : []
+  const highlights: Record<string, Highlight> = {}
+  for (const r of solved) highlights[r.ref] = 'correct'
+  highlights[q.road.ref] = phase === 'ask' ? 'active' : chosen === q.road.ref ? 'correct' : 'wrong'
+  // Only correct answers get their sign on the map, and they keep it for the rest of the round.
+  const shields: PlacedShield[] = solved.map((r) => ({ ref: r.ref, x: r.anchor[0], y: r.anchor[1], state: 'correct' }))
 
   return (
     <div className="game">

@@ -129,7 +129,9 @@ export function DragMode({ data, session, onFinish, onQuit }: ModeProps) {
     for (const r of items) if (!placed[r.ref]) shields.push({ ref: r.ref, x: r.anchor[0], y: r.anchor[1], state: 'wrong' })
   }
   if (flash?.shield) shields.push(flash.shield)
-  const highlights: Record<string, Highlight> = { ...(flash?.highlights ?? {}) }
+  const highlights: Record<string, Highlight> = {}
+  for (const r of items) if (placed[r.ref]) highlights[r.ref] = 'correct'
+  Object.assign(highlights, flash?.highlights ?? {})
   if (phase === 'reveal') for (const r of items) if (!placed[r.ref]) highlights[r.ref] = 'wrong'
 
   const remainingItems = items.filter((r) => !placed[r.ref])

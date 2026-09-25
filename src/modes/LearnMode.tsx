@@ -35,6 +35,7 @@ export function LearnMode({ data, settings, onExit }: Props) {
   const [guess, setGuess] = useState<{ x: number; y: number } | null>(null)
   const [hitShield, setHitShield] = useState<PlacedShield | null>(null)
   const [outcome, setOutcome] = useState<{ rating: Rating; state: CardState; correct: boolean } | null>(null)
+  const [solved, setSolved] = useState<Road[]>([]) // correctly answered roads stay green during the session
   const [toast, showToast] = useToast()
   const now = useNow(phase === 'ask', 500)
 
@@ -53,6 +54,7 @@ export function LearnMode({ data, settings, onExit }: Props) {
     const rating = ratingFor(correct, Date.now() - qStart)
     const state = applyReview(statesRef.current, card, rating)
     setOutcome({ rating, state, correct })
+    if (correct && road && !solved.includes(road)) setSolved((s) => [...s, road])
     setGrades((g) => [...g, gradeOf(rating)])
     setPhase('reveal')
     if (rating === 1) setQueue((q) => [...q, card]) // relearn at the end of this session
@@ -108,6 +110,11 @@ export function LearnMode({ data, settings, onExit }: Props) {
   // ---- map overlays ----
   const highlights: Record<string, Highlight> = {}
   const shields: PlacedShield[] = []
+  for (const r of solved) {
+    if (r.ref === road?.ref) continue
+    highlights[r.ref] = 'correct'
+    shields.push({ ref: r.ref, x: r.anchor[0], y: r.anchor[1], state: 'correct' })
+  }
   const markers: Marker[] = []
   const lines: [number, number, number, number][] = []
   if (road) {
