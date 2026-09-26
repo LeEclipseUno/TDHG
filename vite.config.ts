@@ -15,6 +15,9 @@ function serviceWorkerAssets(): Plugin {
     closeBundle() {
       const dist = path.resolve('dist')
       buildRoadPages(dist)
+      // AdSense ownership file, from the client id in .env.production (ca-pub-123 -> pub-123).
+      const pub = (process.env.VITE_ADSENSE_CLIENT ?? '').replace(/^ca-/, '')
+      if (pub) fs.writeFileSync(path.join(dist, 'ads.txt'), `google.com, ${pub}, DIRECT, f08c47fec0942fa0\n`)
       const html = fs.readFileSync(path.join(dist, 'index.html'), 'utf8')
       const built = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map((m) => m[1]).filter((u) => u.startsWith(base) && /\.(js|css)$/.test(u))
       const fonts = fs.readdirSync(path.join(dist, 'fonts')).map((f) => `${base}fonts/${f}`)

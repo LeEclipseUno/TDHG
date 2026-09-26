@@ -132,6 +132,11 @@ export const IconLock = (p: P) => (
   </svg>
 )
 
+export const IconFreeze = (p: P) => (
+  <svg {...line} {...p} width="14" height="14" strokeWidth="2">
+    <path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9M12 3l-2.5 2.5M12 3l2.5 2.5M12 21l-2.5-2.5M12 21l2.5-2.5" />
+  </svg>
+)
 export const IconGoogle = (p: P) => (
   <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden {...p}>
     <path fill="#4285F4" d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.9h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.4z" />
@@ -230,6 +235,18 @@ export const PictRoute = (p: P) => (
     <circle cx="38" cy="10" r="5" fill="#fff" stroke="none" />
     <path d="M10 33c0-10 6-12 14-12s14-2 14-11" strokeWidth="3" strokeDasharray="5 4" />
     <rect x="18" y="19" width="14" height="8" rx="1.5" fill="#c8102e" stroke="#fff" strokeWidth="1.4" />
+  </svg>
+)
+export const PictDistance = (p: P) => (
+  <svg {...pict} {...p}>
+    <circle cx="9" cy="36" r="4.5" fill="#fff" stroke="none" />
+    <circle cx="39" cy="12" r="4.5" fill="#fff" stroke="none" />
+    <path d="M9 31c0-9 6-11 15-11s15-2 15-8" strokeWidth="3" />
+    <path d="M6 44h36" strokeWidth="2.4" />
+    <path d="M10 41v6M17 42v4M24 41v6M31 42v4M38 41v6" strokeWidth="2" />
+    <text x="24" y="15" textAnchor="middle" fontFamily="'Barlow Condensed', system-ui, sans-serif" fontSize="12" fontWeight="800" fill="#fff" stroke="none">
+      km?
+    </text>
   </svg>
 )
 export const PictStats = (p: P) => (

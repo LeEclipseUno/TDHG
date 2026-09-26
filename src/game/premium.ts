@@ -2,7 +2,7 @@
 import type { ModeId } from './session'
 import type { Account } from './backend'
 
-export const PLUS_MODES: ModeId[] = ['junction', 'exit', 'route']
+export const PLUS_MODES: ModeId[] = ['junction', 'exit', 'route', 'distance']
 
 const KEY = 'tdhg:v1:plus'
 

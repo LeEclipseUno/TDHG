@@ -8,7 +8,9 @@ import { disableReminder, enableReminder, getReminder, pushSupported } from '../
 import { dailyMode, dailyNumber, getDailyResult, getStreak, msUntilNextDaily } from '../game/daily'
 import { season, SEASON_TEXT } from '../game/season'
 import { Board, Matrix } from './widgets'
-import { IconGoogle, IconLock, IconReplay, IconShare, IconSignArrow, PictDrag, PictExit, PictFind, PictGroup, PictJunction, PictLearn, PictQuiz, PictRoute, PictStats, SeasonIcon } from './icons'
+import { IconGoogle, IconLock, IconReplay, IconShare, IconSignArrow, PictDistance, PictDrag, PictExit, PictFind, PictGroup, PictJunction, PictLearn, PictQuiz, PictRoute, PictStats, SeasonIcon, IconFreeze } from './icons'
+import { AdSlot } from './AdSlot'
+import { THEME_NAMES, type ThemeName } from '../map/theme'
 import { ONLINE, type Account } from '../game/backend'
 import DriftMap from '../map/DriftMap'
 import { useNow } from '../game/hooks'
@@ -34,7 +36,7 @@ export interface HomeProps {
   onArchive: () => void
 }
 
-const PICTS: Record<ModeId, typeof PictDrag> = { drag: PictDrag, find: PictFind, junction: PictJunction, quiz: PictQuiz, exit: PictExit, route: PictRoute }
+const PICTS: Record<ModeId, typeof PictDrag> = { drag: PictDrag, find: PictFind, junction: PictJunction, quiz: PictQuiz, exit: PictExit, route: PictRoute, distance: PictDistance }
 
 function Seg<T extends string>({ value, options, onChange, label, wide = false }: { value: T; options: { v: T; label: string; title?: string }[]; onChange: (v: T) => void; label: string; wide?: boolean }) {
   return (
@@ -72,8 +74,10 @@ function LangPost({ lang, onChange, label }: { lang: Lang; onChange: (l: Lang) =
   }
   return (
     <div className="home-lang">
-      <svg className="lang-post" width="140" height="54" viewBox="0 0 140 54" role="group" aria-label={label}>
-        <rect x="60" y="46" width="20" height="8" rx="1.5" fill="#8d949c" />
+      <svg className="lang-post" width="140" height="66" viewBox="0 0 140 66" role="group" aria-label={label}>
+        <rect x="65" y="20" width="10" height="46" rx="2" fill="#7f868e" />
+        <rect x="65" y="20" width="4" height="46" rx="2" fill="#a2a8ae" />
+        <rect x="8" y="44" width="124" height="4" rx="1" fill="#5c636b" />
         <g transform="translate(2 0)">{plate('nl', 0, 'Li')}</g>
         <g transform="translate(74 0)">{plate('en', 0, 'Re')}</g>
       </svg>
@@ -195,6 +199,11 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
               )}
               <span className="daily-streak">
                 {t('streak')} <StreakPosts count={streak.count} />
+                {plus && streak.freeze === new Date().toISOString().slice(0, 7) && (
+                  <small className="frozen-tag" title={t('freezeUsed')}>
+                    <IconFreeze /> {t('frozen')}
+                  </small>
+                )}
                 {streak.best > 1 && (
                   <small>
                     {t('best')} {streak.best}
@@ -291,6 +300,8 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
           })}
         </Board>
 
+        <AdSlot place="home" plus={plus} />
+
         {!plus && (
           <button type="button" className="google-row plus-row" onClick={onPlus}>
             <span className="google-row-icon plus-row-icon">+</span>
@@ -354,6 +365,12 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
             <span className="setting-label">{t('variant')}</span>
             <Seg<Variant> wide label={t('variant')} value={settings.variant} onChange={(variant) => onSettings({ ...settings, variant })} options={VARIANTS.map((v) => ({ v, label: t(`variant_${v}`) }))} />
             <span className="setting-hint">{t(`variantHint_${settings.variant}`)}</span>
+          </div>
+          <div className="setting">
+            <span className="setting-label">
+              {t('theme')} {!plus && <span className="locked-tag">{t('plusTag')}</span>}
+            </span>
+            <Seg<ThemeName> wide label={t('theme')} value={plus ? settings.theme : 'signage'} onChange={(theme) => (plus || theme === 'signage' ? onSettings({ ...settings, theme }) : onPlus())} options={THEME_NAMES.map((v) => ({ v, label: t(`theme_${v}`) }))} />
           </div>
           {ONLINE && pushSupported() && (
             <div className="setting">

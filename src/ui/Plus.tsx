@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { GameData } from '../data'
 import { useLang } from '../i18n'
 import { Board } from './widgets'
-import { IconGoogle, IconMenu, IconReplay, PictLearn, PictExit, PictJunction, PictRoute } from './icons'
+import { IconGoogle, IconMenu, IconReplay, PictLearn, PictExit, PictJunction, PictRoute, PictDistance, PictStats } from './icons'
 import { Backdrop } from './Backdrop'
 import { ONLINE, type Account } from '../game/backend'
 import { checkoutUrl, hasPlus, PLUS_PRICE } from '../game/premium'
@@ -53,6 +53,18 @@ export function Plus({ data, account, onSignIn, onRefresh, onHome }: PlusProps) 
                   <PictLearn />
                 </span>
                 {t('plusFeat3')}
+              </li>
+              <li>
+                <span className="plus-pict">
+                  <PictDistance />
+                </span>
+                {t('plusFeat5')}
+              </li>
+              <li>
+                <span className="plus-pict">
+                  <PictStats />
+                </span>
+                {t('plusFeat6')}
               </li>
               <li>
                 <span className="plus-pict">

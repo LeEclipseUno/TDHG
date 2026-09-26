@@ -43,10 +43,11 @@ export function merge(local: State, remote: State): State {
       for (const [day, v] of Object.entries(a)) if (!m[day] || m[day].score < v.score) m[day] = v
       out[k] = JSON.stringify(m)
     } else if (k === PREFIX + 'streak') {
-      const a = json<{ count: number; last: string; best: number }>(l, { count: 0, last: '', best: 0 })
-      const b = json<{ count: number; last: string; best: number }>(r, { count: 0, last: '', best: 0 })
+      const a = json<{ count: number; last: string; best: number; freeze?: string }>(l, { count: 0, last: '', best: 0 })
+      const b = json<{ count: number; last: string; best: number; freeze?: string }>(r, { count: 0, last: '', best: 0 })
       const later = a.last >= b.last ? a : b
-      out[k] = JSON.stringify({ count: a.last === b.last ? Math.max(a.count, b.count) : later.count, last: later.last, best: Math.max(a.best, b.best) })
+      const freeze = [a.freeze, b.freeze].filter(Boolean).sort().pop()
+      out[k] = JSON.stringify({ count: a.last === b.last ? Math.max(a.count, b.count) : later.count, last: later.last, best: Math.max(a.best, b.best), ...(freeze ? { freeze } : {}) })
     } else if (k.startsWith(PREFIX + 'best:')) {
       const a = json<{ score: number }>(l, { score: 0 })
       const b = json<{ score: number }>(r, { score: 0 })

@@ -19,6 +19,8 @@ import { QuizMode } from './modes/QuizMode'
 import { LearnMode } from './modes/LearnMode'
 import { ExitMode } from './modes/ExitMode'
 import { RouteMode } from './modes/RouteMode'
+import { DistanceMode } from './modes/DistanceMode'
+import { ThemeCtx } from './map/theme'
 import { recordSession } from './game/history'
 import { setSoundEnabled } from './game/sound'
 import { getAccount, ONLINE, signInWithGoogle, signOut, type Account } from './game/backend'
@@ -30,7 +32,7 @@ interface BeforeInstallPromptEvent extends Event {
 
 type Screen = { kind: 'home' } | { kind: 'learn' } | { kind: 'stats' } | { kind: 'about' } | { kind: 'plus' } | { kind: 'archive' } | { kind: 'groups'; joinCode?: string } | { kind: 'game'; session: Session } | { kind: 'results'; session: Session; newBest: boolean; streak: number }
 
-const MODE_COMPONENTS = { drag: DragMode, find: FindMode, junction: JunctionMode, quiz: QuizMode, exit: ExitMode, route: RouteMode } as const
+const MODE_COMPONENTS = { drag: DragMode, find: FindMode, junction: JunctionMode, quiz: QuizMode, exit: ExitMode, route: RouteMode, distance: DistanceMode } as const
 
 /** Deep links: #daily, #find, #quiz, #junction, #drag, #exit, #route, #learn, #stats, #about, #groups, #join-CODE */
 function readHash(): string {
@@ -197,7 +199,8 @@ function Shell() {
   }, [data])
 
   const wrap = (key: string, node: ReactNode) => (
-    <div className="screen" key={key}>
+    <ThemeCtx.Provider value={plus ? settings.theme : 'signage'} key={key}>
+    <div className="screen">
       {!online && (
         <div role="status" className="offline-bar">
           {t('offline')}
@@ -210,6 +213,7 @@ function Shell() {
       )}
       {node}
     </div>
+    </ThemeCtx.Provider>
   )
 
   if (error) return <div className="loading">{t('loadError')}</div>
@@ -234,7 +238,7 @@ function Shell() {
   if (screen.kind === 'groups') return wrap('groups', <Groups data={data} onHome={() => go('home')} joinCode={screen.joinCode} />)
   if (screen.kind === 'results') {
     const again = () => (screen.session.dailyNumber ? void playDaily(screen.session.dailyNumber) : play(screen.session.mode))
-    return wrap('results', <Results data={data} session={screen.session} newBest={screen.newBest} streak={screen.streak} onAgain={again} onHome={() => go('home')} />)
+    return wrap('results', <Results data={data} session={screen.session} newBest={screen.newBest} streak={screen.streak} plus={plus} onAgain={again} onHome={() => go('home')} />)
   }
   return wrap(
     'home',

@@ -1,4 +1,5 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import { forwardRef, useCallback, useContext, useEffect, useImperativeHandle, useRef, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import { SIGNAGE, THEMES, ThemeCtx, type Palette } from './theme'
 import { tierIncludes, type Bounds, type GameData, type Road, type RoadKind, type Tier } from '../data'
 import { IconFit, IconMinus, IconPlus } from '../ui/icons'
 
@@ -105,21 +106,10 @@ const PULSE_MS = 700
 const LINE_MS = 700
 const FLY_MS = 1300
 const MIN_FLY_EXTENT = 4000 // metres
-export const COLORS = {
-  bg: '#091b2c',
-  land: '#1b4a8d',
-  landEdge: '#2f6fd0',
-  abroad: '#15243a',
-  abroadEdge: '#22344d',
-  A: '#f6f8fc',
-  N: '#ffd23f',
-  P: '#8aa4c8',
-  correct: '#34d17c',
-  wrong: '#ff4d5e',
-  active: '#ef712f',
-}
-/** Light palette for the menu backdrop: paper map in the brand colours. */
-export const LIGHT: typeof COLORS = {
+export const COLORS: Palette = SIGNAGE
+/** Light palette for the share card: paper map in the brand colours. */
+export const LIGHT: Palette = {
+  ...SIGNAGE,
   bg: '#f3f5f9',
   land: '#dbe5f1',
   landEdge: '#b7c8dd',
@@ -128,9 +118,12 @@ export const LIGHT: typeof COLORS = {
   A: '#091b2c',
   N: '#ef712f',
   P: '#9fb1c8',
-  correct: '#34d17c',
-  wrong: '#ff4d5e',
-  active: '#ef712f',
+  text: '#091b2c',
+  glow: 'rgba(120,160,220,0.3)',
+  border: 'rgba(9,27,44,0.25)',
+  structure: '#7f8ea6',
+  casing: '#f3f5f9',
+  ripple: '',
 }
 
 const easeOutCubic = (p: number) => 1 - Math.pow(1 - p, 3)
@@ -256,6 +249,9 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const propsRef = useRef(props)
   propsRef.current = props
+  const theme = useContext(ThemeCtx)
+  const themeRef = useRef(theme)
+  themeRef.current = theme
   const sizeRef = useRef({ w: 1, h: 1 })
   const viewRef = useRef<View>({ cx: 0, cy: 0, scale: 1 })
   const minScaleRef = useRef(0.001)
@@ -270,6 +266,7 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
   const tapRef = useRef<{ id: number; x: number; y: number; t: number; moved: boolean } | null>(null)
   const interactive = props.interactive !== false
   const patternRef = useRef<CanvasPattern | null>(null)
+  const patternKeyRef = useRef<string | null>(null)
 
   const clampView = useCallback((v: View): View => {
     const w = propsRef.current.data.world
@@ -314,7 +311,7 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
     }
     const { data, tier, highlights = {}, shields = [], markers = [], lines = [], pulses = [], paths = [], showJunctions, hideRoads } = propsRef.current
     const labels = propsRef.current.labels !== false
-    const C = propsRef.current.palette === 'light' ? LIGHT : COLORS
+    const C = propsRef.current.palette === 'light' ? LIGHT : THEMES[themeRef.current]
     const { w, h } = sizeRef.current
     const dpr = window.devicePixelRatio || 1
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
@@ -326,14 +323,16 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
 
     ctx.fillStyle = C.bg
     ctx.fillRect(0, 0, w, h)
-    if (!patternRef.current) {
-      // Faint wave texture for the water, built once.
+    if (patternKeyRef.current !== C.ripple) {
+      // Faint wave texture for the water, built once per theme.
+      patternKeyRef.current = C.ripple
+      patternRef.current = null
       const pc = document.createElement('canvas')
       pc.width = 48
       pc.height = 48
       const pctx = pc.getContext('2d')
-      if (pctx) {
-        pctx.strokeStyle = 'rgba(255,255,255,0.045)'
+      if (pctx && C.ripple) {
+        pctx.strokeStyle = C.ripple
         pctx.lineWidth = 1.2
         for (const oy of [10, 34]) {
           pctx.beginPath()
@@ -345,7 +344,7 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
         patternRef.current = ctx.createPattern(pc, 'repeat')
       }
     }
-    if (patternRef.current && propsRef.current.palette !== 'light') {
+    if (patternRef.current && C.ripple && propsRef.current.palette !== 'light') {
       ctx.fillStyle = patternRef.current
       ctx.fillRect(0, 0, w, h)
     }
@@ -383,7 +382,7 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
     }
     fillLand(data.abroad, C.abroad, C.abroadEdge) // neighbours, muted, so the country does not float in the void
     // Shallow water glow along the coast, then the land itself.
-    fillLand(data.land, C.land, C.landEdge, { color: 'rgba(90,150,230,0.28)', width: Math.min(16, 5 + Math.log2(scale / minScaleRef.current) * 1.6) })
+    fillLand(data.land, C.land, C.landEdge, { color: C.glow, width: Math.min(16, 5 + Math.log2(scale / minScaleRef.current) * 1.6) })
 
     const z = Math.log2(scale / minScaleRef.current)
     // Line widths: a zoom-dependent minimum in px, or the real road width once zoomed in far enough.
@@ -454,7 +453,7 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
         trace(bl.l)
       }
       ctx.setLineDash([6, 5])
-      ctx.strokeStyle = 'rgba(255,255,255,0.28)'
+      ctx.strokeStyle = C.border
       ctx.lineWidth = 1
       ctx.stroke()
       ctx.setLineDash([])
@@ -522,10 +521,10 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
         ctx.beginPath()
         trace(st.l)
         if (st.t === 'b') {
-          ctx.strokeStyle = '#05101f'
+          ctx.strokeStyle = C.casing
           ctx.lineWidth = widths.A + 8
           ctx.stroke()
-          ctx.strokeStyle = '#cfd8e6'
+          ctx.strokeStyle = C.structure
           ctx.lineWidth = widths.A + 4
           ctx.stroke()
           ctx.strokeStyle = C.A
@@ -533,7 +532,7 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
           ctx.stroke()
         } else {
           ctx.setLineDash([10, 7])
-          ctx.strokeStyle = '#cfd8e6'
+          ctx.strokeStyle = C.structure
           ctx.lineWidth = widths.A + 4
           ctx.stroke()
           ctx.setLineDash([])
@@ -558,7 +557,7 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
         if (sx < -60 || sx > w + 60 || sy < -20 || sy > h + 20) continue
         ctx.beginPath()
         ctx.arc(sx, sy, pl.c ? 3.5 : 2.5, 0, Math.PI * 2)
-        ctx.fillStyle = '#fff'
+        ctx.fillStyle = C.text
         ctx.fill()
         ctx.strokeStyle = C.bg
         ctx.lineWidth = 1.5
@@ -566,8 +565,10 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
         ctx.lineWidth = 3
         ctx.strokeStyle = C.bg
         ctx.strokeText(pl.n, sx + 7, sy)
-        ctx.fillStyle = pl.c ? '#fff' : 'rgba(255,255,255,0.8)'
+        ctx.fillStyle = C.text
+        ctx.globalAlpha = pl.c ? 1 : 0.8
         ctx.fillText(pl.n, sx + 7, sy)
+        ctx.globalAlpha = 1
       }
     }
 
@@ -814,10 +815,10 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
     return () => canvas.removeEventListener('wheel', onWheel)
   }, [zoomAt, interactive])
 
-  // Redraw when overlays change
+  // Redraw when overlays or the theme change
   useEffect(() => {
     requestRedraw()
-  }, [props.highlights, props.shields, props.markers, props.lines, props.pulses, props.paths, props.showJunctions, props.hideRoads, props.tier, requestRedraw])
+  }, [theme, props.highlights, props.shields, props.markers, props.lines, props.pulses, props.paths, props.showJunctions, props.hideRoads, props.tier, requestRedraw])
 
   useEffect(
     () => () => {

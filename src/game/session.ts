@@ -1,10 +1,11 @@
 import type { Exit, GameData, Junction, Road, Tier } from '../data'
 import { roadsForTier } from '../data'
+import { THEME_NAMES, type ThemeName } from '../map/theme'
 import { translate, type Lang } from '../i18n'
 import type { Deck } from './learn'
 
-export type ModeId = 'drag' | 'find' | 'junction' | 'quiz' | 'exit' | 'route'
-export const MODES: ModeId[] = ['drag', 'find', 'junction', 'quiz', 'exit', 'route']
+export type ModeId = 'drag' | 'find' | 'junction' | 'quiz' | 'exit' | 'route' | 'distance'
+export const MODES: ModeId[] = ['drag', 'find', 'junction', 'quiz', 'exit', 'distance', 'route']
 export type Variant = 'normal' | 'nozoom' | 'blind' | 'blitz'
 export const VARIANTS: Variant[] = ['normal', 'nozoom', 'blind', 'blitz']
 /** Score multiplier for the harder variants. */
@@ -31,6 +32,8 @@ export interface Settings {
   variant: Variant
   /** Province code, or '' for the whole country. */
   province: string
+  /** Map look; paper and night need Plus. */
+  theme: ThemeName
 }
 
 export interface Session {
@@ -56,7 +59,7 @@ export interface Session {
 
 export const QUESTION_COUNT = 10
 /** Seconds. drag is a total budget, the others are per question. */
-export const TIME_LIMITS: Record<ModeId, number> = { find: 20, quiz: 15, junction: 30, drag: 180, exit: 25, route: 0 }
+export const TIME_LIMITS: Record<ModeId, number> = { find: 20, quiz: 15, junction: 30, drag: 180, exit: 25, route: 0, distance: 25 }
 export const HINT_COST = 30
 
 export function mulberry32(seed: number): () => number {
@@ -109,7 +112,7 @@ export function newSession(mode: ModeId, s: Settings, challenge?: Challenge, dai
     return { mode: challenge.mode, tier: challenge.tier, timer: challenge.timer, daily: false, seed: challenge.seed, variant: challenge.variant, province: challenge.province, challenge: challenge.score, startedAt: Date.now(), finishedAt: 0, results: [] }
   }
   const seed = s.daily ? dailySeed(mode, s.tier) : Math.floor(Math.random() * 2 ** 31)
-  return { mode, tier: s.tier, timer: s.timer, daily: s.daily, seed, variant: mode === 'route' || mode === 'drag' ? (s.variant === 'blitz' ? 'normal' : s.variant) : s.variant, province: mode === 'route' ? '' : s.province, startedAt: Date.now(), finishedAt: 0, results: [] }
+  return { mode, tier: s.tier, timer: s.timer, daily: s.daily, seed, variant: mode === 'route' || mode === 'drag' || mode === 'distance' ? (s.variant === 'blitz' ? 'normal' : s.variant) : s.variant, province: mode === 'route' ? '' : s.province, startedAt: Date.now(), finishedAt: 0, results: [] }
 }
 
 export interface Challenge {
@@ -260,12 +263,12 @@ export function loadSettings(): Settings {
     if (raw) {
       const p = JSON.parse(raw) as Partial<Settings>
       const tier: Tier = p.tier === 'AN' || p.tier === 'N' ? p.tier : (p.tier as string) === 'ALL' ? 'AN' : 'A'
-      return { tier, timer: p.timer !== false, daily: p.daily === true, learnDeck: p.learnDeck === 'junctions' ? 'junctions' : 'roads', sound: p.sound !== false, variant: VARIANTS.includes(p.variant as Variant) ? (p.variant as Variant) : 'normal', province: typeof p.province === 'string' && /^[A-Z]{2}$/.test(p.province) ? p.province : '' }
+      return { tier, timer: p.timer !== false, daily: p.daily === true, learnDeck: p.learnDeck === 'junctions' ? 'junctions' : 'roads', sound: p.sound !== false, variant: VARIANTS.includes(p.variant as Variant) ? (p.variant as Variant) : 'normal', province: typeof p.province === 'string' && /^[A-Z]{2}$/.test(p.province) ? p.province : '', theme: THEME_NAMES.includes(p.theme as ThemeName) ? (p.theme as ThemeName) : 'signage' }
     }
   } catch {
     /* ignore */
   }
-  return { tier: 'A', timer: true, daily: false, learnDeck: 'roads', sound: true, variant: 'normal', province: '' }
+  return { tier: 'A', timer: true, daily: false, learnDeck: 'roads', sound: true, variant: 'normal', province: '', theme: 'signage' }
 }
 
 export function saveSettings(s: Settings) {

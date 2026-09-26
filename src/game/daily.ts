@@ -1,6 +1,7 @@
 // The daily challenge: one numbered puzzle per day, the same for everyone, plus the play streak.
 import type { Tier } from '../data'
 import { dateKey, marksLine, type ModeId, type Session } from './session'
+import { hasPlus } from './premium'
 
 export const marksOf = (s: Session) => marksLine(s)
 
@@ -82,7 +83,11 @@ export interface Streak {
   count: number
   last: string // date key of the last daily played
   best: number
+  /** Month (YYYY-MM) in which the Plus streak freeze was used, if any. */
+  freeze?: string
 }
+
+const monthOf = (key: string) => key.slice(0, 7)
 
 export function getStreak(): Streak {
   try {
@@ -91,8 +96,19 @@ export function getStreak(): Streak {
     // A missed day breaks the streak, but we only reset when reading so the number shown is honest.
     const today = dateKey()
     const yesterday = dateKey(new Date(Date.now() - DAY))
-    if (s.last !== today && s.last !== yesterday) return { count: 0, last: s.last, best: s.best }
-    return s
+    if (s.last === today || s.last === yesterday) return s
+    // Plus: one missed day per month is forgiven. The streak is moved up to yesterday and the freeze is spent.
+    const twoAgo = dateKey(new Date(Date.now() - 2 * DAY))
+    if (s.last === twoAgo && s.freeze !== monthOf(today) && hasPlus({ signedIn: false })) {
+      const thawed: Streak = { ...s, last: yesterday, freeze: monthOf(today) }
+      try {
+        localStorage.setItem(STREAK_KEY, JSON.stringify(thawed))
+      } catch {
+        /* ignore */
+      }
+      return thawed
+    }
+    return { count: 0, last: s.last, best: s.best, freeze: s.freeze }
   } catch {
     return { count: 0, last: '', best: 0 }
   }
@@ -104,7 +120,7 @@ function bumpStreak(): Streak {
   if (s.last === today) return s
   const yesterday = dateKey(new Date(Date.now() - DAY))
   const count = s.last === yesterday ? s.count + 1 : 1
-  const next: Streak = { count, last: today, best: Math.max(s.best, count) }
+  const next: Streak = { count, last: today, best: Math.max(s.best, count), freeze: s.freeze }
   try {
     localStorage.setItem(STREAK_KEY, JSON.stringify(next))
   } catch {

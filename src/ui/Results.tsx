@@ -14,12 +14,14 @@ import { StreakPosts } from './Home'
 import { createShare, ONLINE, submitDaily, type Percentile } from '../game/backend'
 import { challengeParam } from '../game/session'
 import { dailyNumber } from '../game/daily'
+import { AdSlot } from './AdSlot'
 
 export interface ResultsProps {
   data: GameData
   session: Session
   newBest: boolean
   streak: number
+  plus: boolean
   onAgain: () => void
   onHome: () => void
 }
@@ -29,7 +31,7 @@ const STEP_MS = 160
 const COUNT_MS = 1100
 const RANK_HAPTIC: Record<string, number[]> = { rank_4: [30, 60, 30, 60, 90], rank_3: [30, 60, 30], rank_2: [40], rank_1: [90] }
 
-export function Results({ data, session, newBest, streak, onAgain, onHome }: ResultsProps) {
+export function Results({ data, session, newBest, streak, plus, onAgain, onHome }: ResultsProps) {
   const { t, lang } = useLang()
   const sum = summarize(session)
   const [copied, setCopied] = useState(false)
@@ -203,6 +205,7 @@ export function Results({ data, session, newBest, streak, onAgain, onHome }: Res
           </div>
         </Board>
 
+        <AdSlot place="results" plus={plus} />
         <ul className="results-list">
           {session.results.map((r, i) => {
             const road = data.byRef.get(r.label)

@@ -1,6 +1,6 @@
-import { useEffect, useRef } from 'react'
+import { useContext, useEffect, useRef } from 'react'
 import type { GameData } from '../data'
-import { COLORS } from './MapView'
+import { THEMES, ThemeCtx } from './theme'
 
 interface Props {
   data: GameData
@@ -17,6 +17,8 @@ const LEG_MS = 14000
 /** Menu backdrop: the country rendered once to a bitmap at a fixed zoom, then only panned. */
 export default function DriftMap({ data, focus, zoom = 2.3 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const theme = useContext(ThemeCtx)
+  const COLORS = THEMES[theme]
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -169,7 +171,7 @@ export default function DriftMap({ data, focus, zoom = 2.3 }: Props) {
       cancelAnimationFrame(raf)
       ro.disconnect()
     }
-  }, [data, focus, zoom])
+  }, [data, focus, zoom, theme])
 
   return <canvas ref={canvasRef} className="drift-canvas" />
 }
