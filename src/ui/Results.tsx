@@ -6,6 +6,7 @@ import MapView, { type Highlight, type Marker } from '../map/MapView'
 import { Shield } from './Shield'
 import { Board, Matrix, RouteStrip } from './widgets'
 import { IconChat, IconCheck, IconClock, IconCross, IconMenu, IconReplay, IconShare, IconTilde } from './icons'
+import { Backdrop } from './Backdrop'
 import { haptic, sfx } from '../game/sound'
 import { useNow } from '../game/hooks'
 import { renderCard } from '../game/card'
@@ -83,7 +84,7 @@ export function Results({ data, session, newBest, streak, onAgain, onHome }: Res
     }
   })
 
-  const text = shareText(session, lang, preview ?? url, streak)
+  const text = shareText(session, lang, preview ?? url)
 
   const canShareFiles = typeof navigator.share === 'function' && typeof navigator.canShare === 'function'
 
@@ -104,7 +105,7 @@ export function Results({ data, session, newBest, streak, onAgain, onHome }: Res
           }
         }
       }
-      const finalText = shareText(session, lang, link ?? url, streak)
+      const finalText = shareText(session, lang, link ?? url)
       if (navigator.share) {
         try {
           if (file && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], text: finalText })
@@ -130,6 +131,7 @@ export function Results({ data, session, newBest, streak, onAgain, onHome }: Res
 
   return (
     <div className="results">
+      <Backdrop data={data} />
       <div className="results-inner">
         <Board className="results-board">
           <div className="board-title">{session.dailyNumber ? `Wegenkenner #${session.dailyNumber}` : t('results')}</div>

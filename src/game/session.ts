@@ -221,23 +221,10 @@ export function rankKey(accuracy: number): 'rank_4' | 'rank_3' | 'rank_2' | 'ran
   return 'rank_1'
 }
 
-export function shareText(s: Session, lang: Lang, url: string, streak = 0): string {
+export function shareText(s: Session, lang: Lang, url: string): string {
   const sum = summarize(s)
-  const dot = ' · '
-  const modeName = translate(lang, `mode_${s.mode}` as const)
-  const tierName = translate(lang, `tier_${s.tier}_short` as const)
-  const daily = s.daily ? dot + dateKey() : ''
-  const timer = s.timer ? '' : dot + translate(lang, 'timer') + ' ' + translate(lang, 'timerOff').toLowerCase()
-  const variant = (s.variant !== 'normal' ? dot + translate(lang, `variant_${s.variant}` as const) : '') + (s.province ? dot + translate(lang, `prov_${s.province}` as Parameters<typeof translate>[1]) : '')
-  const vs = s.challenge !== undefined ? dot + `${translate(lang, 'challenger')} ${s.challenge}` : ''
-  const head = s.dailyNumber ? `Wegenkenner #${s.dailyNumber}` + dot + modeName : 'Wegenkenner' + dot + modeName + dot + tierName + daily + timer + variant
-  const streakLine = s.dailyNumber && streak > 1 ? dot + `${translate(lang, 'streak').toLowerCase()} ${streak}` : ''
-  return [
-    head,
-    `${sum.score} ${translate(lang, 'points')}` + dot + `${sum.good}${sum.partial ? `+${sum.partial}` : ''}/${sum.total}` + dot + formatTime(sum.ms) + vs + streakLine,
-    marksLine(s),
-    url.includes('/functions/') ? url : s.dailyNumber ? `${url}#daily` : `${url}?c=${challengeParam(s)}`,
-  ].join('\n')
+  const head = s.dailyNumber ? `Wegenkenner #${s.dailyNumber}` : `Wegenkenner · ${translate(lang, `mode_${s.mode}` as const)}`
+  return [head, `${sum.score} ${translate(lang, 'points')}`, url.includes('/functions/') ? url : s.dailyNumber ? `${url}#daily` : `${url}?c=${challengeParam(s)}`].join('\n')
 }
 
 // ---- persistence ----

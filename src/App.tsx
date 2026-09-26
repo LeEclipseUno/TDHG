@@ -189,7 +189,7 @@ function Shell() {
   }
   if (screen.kind === 'learn') return wrap('learn', <LearnMode data={data} settings={settings} onExit={() => go('home')} />)
   if (screen.kind === 'stats') return wrap('stats', <Stats data={data} onHome={() => go('home')} />)
-  if (screen.kind === 'about') return wrap('about', <About onHome={() => go('home')} />)
+  if (screen.kind === 'about') return wrap('about', <About data={data} onHome={() => go('home')} />)
   if (screen.kind === 'groups') return wrap('groups', <Groups data={data} onHome={() => go('home')} joinCode={screen.joinCode} />)
   if (screen.kind === 'results') {
     const again = () => (screen.session.dailyNumber ? playDaily() : play(screen.session.mode))

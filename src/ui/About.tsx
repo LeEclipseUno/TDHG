@@ -1,12 +1,15 @@
 import { useLang } from '../i18n'
 import { Board } from './widgets'
 import { IconMenu } from './icons'
+import { Backdrop } from './Backdrop'
+import type { GameData } from '../data'
 
 export const REPO_URL = 'https://github.com/LeEclipseUno/TDHG'
-export function About({ onHome }: { onHome: () => void }) {
+export function About({ data, onHome }: { data: GameData; onHome: () => void }) {
   const { t } = useLang()
   return (
     <div className="results">
+      <Backdrop data={data} />
       <div className="results-inner about">
         <Board className="results-board">
           <div className="board-title">{t('about')}</div>
@@ -23,6 +26,9 @@ export function About({ onHome }: { onHome: () => void }) {
             </p>
           </div>
         </Board>
+        <p className="home-footer about-links">
+          <a href="/wegen/">{t('allRoads')}</a> {'·'} <a href="/privacy.html">{t('privacyPage')}</a> {'·'} <a href="/voorwaarden.html">{t('termsPage')}</a>
+        </p>
         <p className="home-footer">
           {t('attribution')} {'·'} CBS {'·'} Natural Earth
         </p>

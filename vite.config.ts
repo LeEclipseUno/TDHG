@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
+import { buildRoadPages } from './scripts/road-pages.mjs'
 
 // The site lives at the root of wegenkenner.nl. Set VITE_BASE=/TDHG/ to build for a plain GitHub Pages project URL instead.
 const base = process.env.VITE_BASE ?? '/'
@@ -13,6 +14,7 @@ function serviceWorkerAssets(): Plugin {
     apply: 'build',
     closeBundle() {
       const dist = path.resolve('dist')
+      buildRoadPages(dist)
       const html = fs.readFileSync(path.join(dist, 'index.html'), 'utf8')
       const built = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map((m) => m[1]).filter((u) => u.startsWith(base) && /\.(js|css)$/.test(u))
       const fonts = fs.readdirSync(path.join(dist, 'fonts')).map((f) => `${base}fonts/${f}`)
