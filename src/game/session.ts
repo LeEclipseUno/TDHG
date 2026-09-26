@@ -234,7 +234,7 @@ export function shareText(s: Session, lang: Lang, url: string, streak = 0): stri
     head,
     `${sum.score} ${translate(lang, 'points')}` + dot + `${sum.good}${sum.partial ? `+${sum.partial}` : ''}/${sum.total}` + dot + formatTime(sum.ms) + vs + streakLine,
     marksLine(s),
-    s.dailyNumber ? `${url}#daily` : `${url}?c=${challengeParam(s)}`,
+    url.includes('/functions/') ? url : s.dailyNumber ? `${url}#daily` : `${url}?c=${challengeParam(s)}`,
   ].join('\n')
 }
 

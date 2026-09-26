@@ -31,6 +31,15 @@ The map data lives in `public/data/` (core roads first, provincial roads, ramps 
 python scripts/build-data.py --refresh
 ```
 
+## Online features (optional)
+
+Friend groups, the daily percentile and personal link previews run on a free Supabase project. Without one the game is fully playable offline.
+
+1. Create a project at supabase.com. In Authentication, Providers, enable "Anonymous sign-ins".
+2. SQL editor: run `supabase/schema.sql`.
+3. Edge function for link previews (needs the Supabase CLI): `supabase functions deploy s --no-verify-jwt`.
+4. Put the project URL and anon key (Settings, API) in `.env` locally, and as repository secrets `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` on GitHub for the deploy.
+
 ## Deploy
 
 The site is served at https://wegenkenner.nl from GitHub Pages. Pushing to `main` runs `.github/workflows/deploy.yml`, which builds the site and publishes it. `public/CNAME` tells GitHub Pages the custom domain; the Vite `base` is `/`.

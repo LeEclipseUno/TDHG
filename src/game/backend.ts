@@ -1,0 +1,146 @@
+// Online features on Supabase: friend groups, daily percentile, share previews.
+// Everything degrades silently when the project is not configured (no env vars) or the player is offline.
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+
+const URL = import.meta.env.VITE_SUPABASE_URL as string | undefined
+const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+export const ONLINE = Boolean(URL && KEY)
+
+let client: SupabaseClient | null = null
+let session: Promise<boolean> | null = null
+
+function sb(): SupabaseClient | null {
+  if (!ONLINE) return null
+  if (!client) client = createClient(URL!, KEY!, { auth: { persistSession: true, autoRefreshToken: true } })
+  return client
+}
+
+/** Anonymous sign-in: gives this device a stable id without any account. */
+async function ensureSession(): Promise<boolean> {
+  const c = sb()
+  if (!c) return false
+  if (!session) {
+    session = (async () => {
+      const { data } = await c.auth.getSession()
+      if (data.session) return true
+      const { error } = await c.auth.signInAnonymously()
+      return !error
+    })().catch(() => false)
+  }
+  return session
+}
+
+const NICK_KEY = 'tdhg:v1:nick'
+export function getNickname(): string {
+  try {
+    return localStorage.getItem(NICK_KEY) ?? ''
+  } catch {
+    return ''
+  }
+}
+export function setNickname(n: string) {
+  try {
+    localStorage.setItem(NICK_KEY, n)
+  } catch {
+    /* ignore */
+  }
+}
+const BLOCK = ['kanker', 'hoer', 'kut', 'nazi', 'hitler', 'neger', 'fuck', 'shit', 'cunt', 'nigger']
+export function validNickname(n: string): boolean {
+  const s = n.trim()
+  if (s.length < 2 || s.length > 16) return false
+  if (!/^[\p{L}\p{N} _.-]+$/u.test(s)) return false
+  const low = s.toLowerCase()
+  return !BLOCK.some((w) => low.includes(w))
+}
+
+export interface Group {
+  code: string
+  name: string
+  members: number
+}
+export interface BoardRow {
+  nickname: string
+  score: number
+  good: number
+  total: number
+  ms: number
+  played: boolean
+  is_me: boolean
+}
+export interface WeekRow {
+  nickname: string
+  total: number
+  days: number
+  is_me: boolean
+}
+
+async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T | null> {
+  const c = sb()
+  if (!c || !(await ensureSession())) return null
+  const { data, error } = await c.rpc(fn, args)
+  if (error) {
+    console.warn('rpc', fn, error.message)
+    return null
+  }
+  return data as T
+}
+
+export interface Percentile {
+  betterThan: number | null
+  players: number
+}
+
+export async function submitDaily(daily: number, score: number, good: number, total: number, ms: number): Promise<Percentile | null> {
+  if (!(await ensureSession())) return null
+  await rpc<null>('submit_daily', { p_daily: daily, p_score: score, p_good: good, p_total: total, p_ms: ms, p_nick: getNickname() })
+  const rows = await rpc<{ better_than: number | null; players: number }[]>('daily_percentile', { p_daily: daily, p_score: score })
+  const r = rows?.[0]
+  return r ? { betterThan: r.better_than === null ? null : Number(r.better_than), players: r.players } : null
+}
+
+export async function createGroup(name: string, nick: string): Promise<Group | null> {
+  const rows = await rpc<{ code: string; name: string }[]>('create_group', { p_name: name, p_nick: nick })
+  const g = rows?.[0]
+  return g ? { ...g, members: 1 } : null
+}
+export async function joinGroup(code: string, nick: string): Promise<Group | null> {
+  const rows = await rpc<{ code: string; name: string }[]>('join_group', { p_code: code, p_nick: nick })
+  const g = rows?.[0]
+  return g ? { ...g, members: 0 } : null
+}
+export async function myGroups(): Promise<Group[]> {
+  return (await rpc<Group[]>('my_groups', {})) ?? []
+}
+export async function groupBoard(code: string, daily: number): Promise<BoardRow[]> {
+  return (await rpc<BoardRow[]>('group_board', { p_code: code, p_daily: daily })) ?? []
+}
+export async function groupWeek(code: string, daily: number): Promise<WeekRow[]> {
+  return (await rpc<WeekRow[]>('group_week', { p_code: code, p_daily: daily })) ?? []
+}
+export async function leaveGroup(code: string): Promise<boolean> {
+  const c = sb()
+  if (!c || !(await ensureSession())) return false
+  const { data: g } = await c.from('groups').select('id').eq('code', code).maybeSingle()
+  if (!g) return false
+  const { data: u } = await c.auth.getUser()
+  if (!u.user) return false
+  const { error } = await c.from('members').delete().eq('group_id', g.id).eq('player_id', u.user.id)
+  return !error
+}
+
+/** Uploads the card and registers a share. Returns the preview link, or null when offline. */
+export async function createShare(blob: Blob, title: string, text: string, param: string | null): Promise<string | null> {
+  const c = sb()
+  if (!c || !(await ensureSession())) return null
+  const { data: u } = await c.auth.getUser()
+  if (!u.user) return null
+  const id = Math.random().toString(36).slice(2, 10)
+  const path = `${u.user.id}/${id}.png`
+  const up = await c.storage.from('cards').upload(path, blob, { contentType: 'image/png', upsert: false })
+  if (up.error) return null
+  const image = c.storage.from('cards').getPublicUrl(path).data.publicUrl
+  const { error } = await c.from('shares').insert({ id, player_id: u.user.id, title, text, image, param })
+  if (error) return null
+  return `${URL}/functions/v1/s/${id}`
+}

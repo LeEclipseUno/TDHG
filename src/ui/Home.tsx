@@ -6,7 +6,8 @@ import { MODES, VARIANTS, getBest, type Challenge, type ModeId, type Settings, t
 import { dailyMode, dailyNumber, getDailyResult, getStreak, msUntilNextDaily } from '../game/daily'
 import { season, SEASON_TEXT } from '../game/season'
 import { Board, Matrix } from './widgets'
-import { IconSignArrow, PictDrag, PictExit, PictFind, PictJunction, PictLearn, PictQuiz, PictRoute, PictStats, SeasonIcon } from './icons'
+import { IconSignArrow, PictDrag, PictExit, PictFind, PictGroup, PictJunction, PictLearn, PictQuiz, PictRoute, PictStats, SeasonIcon } from './icons'
+import { ONLINE } from '../game/backend'
 import MapView from '../map/MapView'
 import { useNow } from '../game/hooks'
 
@@ -19,6 +20,7 @@ export interface HomeProps {
   onLearn: () => void
   onStats: () => void
   onAbout: () => void
+  onGroups: () => void
   challenge: Challenge | null
   onChallenge: () => void
   onInstall?: () => void
@@ -79,7 +81,7 @@ export function StreakPosts({ count }: { count: number }) {
 const isIosSafari = /iphone|ipad|ipod/i.test(navigator.userAgent) && !('standalone' in navigator && (navigator as { standalone?: boolean }).standalone)
 const isStandalone = window.matchMedia('(display-mode: standalone)').matches
 
-export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onStats, onAbout, challenge, onChallenge, onInstall }: HomeProps) {
+export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onStats, onAbout, onGroups, challenge, onChallenge, onInstall }: HomeProps) {
   const { t, lang, setLang } = useLang()
   const tiers: Tier[] = ['A', 'AN', 'ALL']
   const learnStats = useMemo(() => deckStats(buildDeck(data, settings.tier, settings.learnDeck), loadStates()), [data, settings.tier, settings.learnDeck])
@@ -199,6 +201,22 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
             )
           })}
         </Board>
+
+        {ONLINE && (
+          <Board className="groups-board">
+            <div className="board-title">{t('groups')}</div>
+            <button type="button" className="sign-row" onClick={onGroups}>
+              <span className="sign-pict">
+                <PictGroup />
+              </span>
+              <span className="sign-text">
+                <span className="sign-name">{t('groups')}</span>
+                <span className="sign-desc">{t('groups_desc')}</span>
+              </span>
+              <IconSignArrow className="sign-arrow" />
+            </button>
+          </Board>
+        )}
 
         <Board className="learn-board">
           <div className="board-title">{t('learn')}</div>

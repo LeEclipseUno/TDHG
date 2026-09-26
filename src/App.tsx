@@ -7,6 +7,7 @@ import { Home } from './ui/Home'
 import { Results } from './ui/Results'
 import { Stats } from './ui/Stats'
 import { About } from './ui/About'
+import { Groups } from './ui/Groups'
 import { DragMode } from './modes/DragMode'
 import { FindMode } from './modes/FindMode'
 import { JunctionMode } from './modes/JunctionMode'
@@ -21,11 +22,11 @@ interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>
 }
 
-type Screen = { kind: 'home' } | { kind: 'learn' } | { kind: 'stats' } | { kind: 'about' } | { kind: 'game'; session: Session } | { kind: 'results'; session: Session; newBest: boolean; streak: number }
+type Screen = { kind: 'home' } | { kind: 'learn' } | { kind: 'stats' } | { kind: 'about' } | { kind: 'groups'; joinCode?: string } | { kind: 'game'; session: Session } | { kind: 'results'; session: Session; newBest: boolean; streak: number }
 
 const MODE_COMPONENTS = { drag: DragMode, find: FindMode, junction: JunctionMode, quiz: QuizMode, exit: ExitMode, route: RouteMode } as const
 
-/** Deep links: #daily, #find, #quiz, #junction, #drag, #exit, #route, #learn, #stats, #about */
+/** Deep links: #daily, #find, #quiz, #junction, #drag, #exit, #route, #learn, #stats, #about, #groups, #join-CODE */
 function readHash(): string {
   return location.hash.replace('#', '').toLowerCase()
 }
@@ -88,7 +89,7 @@ function Shell() {
     setScreen({ kind: 'game', session: newSession(challenge.mode, settings, challenge) })
     setChallenge(null)
   }
-  const go = (kind: 'home' | 'learn' | 'stats' | 'about') => {
+  const go = (kind: 'home' | 'learn' | 'stats' | 'about' | 'groups') => {
     setHash(kind === 'home' ? '' : kind)
     setScreen({ kind })
   }
@@ -110,7 +111,8 @@ function Shell() {
     if (!h) return
     if (h === 'daily') playDaily()
     else if (MODES.includes(h as ModeId)) play(h as ModeId)
-    else if (h === 'learn' || h === 'stats' || h === 'about') go(h)
+    else if (h === 'learn' || h === 'stats' || h === 'about' || h === 'groups') go(h)
+    else if (h.startsWith('join-')) setScreen({ kind: 'groups', joinCode: h.slice(5).toUpperCase() })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data])
 
@@ -137,6 +139,7 @@ function Shell() {
   if (screen.kind === 'learn') return wrap('learn', <LearnMode data={data} settings={settings} onExit={() => go('home')} />)
   if (screen.kind === 'stats') return wrap('stats', <Stats data={data} onHome={() => go('home')} />)
   if (screen.kind === 'about') return wrap('about', <About onHome={() => go('home')} />)
+  if (screen.kind === 'groups') return wrap('groups', <Groups onHome={() => go('home')} joinCode={screen.joinCode} />)
   if (screen.kind === 'results') {
     const again = () => (screen.session.dailyNumber ? playDaily() : play(screen.session.mode))
     return wrap('results', <Results data={data} session={screen.session} newBest={screen.newBest} streak={screen.streak} onAgain={again} onHome={() => go('home')} />)
@@ -152,6 +155,7 @@ function Shell() {
       onLearn={() => go('learn')}
       onStats={() => go('stats')}
       onAbout={() => go('about')}
+      onGroups={() => go('groups')}
       challenge={challenge}
       onChallenge={playChallenge}
       onInstall={installEvt ? () => installEvt.prompt().then(() => setInstallEvt(null)) : undefined}

@@ -11,6 +11,8 @@ import { useNow, useToast } from '../game/hooks'
 import { renderCard, shareCard, type CardFormat } from '../game/card'
 import { reportUrl } from './About'
 import { StreakPosts } from './Home'
+import { createShare, ONLINE, submitDaily, type Percentile } from '../game/backend'
+import { challengeParam } from '../game/session'
 
 export interface ResultsProps {
   data: GameData
@@ -44,6 +46,19 @@ export function Results({ data, session, newBest, streak, onAgain, onHome }: Res
   const shownScore = Math.round(sum.score * (1 - Math.pow(1 - countP, 3)))
   const lastTick = useRef(0)
   const rank = rankKey(sum.accuracy)
+  const [pct, setPct] = useState<Percentile | null>(null)
+  const [preview, setPreview] = useState<string | null>(null)
+
+  // Daily scores go to the board, and come back as a percentile.
+  useEffect(() => {
+    if (!ONLINE || !session.dailyNumber) return
+    let alive = true
+    submitDaily(session.dailyNumber, sum.score, sum.good, sum.total, sum.ms).then((p) => alive && setPct(p))
+    return () => {
+      alive = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     const step = countP < 1 ? Math.floor(elapsed / 70) : -1
@@ -70,7 +85,7 @@ export function Results({ data, session, newBest, streak, onAgain, onHome }: Res
     }
   })
 
-  const text = shareText(session, lang, url, streak)
+  const text = shareText(session, lang, preview ?? url, streak)
 
   const share = async () => {
     if (navigator.share) {
@@ -96,6 +111,11 @@ export function Results({ data, session, newBest, streak, onAgain, onHome }: Res
       const blob = await renderCard(data, session, lang, format, streak)
       if (!blob) return
       const name = session.dailyNumber ? `wegenkenner-${session.dailyNumber}-${format}.png` : `wegenkenner-${format}.png`
+      // With a backend, the card also becomes the link preview of the share text.
+      if (ONLINE && !preview) {
+        const link = await createShare(blob, session.dailyNumber ? `Wegenkenner #${session.dailyNumber}` : 'Wegenkenner', `${sum.score} ${t('points')} \u00b7 ${sum.good}/${sum.total}`, session.dailyNumber ? null : challengeParam(session))
+        if (link) setPreview(link)
+      }
       const how = await shareCard(blob, name, text)
       if (how === 'downloaded') showToast(t('downloaded'))
     } finally {
@@ -159,6 +179,12 @@ export function Results({ data, session, newBest, streak, onAgain, onHome }: Res
             {session.dailyNumber && streak > 0 && (
               <div className="results-streak">
                 {t('streak')} <StreakPosts count={streak} />
+              </div>
+            )}
+            {pct && (
+              <div className="results-pct">
+                {pct.betterThan === null ? t('onlyYou') : t('betterThan', { p: pct.betterThan })}
+                <small>{t('players', { n: pct.players })}</small>
               </div>
             )}
           </div>

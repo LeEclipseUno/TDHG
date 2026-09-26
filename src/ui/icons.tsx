@@ -212,6 +212,15 @@ export const PictStats = (p: P) => (
   </svg>
 )
 
+export const PictGroup = (p: P) => (
+  <svg {...pict} {...p}>
+    <circle cx="16" cy="16" r="6" />
+    <circle cx="32" cy="16" r="6" />
+    <path d="M5 40c0-8 5-12 11-12s11 4 11 12M21 40c0-8 5-12 11-12s11 4 11 12" />
+    <rect x="18" y="4" width="12" height="7" rx="1.5" fill="#c8102e" stroke="#fff" strokeWidth="1.2" />
+  </svg>
+)
+
 /** A hectometre post pictogram, used as the app's small brand mark. */
 export const PictPost = (p: P) => (
   <svg width="16" height="24" viewBox="0 0 16 24" aria-hidden {...p}>

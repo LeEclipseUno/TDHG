@@ -1714,3 +1714,163 @@ button {
 .daily-play {
   grid-template-columns: 1fr 32px;
 }
+
+/* ---------- groups ---------- */
+
+.groups-setup {
+  padding: 14px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--white);
+}
+.groups-forms {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+@media (min-width: 560px) {
+  .groups-forms {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-family: var(--font-sign);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.8);
+}
+.field input {
+  font: inherit;
+  font-family: var(--font-body);
+  font-size: 16px;
+  letter-spacing: 0;
+  text-transform: none;
+  padding: 9px 11px;
+  border-radius: 5px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--white);
+  min-height: 42px;
+  width: 100%;
+}
+.field input:focus {
+  outline: none;
+  border-color: var(--white);
+}
+.field-row {
+  display: flex;
+  gap: 8px;
+}
+.field-row input {
+  flex: 1;
+  min-width: 0;
+}
+.field-hint {
+  font-size: 13px;
+  color: var(--amber);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.group-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.chip-tab {
+  border: 2px solid var(--asphalt-3);
+  background: var(--paper);
+  color: var(--ink);
+  border-radius: 5px;
+  padding: 6px 12px;
+  font-family: var(--font-sign);
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+}
+.chip-tab small {
+  opacity: 0.6;
+  margin-left: 4px;
+}
+.chip-tab-on {
+  background: var(--ink);
+  color: var(--navy);
+  border-color: var(--ink);
+}
+.group-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.group-code {
+  margin-left: 8px;
+  background: var(--white);
+  color: var(--navy);
+  border-radius: 3px;
+  padding: 1px 7px;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+}
+.group-actions {
+  display: flex;
+  gap: 6px;
+}
+.group-sub {
+  margin-top: 6px;
+  font-size: 13px;
+  opacity: 0.8;
+}
+.group-board li {
+  grid-template-columns: 28px 1fr auto auto;
+}
+.group-board .is-me {
+  background: rgba(255, 176, 0, 0.08);
+  border-radius: 5px;
+  padding: 2px 6px;
+  margin: 0 -6px;
+}
+.group-rank {
+  font-family: var(--font-sign);
+  font-weight: 800;
+  text-align: center;
+  color: var(--muted);
+}
+.group-nick {
+  font-weight: 600;
+}
+.group-nick small {
+  color: var(--muted);
+  font-weight: 400;
+}
+.group-detail {
+  color: var(--muted);
+  font-size: 13px;
+}
+.group-leave {
+  align-self: flex-start;
+  margin-top: 6px;
+  font-size: 13px;
+}
+.results-pct {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-family: var(--font-sign);
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--amber);
+}
+.results-pct small {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
