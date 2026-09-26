@@ -1,5 +1,5 @@
-"""Derive every brand asset from branding/logo.png (wide, transparent):
-public/logo.png (trimmed), icon-*.png and favicon.ico (square crop of the HG mark), og.jpg (share card with the map).
+"""Derive every brand asset from branding/logo.png (wide) and branding/icon.png (square):
+public/logo.png (trimmed), icon-*.png, favicon.ico (a red A-shield) and og.jpg (share card with the map).
 
 Usage: python scripts/build-brand.py   (needs Pillow; run after build-data.py)
 """
@@ -20,16 +20,11 @@ w, h = logo.size
 logo.resize((1200, round(1200 * h / w)), Image.LANCZOS).save(os.path.join(PUB, "logo.png"))
 print("logo", logo.size)
 
-# Square app icon: the HG mark with the sign, on the light background.
-mark = logo.crop((round(w * 0.495), 0, w, round(h * 0.78)))
-mark = mark.crop(mark.getbbox())
-side = max(mark.size) + 40
-sq = Image.new("RGBA", (side, side), LIGHT_BG + (255,))
-glow = Image.new("RGBA", (side, side), (0, 0, 0, 0))
-ImageDraw.Draw(glow).ellipse((side * 0.08, side * 0.12, side * 0.92, side * 0.88), fill=(90, 150, 255, 120))
-glow = glow.filter(ImageFilter.GaussianBlur(side * 0.12))
-sq.alpha_composite(glow)
-sq.paste(mark, ((side - mark.size[0]) // 2, (side - mark.size[1]) // 2), mark)
+# Square app icon: the tilted A-shield on the blue sign, drawn as branding/icon.png by the logo SVG.
+sq = Image.open(os.path.join(ROOT, "branding", "icon.png")).convert("RGBA")
+bg = Image.new("RGBA", sq.size, LIGHT_BG + (255,))
+bg.alpha_composite(sq)
+sq = bg
 for s in (512, 192, 64, 32):
     sq.resize((s, s), Image.LANCZOS).save(os.path.join(PUB, f"icon-{s}.png"))
 # Static favicon fallback: a red A-shield (the app draws a random one at runtime).

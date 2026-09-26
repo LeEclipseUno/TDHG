@@ -1,6 +1,6 @@
 # Roadmap
 
-Ideas and planned modes for The Dutch Highway Guesser. Items at the top are next.
+Ideas and planned modes for Wegenkenner. Items at the top are next.
 
 ## Route modes (built on 2026-09-26 as the Route planner mode; kept here for follow-ups)
 

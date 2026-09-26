@@ -3,7 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 export type Lang = 'nl' | 'en'
 
 const nl = {
-  title: 'The Dutch Highway Guesser',
+  title: 'Wegenkenner',
   tagline: 'Ken jij het wegennet uit je hoofd?',
   chooseMode: 'Kies je rit',
   loading: 'Kaart laden',
@@ -308,7 +308,7 @@ const nl = {
 export type Key = keyof typeof nl
 
 const en: Record<Key, string> = {
-  title: 'The Dutch Highway Guesser',
+  title: 'Wegenkenner',
   tagline: 'Know the Dutch road network by heart?',
   chooseMode: 'Pick your ride',
   loading: 'Loading map',

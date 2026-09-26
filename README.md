@@ -1,4 +1,4 @@
-# The Dutch Highway Guesser (TDHG)
+# Wegenkenner (The Dutch Highway Guesser)
 
 A phone-friendly guessing game about the Dutch road network: motorways (A), national and provincial N-roads, and the named motorway interchanges (knooppunten). Built with Vite, React and TypeScript, drawn on a zoomable canvas with real road geometry from OpenStreetMap.
 

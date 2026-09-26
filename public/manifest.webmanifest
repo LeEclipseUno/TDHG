@@ -1,6 +1,6 @@
 {
-  "name": "The Dutch Highway Guesser",
-  "short_name": "TDHG",
+  "name": "Wegenkenner",
+  "short_name": "Wegenkenner",
   "description": "How well do you know the Dutch highways, N-roads and interchanges?",
   "start_url": "./",
   "display": "standalone",
