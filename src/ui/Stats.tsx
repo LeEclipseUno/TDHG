@@ -5,7 +5,7 @@ import { clearHistory, loadHistory, loadLabelStats } from '../game/history'
 import { formatTime, MODES } from '../game/session'
 import { Board, Matrix } from './widgets'
 import { Shield } from './Shield'
-import { IconMenu } from './icons'
+import { IconMenu, PictStats } from './icons'
 import { Backdrop } from './Backdrop'
 
 export function Stats({ data, onHome }: { data: GameData; onHome: () => void }) {
@@ -119,7 +119,12 @@ export function Stats({ data, onHome }: { data: GameData; onHome: () => void }) 
             </ul>
           </Board>
         )}
-        {games === 0 && <p className="learn-note stats-empty">{t('noStats')}</p>}
+        {games === 0 && (
+          <div className="empty">
+            <PictStats />
+            <p>{t('statsEmpty')}</p>
+          </div>
+        )}
         <div className="results-actions">
           <button type="button" className="btn btn-ghost" onClick={onHome}>
             <IconMenu /> {t('home')}

@@ -446,6 +446,20 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
       ctx.globalAlpha = 1
     }
 
+    // Province borders, faint and dashed.
+    if (z > 0.8 && data.provinces.borders.length) {
+      ctx.beginPath()
+      for (const bl of data.provinces.borders) {
+        if (!inView(bl.b)) continue
+        trace(bl.l)
+      }
+      ctx.setLineDash([6, 5])
+      ctx.strokeStyle = 'rgba(255,255,255,0.28)'
+      ctx.lineWidth = 1
+      ctx.stroke()
+      ctx.setLineDash([])
+    }
+
     // Local roads as context: secondary from mid zoom, tertiary closer in. Thin, dim, never interactive.
     if (!hideRoads && z > 2.8) {
       const minorW = Math.max(Math.min(2.2, 0.5 + z * 0.25), 5.5 * scale)

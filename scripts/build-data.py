@@ -48,6 +48,7 @@ def download_all():
     overpass("minor_secondary.json", f'[out:json][timeout:600];{area}way["highway"~"^(secondary|secondary_link)$"](area.a);out geom;')
     overpass("minor_tertiary.json", f'[out:json][timeout:600];{area}way["highway"~"^(tertiary|tertiary_link)$"](area.a);out geom;')
     overpass("water.json", f'[out:json][timeout:600];{area}(way["waterway"="river"](area.a);way["waterway"="canal"]["CEMT"](area.a););out geom;')
+    overpass("provinces.json", f'[out:json][timeout:600];{area}relation["boundary"="administrative"]["admin_level"="4"](area.a);out geom;')
     overpass("abroad.json", '[out:json][timeout:300];(relation(52411);relation(62761);relation(62771););out geom;')  # Belgium, NRW, Lower Saxony
     overpass("exits_places.json", f'[out:json][timeout:300];{area}(node["highway"="motorway_junction"]["ref"](area.a);node["place"~"^(city|town)$"](area.a););out;')
     ne = os.path.join(RAW, "ne_land.geojson")
@@ -332,6 +333,78 @@ def seg_dist(px, py, ax, ay, bx, by):
     t = max(0, min(1, ((px - ax) * dx + (py - ay) * dy) / L2))
     return math.hypot(px - (ax + t * dx), py - (ay + t * dy))
 
+PROV_CODES = {"Groningen": "GR", "Fryslân": "FR", "Friesland": "FR", "Drenthe": "DR", "Overijssel": "OV", "Flevoland": "FL", "Gelderland": "GE",
+              "Utrecht": "UT", "Noord-Holland": "NH", "Zuid-Holland": "ZH", "Zeeland": "ZE", "Noord-Brabant": "NB", "Limburg": "LI"}
+
+def build_provinces():
+    """Province polygons (for tagging) and their land borders as dashed lines. Returns {code: prepared polygon}."""
+    from shapely.geometry import shape, LineString, MultiPolygon
+    from shapely.ops import unary_union, polygonize
+    from shapely.prepared import prep
+    d = json.load(open(os.path.join(RAW, "provinces.json"), encoding="utf-8"))["elements"]
+    provs = {}
+    for rel in d:
+        name = rel["tags"].get("name:nl") or rel["tags"].get("name", "")
+        code = PROV_CODES.get(name)
+        if not code: continue
+        lines = [LineString([proj(p["lon"], p["lat"]) for p in m["geometry"]]) for m in rel.get("members", []) if m["type"] == "way" and m.get("role") in ("outer", "") and "geometry" in m and len(m["geometry"]) >= 2]
+        polys = list(polygonize(unary_union(lines)))
+        if not polys: continue
+        provs[code] = unary_union(polys)
+    nl = json.load(open(os.path.join(OUT, "land.json"), encoding="utf-8"))
+    from shapely import make_valid
+    land = make_valid(unary_union([make_valid(shape({"type": "Polygon", "coordinates": [[(r[i], r[i + 1]) for i in range(0, len(r), 2)] for r in poly["rings"]]})) for poly in nl]))
+    inland = make_valid(land.buffer(-300))
+    provs = {code: make_valid(g) for code, g in provs.items()}
+    borders = make_valid(unary_union([make_valid(g.boundary) for g in provs.values()])).intersection(inland).simplify(25, preserve_topology=True)
+    from shapely.ops import linemerge
+    def flatten(g):
+        if hasattr(g, "geoms"):
+            for x in g.geoms: yield from flatten(x)
+        else: yield g
+    pieces = [g for g in flatten(borders) if g.geom_type == "LineString"]
+    merged = list(flatten(linemerge(pieces))) if pieces else []
+    out = []; pts = 0
+    for g in merged:
+        if g.geom_type != "LineString" or g.length < 2000: continue
+        line = [(round(x), round(y)) for x, y in g.coords]
+        xs = [p[0] for p in line]; ys = [p[1] for p in line]; pts += len(line)
+        out.append({"b": [min(xs), min(ys), max(xs), max(ys)], "l": encode([c for p in line for c in p])})
+    json.dump({"codes": sorted(provs.keys()), "borders": out}, open(os.path.join(OUT, "provinces.json"), "w"), separators=(",", ":"))
+    print("provinces:", len(provs), "border lines:", len(out), "points:", pts)
+    return {code: prep(g) for code, g in provs.items()}
+
+def tag_provinces(prepared):
+    """Add a province code list to roads, junctions and exits (sampled along each road)."""
+    from shapely.geometry import Point
+    def codes_for(points):
+        found = set()
+        for x, y in points:
+            pt = Point(x, y)
+            for code, g in prepared.items():
+                if g.contains(pt): found.add(code); break
+        return sorted(found)
+    for fname in ("roads-core.json", "roads-extra.json"):
+        path = os.path.join(OUT, fname)
+        roads = json.load(open(path, encoding="utf-8"))
+        for r in roads:
+            pts = []
+            for line in r["lines"]:
+                # decode delta line and sample every ~15th point
+                x, y = line[0], line[1]; pts.append((x, y)); n = 0
+                for i in range(2, len(line), 2):
+                    x += line[i]; y += line[i + 1]; n += 1
+                    if n % 15 == 0: pts.append((x, y))
+                pts.append((x, y))
+            r["p"] = codes_for(pts)
+        json.dump(roads, open(path, "w"), separators=(",", ":"))
+    for fname, key in (("junctions.json", None), ("exits.json", None)):
+        path = os.path.join(OUT, fname)
+        items = json.load(open(path, encoding="utf-8"))
+        for it in items: it["p"] = codes_for([(it["x"], it["y"])])
+        json.dump(items, open(path, "w", encoding="utf-8"), separators=(",", ":"), ensure_ascii=False)
+    print("province tags added")
+
 def build_junctions(roads):
     d = json.load(open(os.path.join(RAW, "knooppunten_geo.json"), encoding="utf-8"))["elements"]
     by = collections.defaultdict(list)
@@ -372,3 +445,4 @@ def build_junctions(roads):
 if __name__ == "__main__":
     download_all()
     roads = build_roads(); build_links(); build_structures(); build_minor(); build_water(); build_land(); build_abroad(); build_junctions(roads); build_exits_places(roads)
+    tag_provinces(build_provinces())

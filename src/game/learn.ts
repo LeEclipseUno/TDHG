@@ -33,10 +33,10 @@ export function saveStates(states: CardStates) {
   }
 }
 
-export function buildDeck(data: GameData, tier: Tier, deck: Deck): Card[] {
-  if (deck === 'junctions') return data.junctions.map((j) => ({ id: `kp:${j.name}`, kind: 'kp', junction: j.name }))
+export function buildDeck(data: GameData, tier: Tier, deck: Deck, province = ''): Card[] {
+  if (deck === 'junctions') return data.junctions.filter((j) => !province || j.p?.includes(province)).map((j) => ({ id: `kp:${j.name}`, kind: 'kp', junction: j.name }))
   const cards: Card[] = []
-  for (const r of roadsForTier(data, tier)) {
+  for (const r of roadsForTier(data, tier, province)) {
     cards.push({ id: `rec:${r.ref}`, kind: 'rec', ref: r.ref })
     cards.push({ id: `loc:${r.ref}`, kind: 'loc', ref: r.ref })
   }

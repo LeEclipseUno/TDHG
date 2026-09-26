@@ -12,7 +12,7 @@ import type { ModeProps } from './types'
 export function JunctionMode({ data, session, onFinish, onQuit }: ModeProps) {
   const { t } = useLang()
   const mapRef = useRef<MapHandle>(null)
-  const questions = useMemo(() => pickJunctions(data, QUESTION_COUNT, mulberry32(session.seed)), [data, session.seed])
+  const questions = useMemo(() => pickJunctions(data, QUESTION_COUNT, mulberry32(session.seed), session.province), [data, session.seed, session.province])
   const [i, setI] = useState(0)
   const [results, setResults] = useState<QuestionResult[]>([])
   const [phase, setPhase] = useState<'ask' | 'reveal'>('ask')

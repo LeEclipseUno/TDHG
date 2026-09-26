@@ -40,6 +40,18 @@ Friend groups, the daily percentile and personal link previews run on a free Sup
 3. Edge function for link previews (needs the Supabase CLI): `supabase functions deploy s --no-verify-jwt`.
 4. Put the project URL and the publishable (anon) key from Settings, API in `.env.production` (committed; the key is meant to be public) and in `.env` for local development.
 
+### Google sign-in and cloud save
+
+Players start with an anonymous account per device. Signing in with Google links that account so streak, records, statistics, learn progress and groups follow them to other devices (`src/game/sync.ts` merges both sides, never losing a score).
+
+1. Google Cloud Console: create an OAuth client of type Web application. Authorised redirect URI: the callback URL shown in Supabase under Authentication, Providers, Google.
+2. Supabase: enable the Google provider with that client id and secret. Under Authentication, Settings, also enable "Allow manual linking" so anonymous accounts can be upgraded.
+3. Re-run `supabase/schema.sql` once more (it adds the `player_state` table; the script is safe to run again).
+
+### Short share links
+
+Preview links point at the Supabase functions domain by default. For `https://wegenkenner.nl/s/<id>`: move the domain's DNS to Cloudflare (free), deploy `cloudflare/share-worker.js` as a Worker with the route `wegenkenner.nl/s/*` and the variable `SUPABASE_URL`, then set `VITE_SHARE_BASE=https://wegenkenner.nl/s` in `.env.production`.
+
 ## Deploy
 
 The site is served at https://wegenkenner.nl from GitHub Pages. Pushing to `main` runs `.github/workflows/deploy.yml`, which builds the site and publishes it. `public/CNAME` tells GitHub Pages the custom domain; the Vite `base` is `/`.

@@ -16,8 +16,8 @@ export function QuizMode({ data, session, onFinish, onQuit }: ModeProps) {
   const blitz = session.variant === 'blitz'
   const questions = useMemo(() => {
     const rng = mulberry32(session.seed)
-    const roads = blitz ? shuffle(roadsForTier(data, session.tier), rng) : pickRoads(data, session.tier, QUESTION_COUNT, rng)
-    return roads.map((road) => ({ road, options: quizOptions(data, session.tier, road, rng) }))
+    const roads = blitz ? shuffle(roadsForTier(data, session.tier, session.province), rng) : pickRoads(data, session.tier, QUESTION_COUNT, rng, session.province)
+    return roads.map((road) => ({ road, options: quizOptions(data, session.tier, road, rng, session.province) }))
   }, [data, session.tier, session.seed, blitz])
   const [i, setI] = useState(0)
   const [results, setResults] = useState<QuestionResult[]>([])

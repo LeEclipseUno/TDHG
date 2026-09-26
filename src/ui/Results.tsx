@@ -5,11 +5,10 @@ import type { GameData } from '../data'
 import MapView, { type Highlight, type Marker } from '../map/MapView'
 import { Shield } from './Shield'
 import { Board, Matrix, RouteStrip } from './widgets'
-import { IconCheck, IconClock, IconCross, IconFlag, IconImage, IconMenu, IconReplay, IconShare, IconTilde } from './icons'
+import { IconChat, IconCheck, IconClock, IconCross, IconMenu, IconReplay, IconShare, IconTilde } from './icons'
 import { haptic, sfx } from '../game/sound'
-import { useNow, useToast } from '../game/hooks'
-import { renderCard, shareCard, type CardFormat } from '../game/card'
-import { reportUrl } from './About'
+import { useNow } from '../game/hooks'
+import { renderCard } from '../game/card'
 import { StreakPosts } from './Home'
 import { createShare, ONLINE, submitDaily, type Percentile } from '../game/backend'
 import { challengeParam } from '../game/session'
@@ -32,8 +31,7 @@ export function Results({ data, session, newBest, streak, onAgain, onHome }: Res
   const { t, lang } = useLang()
   const sum = summarize(session)
   const [copied, setCopied] = useState(false)
-  const [toast, showToast] = useToast()
-  const [busy, setBusy] = useState<CardFormat | null>(null)
+  const [busy, setBusy] = useState(false)
   const url = `${location.origin}${import.meta.env.BASE_URL}`
   const t0 = useMemo(() => Date.now(), [])
   const total = session.results.length
@@ -87,41 +85,48 @@ export function Results({ data, session, newBest, streak, onAgain, onHome }: Res
 
   const text = shareText(session, lang, preview ?? url, streak)
 
+  const canShareFiles = typeof navigator.share === 'function' && typeof navigator.canShare === 'function'
+
+  /** Phones: the card image plus the text through the share sheet. Elsewhere: text to the clipboard. */
   const share = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({ text })
-        return
-      } catch {
-        /* cancelled, fall back to the clipboard */
-      }
-    }
+    if (busy) return
+    setBusy(true)
     try {
-      await navigator.clipboard.writeText(text)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      window.prompt('Copy:', text)
+      let link = preview
+      let file: File | null = null
+      if (canShareFiles) {
+        const blob = await renderCard(data, session, lang, 'square', streak)
+        if (blob) {
+          file = new File([blob], session.dailyNumber ? `wegenkenner-${session.dailyNumber}.png` : 'wegenkenner.png', { type: 'image/png' })
+          if (ONLINE && !link) {
+            link = await createShare(blob, session.dailyNumber ? `Wegenkenner #${session.dailyNumber}` : 'Wegenkenner', `${sum.score} ${t('points')} \u00b7 ${sum.good}/${sum.total}`, session.dailyNumber ? null : challengeParam(session))
+            if (link) setPreview(link)
+          }
+        }
+      }
+      const finalText = shareText(session, lang, link ?? url, streak)
+      if (navigator.share) {
+        try {
+          if (file && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], text: finalText })
+          else await navigator.share({ text: finalText })
+          return
+        } catch {
+          /* cancelled, fall back to the clipboard */
+        }
+      }
+      try {
+        await navigator.clipboard.writeText(finalText)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      } catch {
+        window.prompt('Copy:', finalText)
+      }
+    } finally {
+      setBusy(false)
     }
   }
 
-  const shareImage = async (format: CardFormat) => {
-    setBusy(format)
-    try {
-      const blob = await renderCard(data, session, lang, format, streak)
-      if (!blob) return
-      const name = session.dailyNumber ? `wegenkenner-${session.dailyNumber}-${format}.png` : `wegenkenner-${format}.png`
-      // With a backend, the card also becomes the link preview of the share text.
-      if (ONLINE && !preview) {
-        const link = await createShare(blob, session.dailyNumber ? `Wegenkenner #${session.dailyNumber}` : 'Wegenkenner', `${sum.score} ${t('points')} \u00b7 ${sum.good}/${sum.total}`, session.dailyNumber ? null : challengeParam(session))
-        if (link) setPreview(link)
-      }
-      const how = await shareCard(blob, name, text)
-      if (how === 'downloaded') showToast(t('downloaded'))
-    } finally {
-      setBusy(null)
-    }
-  }
+  const whatsapp = `https://wa.me/?text=${encodeURIComponent(text)}`
 
   return (
     <div className="results">
@@ -202,26 +207,20 @@ export function Results({ data, session, newBest, streak, onAgain, onHome }: Res
                 {road ? <Shield code={road.ref} kind={road.kind} size="sm" /> : <span className="results-label">{r.label}</span>}
                 <span className="results-detail">{r.detail}</span>
                 <span className="results-points">{r.points}</span>
-                <a className="report-btn" href={reportUrl(session.mode, r.label, r.detail, lang)} target="_blank" rel="noreferrer" title={t('report')} aria-label={t('report')}>
-                  <IconFlag />
-                </a>
               </li>
             )
           })}
         </ul>
 
         <div className="results-actions">
-          <button type="button" className="btn btn-primary" onClick={share}>
+          <button type="button" className="btn btn-primary" disabled={busy} onClick={share}>
             <IconShare /> {copied ? t('copied') : t('share')}
           </button>
-          <div className="share-images">
-            <button type="button" className="btn" disabled={busy !== null} onClick={() => shareImage('square')}>
-              <IconImage /> {t('cardSquare')}
-            </button>
-            <button type="button" className="btn" disabled={busy !== null} onClick={() => shareImage('story')}>
-              <IconImage /> {t('cardStory')}
-            </button>
-          </div>
+          {!navigator.share && (
+            <a className="btn" href={whatsapp} target="_blank" rel="noreferrer">
+              <IconChat /> {t('whatsapp')}
+            </a>
+          )}
           <button type="button" className="btn btn-ghost" onClick={onAgain}>
             <IconReplay /> {t('again')}
           </button>
@@ -229,11 +228,6 @@ export function Results({ data, session, newBest, streak, onAgain, onHome }: Res
             <IconMenu /> {t('home')}
           </button>
         </div>
-        {toast && (
-          <div role="status" className="toast toast-page">
-            {toast}
-          </div>
-        )}
       </div>
     </div>
   )

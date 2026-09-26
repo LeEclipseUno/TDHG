@@ -166,3 +166,14 @@ drop policy if exists "upload cards" on storage.objects;
 create policy "upload cards" on storage.objects for insert to authenticated with check (bucket_id = 'cards');
 drop policy if exists "read cards" on storage.objects;
 create policy "read cards" on storage.objects for select to anon, authenticated using (bucket_id = 'cards');
+
+-- ---------- cloud save (signed-in players) ----------
+create table if not exists player_state (
+  player_id uuid primary key,
+  state jsonb not null,
+  updated_at timestamptz not null default now()
+);
+alter table player_state enable row level security;
+drop policy if exists "own state" on player_state;
+create policy "own state" on player_state for all to authenticated
+  using (player_id = auth.uid()) with check (player_id = auth.uid());

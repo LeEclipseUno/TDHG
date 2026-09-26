@@ -17,6 +17,8 @@ import { ExitMode } from './modes/ExitMode'
 import { RouteMode } from './modes/RouteMode'
 import { recordSession } from './game/history'
 import { setSoundEnabled } from './game/sound'
+import { getAccount, ONLINE, signInWithGoogle, signOut, type Account } from './game/backend'
+import { pushSoon, syncNow } from './game/sync'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>
@@ -42,6 +44,9 @@ function Shell() {
   const [settings, setSettingsState] = useState<Settings>(loadSettings)
   const [screen, setScreen] = useState<Screen>({ kind: 'home' })
   const [installEvt, setInstallEvt] = useState<BeforeInstallPromptEvent | null>(null)
+  const [online, setOnline] = useState(navigator.onLine)
+  const [account, setAccount] = useState<Account>({ signedIn: false })
+  const [notice, setNotice] = useState<string | null>(null)
   const [challenge, setChallenge] = useState<Challenge | null>(() => {
     const c = parseChallenge(location.search)
     if (c) history.replaceState(null, '', location.pathname + location.hash)
@@ -49,8 +54,26 @@ function Shell() {
   })
 
   useEffect(() => {
-    loadData().then(setData).catch((e: unknown) => setError(String(e)))
+    // Cloud state comes in before the menu reads local storage, so a signed-in player sees their progress at once.
+    loadData()
+      .then(async (d) => {
+        if (ONLINE) {
+          const acc = await getAccount().catch(() => ({ signedIn: false }) as Account)
+          setAccount(acc)
+          if (acc.signedIn) await syncNow().catch(() => {})
+        }
+        setData(d)
+      })
+      .catch((e: unknown) => setError(String(e)))
     updateBadge()
+    const up = () => setOnline(true)
+    const down = () => setOnline(false)
+    window.addEventListener('online', up)
+    window.addEventListener('offline', down)
+    return () => {
+      window.removeEventListener('online', up)
+      window.removeEventListener('offline', down)
+    }
   }, [])
 
   useEffect(() => {
@@ -67,6 +90,17 @@ function Shell() {
     setSettingsState(s)
     saveSettings(s)
     setSoundEnabled(s.sound)
+    if (account.signedIn) pushSoon()
+  }
+  const signIn = async () => {
+    const r = await signInWithGoogle()
+    if (r === 'off') setNotice(t('googleOff'))
+    else if (r === 'error') setNotice(t('signInError'))
+    if (r !== 'redirect') setTimeout(() => setNotice(null), 3000)
+  }
+  const doSignOut = async () => {
+    await signOut()
+    setAccount({ signedIn: false })
   }
 
   useEffect(() => {
@@ -102,6 +136,7 @@ function Shell() {
       updateBadge()
     }
     setScreen({ kind: 'results', session, newBest: submitBest(session), streak })
+    if (account.signedIn) pushSoon()
   }
 
   // Deep links: on first load and whenever the hash changes while the app is open (invite links, back button).
@@ -124,6 +159,16 @@ function Shell() {
 
   const wrap = (key: string, node: ReactNode) => (
     <div className="screen" key={key}>
+      {!online && (
+        <div role="status" className="offline-bar">
+          {t('offline')}
+        </div>
+      )}
+      {notice && (
+        <div role="status" className="offline-bar notice-bar">
+          {notice}
+        </div>
+      )}
       {node}
     </div>
   )
@@ -165,6 +210,9 @@ function Shell() {
       challenge={challenge}
       onChallenge={playChallenge}
       onInstall={installEvt ? () => installEvt.prompt().then(() => setInstallEvt(null)) : undefined}
+      account={account}
+      onSignIn={signIn}
+      onSignOut={doSignOut}
     />,
   )
 }

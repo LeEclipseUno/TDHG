@@ -25,10 +25,10 @@ export function ExitMode({ data, session, onFinish, onQuit }: ModeProps) {
     const rng = mulberry32(session.seed)
     const pool = data.exits.filter((e) => {
       const r = data.byRef.get(e.road)
-      return r && tierIncludes(session.tier, r.kind)
+      return r && tierIncludes(session.tier, r.kind) && (!session.province || e.p?.includes(session.province))
     })
     return shuffle(pool, rng).slice(0, QUESTION_COUNT)
-  }, [data, session.tier, session.seed])
+  }, [data, session.tier, session.seed, session.province])
   const [i, setI] = useState(0)
   const [results, setResults] = useState<QuestionResult[]>([])
   const [phase, setPhase] = useState<'ask' | 'reveal'>('ask')

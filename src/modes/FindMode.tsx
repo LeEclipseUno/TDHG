@@ -14,7 +14,7 @@ export function FindMode({ data, session, onFinish, onQuit }: ModeProps) {
   const { t } = useLang()
   const mapRef = useRef<MapHandle>(null)
   const blitz = session.variant === 'blitz'
-  const questions = useMemo(() => (blitz ? shuffle(roadsForTier(data, session.tier), mulberry32(session.seed)) : pickRoads(data, session.tier, QUESTION_COUNT, mulberry32(session.seed))), [data, session.tier, session.seed, blitz])
+  const questions = useMemo(() => (blitz ? shuffle(roadsForTier(data, session.tier, session.province), mulberry32(session.seed)) : pickRoads(data, session.tier, QUESTION_COUNT, mulberry32(session.seed), session.province)), [data, session.tier, session.seed, blitz])
   const [i, setI] = useState(0)
   const [results, setResults] = useState<QuestionResult[]>([])
   const [phase, setPhase] = useState<'ask' | 'reveal'>('ask')

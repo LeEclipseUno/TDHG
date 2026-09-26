@@ -12,6 +12,8 @@ export interface Road {
   bbox: [number, number, number, number]
   anchor: [number, number]
   lines: number[][] // flat [x0,y0,x1,y1,...] per polyline
+  /** Province codes the road runs through (GR, FR, DR, OV, FL, GE, UT, NH, ZH, ZE, NB, LI). */
+  p?: string[]
 }
 
 export interface Junction {
@@ -19,6 +21,7 @@ export interface Junction {
   x: number
   y: number
   roads: string[]
+  p?: string[]
 }
 
 /** A ramp or connector road of an interchange. k: A = motorway link, N = trunk link. */
@@ -49,6 +52,11 @@ export interface Water {
   l: number[]
 }
 
+export interface Provinces {
+  codes: string[]
+  borders: { b: [number, number, number, number]; l: number[] }[]
+}
+
 export interface LandPoly {
   name: string
   rings: number[][]
@@ -60,6 +68,7 @@ export interface Exit {
   road: string
   x: number
   y: number
+  p?: string[]
 }
 
 export interface Place {
@@ -169,6 +178,7 @@ export interface GameData {
   structures: Structure[]
   minor: Minor[]
   water: Water[]
+  provinces: Provinces
   land: LandPoly[]
   abroad: LandPoly[]
   exits: Exit[]
@@ -217,6 +227,7 @@ export async function loadData(): Promise<GameData> {
   const structures: Structure[] = []
   const minor: Minor[] = []
   const water: Water[] = []
+  const provinces: Provinces = { codes: [], borders: [] }
   const world: Bounds = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity }
   for (const poly of land) {
     for (const ring of poly.rings) {
@@ -242,6 +253,7 @@ export async function loadData(): Promise<GameData> {
     structures,
     minor,
     water,
+    provinces,
     land,
     abroad,
     exits,
@@ -257,6 +269,14 @@ export async function loadData(): Promise<GameData> {
   data.ready = Promise.all([get<Road[]>('roads-extra.json'), get<Link[]>('links.json'), get<Structure[]>('structures.json'), get<Water[]>('water.json').catch(() => [] as Water[])]).then(([extra, lk, st, wt]) => {
     for (const w of wt) w.l = decode(w.l)
     data.water.push(...wt)
+    get<Provinces>('provinces.json')
+      .then((pv) => {
+        for (const b of pv.borders) b.l = decode(b.l)
+        data.provinces.codes = pv.codes
+        data.provinces.borders = pv.borders
+        for (const fn of data.listeners) fn()
+      })
+      .catch(() => {})
     for (const r of extra) {
       r.lines = r.lines.map(decode)
       data.roads.push(r)
@@ -281,8 +301,9 @@ export async function loadData(): Promise<GameData> {
   return data
 }
 
-export function roadsForTier(data: GameData, tier: Tier): Road[] {
-  return data.roads.filter((r) => tierIncludes(tier, r.kind))
+/** Playable roads for a tier, optionally only those touching a province ('' = whole country). */
+export function roadsForTier(data: GameData, tier: Tier, province = ''): Road[] {
+  return data.roads.filter((r) => tierIncludes(tier, r.kind) && (!province || r.p?.includes(province)))
 }
 
 export function boundsOfPoints(pts: [number, number][], pad = 0): Bounds {

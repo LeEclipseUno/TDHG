@@ -5,8 +5,8 @@ import { MODES, VARIANTS, getBest, type Challenge, type ModeId, type Settings, t
 import { dailyMode, dailyNumber, getDailyResult, getStreak, msUntilNextDaily } from '../game/daily'
 import { season, SEASON_TEXT } from '../game/season'
 import { Board, Matrix } from './widgets'
-import { IconLock, IconSignArrow, PictDrag, PictExit, PictFind, PictGroup, PictJunction, PictLearn, PictQuiz, PictRoute, PictStats, SeasonIcon } from './icons'
-import { ONLINE } from '../game/backend'
+import { IconGoogle, IconLock, IconSignArrow, PictDrag, PictExit, PictFind, PictGroup, PictJunction, PictLearn, PictQuiz, PictRoute, PictStats, SeasonIcon } from './icons'
+import { ONLINE, type Account } from '../game/backend'
 import DriftMap from '../map/DriftMap'
 import { useNow } from '../game/hooks'
 
@@ -24,6 +24,9 @@ export interface HomeProps {
   challenge: Challenge | null
   onChallenge: () => void
   onInstall?: () => void
+  account: Account
+  onSignIn: () => void
+  onSignOut: () => void
 }
 
 const PICTS: Record<ModeId, typeof PictDrag> = { drag: PictDrag, find: PictFind, junction: PictJunction, quiz: PictQuiz, exit: PictExit, route: PictRoute }
@@ -90,7 +93,7 @@ export function StreakPosts({ count }: { count: number }) {
 const isIosSafari = /iphone|ipad|ipod/i.test(navigator.userAgent) && !('standalone' in navigator && (navigator as { standalone?: boolean }).standalone)
 const isStandalone = window.matchMedia('(display-mode: standalone)').matches
 
-export function Home({ data, settings, onSettings, onPlay, onDaily, onStats, onAbout, onGroups, challenge, onChallenge, onInstall }: HomeProps) {
+export function Home({ data, settings, onSettings, onPlay, onDaily, onStats, onAbout, onGroups, challenge, onChallenge, onInstall, account, onSignIn, onSignOut }: HomeProps) {
   const { t, lang, setLang } = useLang()
   const tiers: Tier[] = ['A', 'N', 'AN']
   const n = dailyNumber()
@@ -188,7 +191,7 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onStats, onA
         <Board className="modes-board">
           <div className="board-title">{t('chooseMode')}</div>
           {MODES.map((mode) => {
-            const best = getBest(mode, settings.tier, settings.timer, settings.variant)
+            const best = getBest(mode, settings.tier, settings.timer, settings.variant, settings.province)
             const Pict = PICTS[mode]
             return (
               <button key={mode} type="button" className="sign-row" onClick={() => onPlay(mode)}>
@@ -263,6 +266,39 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onStats, onA
             <Seg<Variant> wide label={t('variant')} value={settings.variant} onChange={(variant) => onSettings({ ...settings, variant })} options={VARIANTS.map((v) => ({ v, label: t(`variant_${v}`) }))} />
             <span className="setting-hint">{t(`variantHint_${settings.variant}`)}</span>
           </div>
+          <div className="setting">
+            <span className="setting-label">{t('province')}</span>
+            <select className="prov-select" value={settings.province} onChange={(e) => onSettings({ ...settings, province: e.target.value })} aria-label={t('province')}>
+              <option value="">{t('allProvinces')}</option>
+              {data.provinces.codes.map((c) => (
+                <option key={c} value={c}>
+                  {t(`prov_${c}` as 'prov_GR')}
+                </option>
+              ))}
+            </select>
+          </div>
+          {ONLINE && (
+            <div className="setting">
+              <span className="setting-label">{t('account')}</span>
+              {account.signedIn ? (
+                <div className="account-row">
+                  <span className="setting-hint">
+                    {t('signedInAs')} {account.email}
+                  </span>
+                  <button type="button" className="btn btn-small btn-ghost" onClick={onSignOut}>
+                    {t('signOut')}
+                  </button>
+                </div>
+              ) : (
+                <div className="account-row">
+                  <button type="button" className="btn btn-small google-btn" onClick={onSignIn}>
+                    <IconGoogle /> {t('signInGoogle')}
+                  </button>
+                  <span className="setting-hint">{t('cloudHint')}</span>
+                </div>
+              )}
+            </div>
+          )}
           <div className="setting">
             <span className="setting-label">{t('learnDeck')}</span>
             <Seg<Deck> label={t('learnDeck')} value={settings.learnDeck} onChange={(learnDeck) => onSettings({ ...settings, learnDeck })} options={[{ v: 'roads', label: t('deck_roads') }, { v: 'junctions', label: t('deck_junctions') }]} />

@@ -4,6 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 const URL = import.meta.env.VITE_SUPABASE_URL as string | undefined
 const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+const SHARE_BASE = (import.meta.env.VITE_SHARE_BASE as string | undefined) || (URL ? `${URL}/functions/v1/s` : '')
 export const ONLINE = Boolean(URL && KEY)
 
 let clientPromise: Promise<SupabaseClient | null> | null = null
@@ -147,5 +148,62 @@ export async function createShare(blob: Blob, title: string, text: string, param
   const image = c.storage.from('cards').getPublicUrl(path).data.publicUrl
   const { error } = await c.from('shares').insert({ id, player_id: u.user.id, title, text, image, param })
   if (error) return null
-  return `${URL}/functions/v1/s/${id}`
+  return `${SHARE_BASE}/${id}`
+}
+
+// ---------- account ----------
+
+export interface Account {
+  signedIn: boolean
+  email?: string
+}
+
+/** Signed in means a real (Google) identity, not the anonymous device account. */
+export async function getAccount(): Promise<Account> {
+  const c = await sb()
+  if (!c) return { signedIn: false }
+  const { data } = await c.auth.getUser()
+  const u = data.user
+  if (!u || u.is_anonymous) return { signedIn: false }
+  return { signedIn: true, email: u.email ?? undefined }
+}
+
+export async function isSignedIn(): Promise<boolean> {
+  return (await getAccount()).signedIn
+}
+
+/** Links the anonymous device account to Google (keeps groups and scores), or signs in fresh. Redirects away. */
+export async function signInWithGoogle(): Promise<'redirect' | 'off' | 'error'> {
+  const c = await sb()
+  if (!c || !(await ensureSession())) return 'error'
+  const redirectTo = `${location.origin}${import.meta.env.BASE_URL}`
+  const { data } = await c.auth.getUser()
+  const link = data.user?.is_anonymous ? await c.auth.linkIdentity({ provider: 'google', options: { redirectTo } }) : null
+  if (link && !link.error) return 'redirect'
+  const res = await c.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } })
+  if (res.error) return /not enabled|unsupported|disabled/i.test(res.error.message) ? 'off' : 'error'
+  return 'redirect'
+}
+
+export async function signOut() {
+  const c = await sb()
+  if (!c) return
+  await c.auth.signOut()
+  session = null
+}
+
+export async function loadRemoteState(): Promise<Record<string, string> | null> {
+  const c = await sb()
+  if (!c || !(await ensureSession())) return null
+  const { data } = await c.from('player_state').select('state').maybeSingle()
+  return (data?.state as Record<string, string> | undefined) ?? null
+}
+
+export async function saveRemoteState(state: Record<string, string>): Promise<boolean> {
+  const c = await sb()
+  if (!c || !(await ensureSession())) return false
+  const { data: u } = await c.auth.getUser()
+  if (!u.user) return false
+  const { error } = await c.from('player_state').upsert({ player_id: u.user.id, state, updated_at: new Date().toISOString() })
+  return !error
 }

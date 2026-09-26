@@ -27,7 +27,7 @@ interface DragState {
 export function DragMode({ data, session, onFinish, onQuit }: ModeProps) {
   const { t } = useLang()
   const mapRef = useRef<MapHandle>(null)
-  const items = useMemo(() => pickRoads(data, session.tier, QUESTION_COUNT, mulberry32(session.seed)), [data, session.tier, session.seed])
+  const items = useMemo(() => pickRoads(data, session.tier, QUESTION_COUNT, mulberry32(session.seed), session.province), [data, session.tier, session.seed, session.province])
   const [placed, setPlaced] = useState<Record<string, { x: number; y: number; at: number }>>({})
   const [pulses, setPulses] = useState<Pulse[]>([])
   const [attempts, setAttempts] = useState<Record<string, number>>({})

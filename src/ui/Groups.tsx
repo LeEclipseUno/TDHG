@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLang } from '../i18n'
 import { Board } from './widgets'
-import { IconMenu, IconReplay, IconShare } from './icons'
+import { IconMenu, IconReplay, IconShare, PictGroup } from './icons'
 import { createGroup, getNickname, groupBoard, groupWeek, joinGroup, leaveGroup, myGroups, ONLINE, setNickname, validNickname, type BoardRow, type Group, type WeekRow } from '../game/backend'
 import { dailyNumber } from '../game/daily'
 import { formatTime } from '../game/session'
@@ -216,7 +216,12 @@ export function Groups({ data, onHome, joinCode }: { data: GameData; onHome: () 
           </Board>
         )}
 
-        {groups && groups.length === 0 && ONLINE && <p className="learn-note stats-empty">{t('groupsHint')}</p>}
+        {groups && groups.length === 0 && ONLINE && (
+          <div className="empty">
+            <PictGroup />
+            <p>{t('groupsHint')}</p>
+          </div>
+        )}
 
         <div className="results-actions">
           <button type="button" className="btn btn-ghost" onClick={onHome}>
