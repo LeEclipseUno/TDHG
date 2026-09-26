@@ -156,6 +156,8 @@ export async function createShare(blob: Blob, title: string, text: string, param
 export interface Account {
   signedIn: boolean
   email?: string
+  name?: string
+  avatar?: string
 }
 
 /** Signed in means a real (Google) identity, not the anonymous device account. */
@@ -165,7 +167,9 @@ export async function getAccount(): Promise<Account> {
   const { data } = await c.auth.getUser()
   const u = data.user
   if (!u || u.is_anonymous) return { signedIn: false }
-  return { signedIn: true, email: u.email ?? undefined }
+  const m = (u.user_metadata ?? {}) as Record<string, unknown>
+  const str = (k: string) => (typeof m[k] === 'string' && (m[k] as string).trim() ? (m[k] as string).trim() : undefined)
+  return { signedIn: true, email: u.email ?? undefined, name: str('full_name') ?? str('name') ?? str('given_name'), avatar: str('avatar_url') ?? str('picture') }
 }
 
 export async function isSignedIn(): Promise<boolean> {

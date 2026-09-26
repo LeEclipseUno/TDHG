@@ -112,7 +112,20 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onStats, onA
       </div>
       <div className="home-inner">
         <header className="home-header">
-          <LangPost lang={lang} onChange={setLang} label={t('language')} />
+          <div className="home-topbar">
+            {ONLINE && account.signedIn ? (
+              <button type="button" className="avatar-btn" onClick={onStats} aria-label={t('stats')}>
+                {account.avatar ? <img className="avatar-img" src={account.avatar} alt="" referrerPolicy="no-referrer" /> : <span className="avatar-img avatar-fallback">{(account.name ?? account.email ?? '?').slice(0, 1).toUpperCase()}</span>}
+                <span className="avatar-text">
+                  <span className="avatar-name">{account.name ?? account.email?.split('@')[0]}</span>
+                  <span className="avatar-sub">{t('stats')}</span>
+                </span>
+              </button>
+            ) : (
+              <span />
+            )}
+            <LangPost lang={lang} onChange={setLang} label={t('language')} />
+          </div>
           <div className="home-logo-wrap">
             <img src={`${import.meta.env.BASE_URL}logo.png`} alt="The Dutch Highway Guesser" className="home-logo" />
           </div>
@@ -297,14 +310,6 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onStats, onA
           </div>
         </Board>
 
-        <button type="button" className="install-row" onClick={onStats}>
-          <span className="install-icon" aria-hidden>
-            <PictStats width={30} height={30} />
-          </span>
-          <span className="sign-text">
-            <span className="install-name">{t('stats')}</span>
-          </span>
-        </button>
         {!isStandalone && (onInstall || isIosSafari) && (
           <button type="button" className="install-row" onClick={onInstall} disabled={!onInstall}>
             <span className="install-icon" aria-hidden>
