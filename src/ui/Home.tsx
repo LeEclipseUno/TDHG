@@ -67,11 +67,10 @@ function LangPost({ lang, onChange, label }: { lang: Lang; onChange: (l: Lang) =
   }
   return (
     <div className="home-lang">
-      <svg className="lang-post" width="64" height="106" viewBox="0 0 64 106" role="group" aria-label={label}>
-        <rect x="27" y="40" width="10" height="66" rx="1.5" fill="#8d949c" />
-        <rect x="27" y="40" width="3" height="66" fill="#b9bec4" />
-        {plate('nl', 0, 'Li')}
-        {plate('en', 50, 'Re')}
+      <svg className="lang-post" width="140" height="54" viewBox="0 0 140 54" role="group" aria-label={label}>
+        <rect x="60" y="46" width="20" height="8" rx="1.5" fill="#8d949c" />
+        <g transform="translate(2 0)">{plate('nl', 0, 'Li')}</g>
+        <g transform="translate(74 0)">{plate('en', 0, 'Re')}</g>
       </svg>
     </div>
   )
@@ -165,6 +164,19 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onStats, onA
             <IconSignArrow className="sign-arrow" />
           </button>
         </Board>
+
+        {ONLINE && !account.signedIn && (
+          <button type="button" className="google-row" onClick={onSignIn}>
+            <span className="google-row-icon">
+              <IconGoogle />
+            </span>
+            <span className="sign-text">
+              <span className="google-row-name">{t('signInGoogle')}</span>
+              <span className="google-row-desc">{t('cloudHint')}</span>
+            </span>
+            <IconSignArrow className="sign-arrow google-row-arrow" />
+          </button>
+        )}
 
         {challenge && (
           <Board tone="orange" className="challenge-board">
@@ -266,37 +278,17 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onStats, onA
             <Seg<Variant> wide label={t('variant')} value={settings.variant} onChange={(variant) => onSettings({ ...settings, variant })} options={VARIANTS.map((v) => ({ v, label: t(`variant_${v}`) }))} />
             <span className="setting-hint">{t(`variantHint_${settings.variant}`)}</span>
           </div>
-          <div className="setting">
-            <span className="setting-label">{t('province')}</span>
-            <select className="prov-select" value={settings.province} onChange={(e) => onSettings({ ...settings, province: e.target.value })} aria-label={t('province')}>
-              <option value="">{t('allProvinces')}</option>
-              {data.provinces.codes.map((c) => (
-                <option key={c} value={c}>
-                  {t(`prov_${c}` as 'prov_GR')}
-                </option>
-              ))}
-            </select>
-          </div>
-          {ONLINE && (
+          {ONLINE && account.signedIn && (
             <div className="setting">
               <span className="setting-label">{t('account')}</span>
-              {account.signedIn ? (
-                <div className="account-row">
-                  <span className="setting-hint">
-                    {t('signedInAs')} {account.email}
-                  </span>
-                  <button type="button" className="btn btn-small btn-ghost" onClick={onSignOut}>
-                    {t('signOut')}
-                  </button>
-                </div>
-              ) : (
-                <div className="account-row">
-                  <button type="button" className="btn btn-small google-btn" onClick={onSignIn}>
-                    <IconGoogle /> {t('signInGoogle')}
-                  </button>
-                  <span className="setting-hint">{t('cloudHint')}</span>
-                </div>
-              )}
+              <div className="account-row">
+                <span className="setting-hint">
+                  {t('signedInAs')} {account.email}
+                </span>
+                <button type="button" className="btn btn-small btn-ghost" onClick={onSignOut}>
+                  {t('signOut')}
+                </button>
+              </div>
             </div>
           )}
           <div className="setting">

@@ -547,7 +547,7 @@ button {
 }
 .home-lang {
   align-self: flex-end;
-  margin-bottom: 2px;
+  margin-bottom: -6px;
 }
 .lang-post {
   display: block;
@@ -1999,4 +1999,46 @@ body,
 .empty p {
   margin: 0;
   max-width: 320px;
+}
+
+/* ---------- google sign-in row ---------- */
+.google-row {
+  display: grid;
+  grid-template-columns: 52px 1fr 32px;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  background: var(--white);
+  border: 0;
+  border-radius: 8px;
+  padding: 12px 14px;
+  cursor: pointer;
+  color: var(--navy);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+}
+.google-row-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  border: 2px solid #e3e6ea;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+}
+.google-row-icon svg {
+  width: 30px;
+  height: 30px;
+}
+.google-row-name {
+  font-family: var(--font-sign);
+  font-weight: 800;
+  font-size: 21px;
+}
+.google-row-desc {
+  font-size: 13px;
+  color: #5b6b80;
+}
+.google-row-arrow {
+  color: var(--navy);
 }
