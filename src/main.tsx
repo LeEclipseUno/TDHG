@@ -11,6 +11,13 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {})
   })
+  // A new version takes over as soon as it is installed: reload once so nobody sees a stale mix.
+  let reloading = false
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloading || !navigator.serviceWorker.controller) return
+    reloading = true
+    location.reload()
+  })
 }
 
 createRoot(document.getElementById('root')!).render(

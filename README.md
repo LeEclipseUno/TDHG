@@ -38,7 +38,7 @@ Friend groups, the daily percentile and personal link previews run on a free Sup
 1. Create a project at supabase.com. In Authentication, Providers, enable "Anonymous sign-ins".
 2. SQL editor: run `supabase/schema.sql`.
 3. Edge function for link previews (needs the Supabase CLI): `supabase functions deploy s --no-verify-jwt`.
-4. Put the project URL and anon key (Settings, API) in `.env` locally, and as repository secrets `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` on GitHub for the deploy.
+4. Put the project URL and the publishable (anon) key from Settings, API in `.env.production` (committed; the key is meant to be public) and in `.env` for local development.
 
 ## Deploy
 
