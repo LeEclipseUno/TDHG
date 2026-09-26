@@ -1,5 +1,5 @@
-// Daily reminder: called once an hour (pg_cron, see schema.sql). Sends a push to every subscription whose
-// local hour is now and whose player has not played today's daily yet.
+// Daily reminder: called every five minutes (pg_cron, see schema.sql). Sends a push to every subscription whose
+// local time falls in this five-minute slot and whose player has not played today's daily yet.
 // Deploy with: supabase functions deploy remind --no-verify-jwt
 // Secrets: VAPID_PUBLIC, VAPID_PRIVATE, VAPID_SUBJECT (mailto:you@example.com), CRON_SECRET.
 import { createClient } from 'npm:@supabase/supabase-js@2'
@@ -13,11 +13,11 @@ const TEXT = {
   en: { title: 'Wegenkenner', body: "Today's daily puzzle is waiting. Keep your streak alive." },
 }
 
-function localParts(now: Date, tz: string): { hour: number; date: string } {
+function localParts(now: Date, tz: string): { hour: number; minute: number; date: string } {
   try {
-    const f = new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: 'numeric', hour12: false, year: 'numeric', month: '2-digit', day: '2-digit' })
+    const f = new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: 'numeric', minute: 'numeric', hour12: false, year: 'numeric', month: '2-digit', day: '2-digit' })
     const parts = Object.fromEntries(f.formatToParts(now).map((p) => [p.type, p.value]))
-    return { hour: Number(parts.hour) % 24, date: `${parts.year}-${parts.month}-${parts.day}` }
+    return { hour: Number(parts.hour) % 24, minute: Number(parts.minute), date: `${parts.year}-${parts.month}-${parts.day}` }
   } catch {
     return localParts(now, 'Europe/Amsterdam')
   }
@@ -34,10 +34,14 @@ Deno.serve(async (req) => {
   webpush.setVapidDetails(Deno.env.get('VAPID_SUBJECT') ?? 'mailto:hello@wegenkenner.nl', Deno.env.get('VAPID_PUBLIC')!, Deno.env.get('VAPID_PRIVATE')!)
   const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
   const now = new Date()
-  const { data: subs, error } = await supabase.from('push_subs').select('player_id, endpoint, p256dh, auth, hour, tz, lang')
+  const { data: subs, error } = await supabase.from('push_subs').select('player_id, endpoint, p256dh, auth, hour, minute, tz, lang')
   if (error) return new Response(error.message, { status: 500 })
 
-  const due = (subs ?? []).filter((s) => localParts(now, s.tz).hour === s.hour)
+  const slot = (m: number) => Math.floor(m / 5)
+  const due = (subs ?? []).filter((s) => {
+    const l = localParts(now, s.tz)
+    return l.hour === s.hour && slot(l.minute) === slot(s.minute ?? 0)
+  })
   let sent = 0
   const gone: string[] = []
   for (const s of due) {

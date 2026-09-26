@@ -8,6 +8,7 @@ const VAPID = import.meta.env.VITE_VAPID_PUBLIC as string | undefined
 export interface Reminder {
   on: boolean
   hour: number
+  minute: number
 }
 
 export function pushSupported(): boolean {
@@ -17,11 +18,11 @@ export function pushSupported(): boolean {
 export function getReminder(): Reminder {
   try {
     const r = JSON.parse(localStorage.getItem(KEY) ?? 'null') as Reminder | null
-    if (r && typeof r.hour === 'number') return r
+    if (r && typeof r.hour === 'number') return { on: !!r.on, hour: r.hour, minute: typeof r.minute === 'number' ? r.minute : 0 }
   } catch {
     /* ignore */
   }
-  return { on: false, hour: 18 }
+  return { on: false, hour: 18, minute: 0 }
 }
 
 function remember(r: Reminder) {
@@ -39,7 +40,7 @@ function keyBytes(b64: string): Uint8Array {
 }
 
 /** Asks permission, subscribes the browser and stores the subscription. Returns false when anything refuses. */
-export async function enableReminder(hour: number, lang: string): Promise<boolean> {
+export async function enableReminder(hour: number, minute: number, lang: string): Promise<boolean> {
   if (!pushSupported()) return false
   const c = await sb()
   if (!c || !(await ensureSession())) return false
@@ -49,11 +50,11 @@ export async function enableReminder(hour: number, lang: string): Promise<boolea
     const sub = (await reg.pushManager.getSubscription()) ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(VAPID!) as BufferSource }))
     const j = sub.toJSON()
     const { error } = await c.from('push_subs').upsert(
-      { endpoint: sub.endpoint, p256dh: j.keys?.p256dh ?? '', auth: j.keys?.auth ?? '', hour, tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Amsterdam', lang },
+      { endpoint: sub.endpoint, p256dh: j.keys?.p256dh ?? '', auth: j.keys?.auth ?? '', hour, minute, tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Amsterdam', lang },
       { onConflict: 'endpoint' },
     )
     if (error) return false
-    remember({ on: true, hour })
+    remember({ on: true, hour, minute })
     return true
   } catch {
     return false
@@ -61,7 +62,7 @@ export async function enableReminder(hour: number, lang: string): Promise<boolea
 }
 
 export async function disableReminder(): Promise<void> {
-  remember({ on: false, hour: getReminder().hour })
+  remember({ ...getReminder(), on: false })
   try {
     const reg = await navigator.serviceWorker.ready
     const sub = await reg.pushManager.getSubscription()

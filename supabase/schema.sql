@@ -199,20 +199,22 @@ create table if not exists push_subs (
   p256dh text not null,
   auth text not null,
   hour int not null default 18 check (hour between 0 and 23),
+  minute int not null default 0 check (minute between 0 and 59),
   tz text not null default 'Europe/Amsterdam',
   lang text not null default 'nl',
   updated_at timestamptz not null default now()
 );
+alter table push_subs add column if not exists minute int not null default 0 check (minute between 0 and 59);
 create index if not exists push_subs_player on push_subs(player_id);
 alter table push_subs enable row level security;
 drop policy if exists "own push subs" on push_subs;
 create policy "own push subs" on push_subs for all to authenticated
   using (player_id = auth.uid()) with check (player_id = auth.uid());
 
--- Hourly trigger for the remind function. Enable the pg_cron and pg_net extensions first
+-- Trigger for the remind function, every five minutes. Enable the pg_cron and pg_net extensions first
 -- (Database, Extensions), then run this once with your project ref, anon key and CRON_SECRET filled in:
 --
--- select cron.schedule('remind-hourly', '0 * * * *', $$
+-- select cron.schedule('remind', '*/5 * * * *', $$
 --   select net.http_post(
 --     url := 'https://<project-ref>.supabase.co/functions/v1/remind',
 --     headers := '{"Content-Type":"application/json","Authorization":"Bearer <anon key>","x-cron-secret":"<CRON_SECRET>"}'::jsonb,

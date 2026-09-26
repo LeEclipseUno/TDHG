@@ -127,18 +127,18 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
   }
   const [reminder, setReminder] = useState(getReminder)
   const [reminderNote, setReminderNote] = useState('')
-  const setReminderHour = async (v: string) => {
+  const applyReminder = async (on: boolean, hour: number, minute: number) => {
     setReminderNote('')
-    if (v === 'off') {
+    if (!on) {
       await disableReminder()
-      setReminder({ on: false, hour: reminder.hour })
+      setReminder({ on: false, hour, minute })
       return
     }
-    const hour = Number(v)
-    const ok = await enableReminder(hour, lang)
-    if (ok) setReminder({ on: true, hour })
+    const ok = await enableReminder(hour, minute, lang)
+    if (ok) setReminder({ on: true, hour, minute })
     else setReminderNote(isIosSafari && !isStandalone ? t('reminderInstall') : t('reminderDenied'))
   }
+  const reminderTime = `${String(reminder.hour).padStart(2, '0')}:${String(reminder.minute).padStart(2, '0')}`
 
   return (
     <div className={'home' + (s ? ` season-${s}` : '')}>
@@ -372,7 +372,21 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
           {ONLINE && pushSupported() && (
             <div className="setting">
               <span className="setting-label">{t('reminder')}</span>
-              <Seg<string> wide label={t('reminder')} value={reminder.on ? String(reminder.hour) : 'off'} onChange={(v) => void setReminderHour(v)} options={[{ v: 'off', label: t('reminderOff') }, ...[8, 12, 18, 20].map((h) => ({ v: String(h), label: `${h}:00` }))]} />
+              <div className="reminder-row">
+                <Seg<string> label={t('reminder')} value={reminder.on ? 'on' : 'off'} onChange={(v) => void applyReminder(v === 'on', reminder.hour, reminder.minute)} options={[{ v: 'on', label: t('timerOn') }, { v: 'off', label: t('timerOff') }]} />
+                <input
+                  type="time"
+                  className="time-input"
+                  aria-label={t('reminder')}
+                  value={reminderTime}
+                  step={300}
+                  onChange={(e) => {
+                    const [h, m] = e.target.value.split(':').map(Number)
+                    if (Number.isNaN(h)) return
+                    void applyReminder(reminder.on, h, m || 0)
+                  }}
+                />
+              </div>
               <span className="setting-hint">{reminderNote || t('reminderHint')}</span>
             </div>
           )}
