@@ -3,8 +3,14 @@ import { roadsForTier } from '../data'
 import { translate, type Lang } from '../i18n'
 import type { Deck } from './learn'
 
-export type ModeId = 'drag' | 'find' | 'junction' | 'quiz'
-export const MODES: ModeId[] = ['drag', 'find', 'junction', 'quiz']
+export type ModeId = 'drag' | 'find' | 'junction' | 'quiz' | 'exit' | 'route'
+export const MODES: ModeId[] = ['drag', 'find', 'junction', 'quiz', 'exit', 'route']
+export type Variant = 'normal' | 'nozoom' | 'blind' | 'blitz'
+export const VARIANTS: Variant[] = ['normal', 'nozoom', 'blind', 'blitz']
+/** Score multiplier for the harder variants. */
+export const VARIANT_MULT: Record<Variant, number> = { normal: 1, nozoom: 1.25, blind: 1.5, blitz: 1 }
+export const BLITZ_MS = 60_000
+export const BLITZ_BONUS_MS = 4_000
 
 export type Grade = 'good' | 'partial' | 'bad'
 
@@ -22,6 +28,7 @@ export interface Settings {
   daily: boolean
   learnDeck: Deck
   sound: boolean
+  variant: Variant
 }
 
 export interface Session {
@@ -30,6 +37,9 @@ export interface Session {
   timer: boolean
   daily: boolean
   seed: number
+  variant: Variant
+  /** Score of the player who sent a challenge link, when playing one. */
+  challenge?: number
   startedAt: number
   finishedAt: number
   results: QuestionResult[]
@@ -37,7 +47,7 @@ export interface Session {
 
 export const QUESTION_COUNT = 10
 /** Seconds. drag is a total budget, the others are per question. */
-export const TIME_LIMITS: Record<ModeId, number> = { find: 20, quiz: 15, junction: 30, drag: 180 }
+export const TIME_LIMITS: Record<ModeId, number> = { find: 20, quiz: 15, junction: 30, drag: 180, exit: 25, route: 0 }
 export const HINT_COST = 30
 
 export function mulberry32(seed: number): () => number {
@@ -79,9 +89,38 @@ export function shuffle<T>(arr: readonly T[], rng: () => number): T[] {
   return a
 }
 
-export function newSession(mode: ModeId, s: Settings): Session {
+export function newSession(mode: ModeId, s: Settings, challenge?: Challenge): Session {
+  if (challenge) {
+    return { mode: challenge.mode, tier: challenge.tier, timer: challenge.timer, daily: false, seed: challenge.seed, variant: challenge.variant, challenge: challenge.score, startedAt: Date.now(), finishedAt: 0, results: [] }
+  }
   const seed = s.daily ? dailySeed(mode, s.tier) : Math.floor(Math.random() * 2 ** 31)
-  return { mode, tier: s.tier, timer: s.timer, daily: s.daily, seed, startedAt: Date.now(), finishedAt: 0, results: [] }
+  return { mode, tier: s.tier, timer: s.timer, daily: s.daily, seed, variant: mode === 'route' || mode === 'drag' ? (s.variant === 'blitz' ? 'normal' : s.variant) : s.variant, startedAt: Date.now(), finishedAt: 0, results: [] }
+}
+
+export interface Challenge {
+  mode: ModeId
+  tier: Tier
+  timer: boolean
+  seed: number
+  score: number
+  variant: Variant
+}
+
+/** Challenge links carry mode, tier, timer, seed, score and variant in one query parameter. */
+export function challengeParam(s: Session): string {
+  return [s.mode, s.tier, s.timer ? 1 : 0, s.seed, summarize(s).score, s.variant].join('.')
+}
+
+export function parseChallenge(search: string): Challenge | null {
+  const c = new URLSearchParams(search).get('c')
+  if (!c) return null
+  const [mode, tier, timer, seed, score, variant] = c.split('.')
+  if (!MODES.includes(mode as ModeId) || !['A', 'AN', 'ALL'].includes(tier)) return null
+  const v = VARIANTS.includes(variant as Variant) ? (variant as Variant) : 'normal'
+  const n = Number(seed)
+  const sc = Number(score)
+  if (!Number.isFinite(n) || !Number.isFinite(sc)) return null
+  return { mode: mode as ModeId, tier: tier as Tier, timer: timer === '1', seed: n, score: sc, variant: v }
 }
 
 /** Pick n roads for a tier. Mixes kinds so that the harder tiers do not drown in provincial roads. */
@@ -182,11 +221,14 @@ export function shareText(s: Session, lang: Lang, url: string): string {
   const tierName = translate(lang, `tier_${s.tier}_short` as const)
   const daily = s.daily ? dot + dateKey() : ''
   const timer = s.timer ? '' : dot + translate(lang, 'timer') + ' ' + translate(lang, 'timerOff').toLowerCase()
+  const variant = s.variant !== 'normal' ? dot + translate(lang, `variant_${s.variant}` as const) : ''
+  const vs = s.challenge !== undefined ? dot + `${translate(lang, 'challenger')} ${s.challenge}` : ''
   return [
-    'TDHG' + dot + modeName + dot + tierName + daily + timer,
-    `${sum.score} ${translate(lang, 'points')}` + dot + `${sum.good}${sum.partial ? `+${sum.partial}` : ''}/${sum.total}` + dot + formatTime(sum.ms),
+    'TDHG' + dot + modeName + dot + tierName + daily + timer + variant,
+    `${sum.score} ${translate(lang, 'points')}` + dot + `${sum.good}${sum.partial ? `+${sum.partial}` : ''}/${sum.total}` + dot + formatTime(sum.ms) + vs,
     marksLine(s),
-    url,
+    translate(lang, 'beatMe'),
+    `${url}?c=${challengeParam(s)}`,
   ].join('\n')
 }
 
@@ -199,12 +241,12 @@ export function loadSettings(): Settings {
     const raw = localStorage.getItem(SETTINGS_KEY)
     if (raw) {
       const p = JSON.parse(raw) as Partial<Settings>
-      return { tier: p.tier === 'AN' || p.tier === 'ALL' ? p.tier : 'A', timer: p.timer !== false, daily: p.daily === true, learnDeck: p.learnDeck === 'junctions' ? 'junctions' : 'roads', sound: p.sound !== false }
+      return { tier: p.tier === 'AN' || p.tier === 'ALL' ? p.tier : 'A', timer: p.timer !== false, daily: p.daily === true, learnDeck: p.learnDeck === 'junctions' ? 'junctions' : 'roads', sound: p.sound !== false, variant: VARIANTS.includes(p.variant as Variant) ? (p.variant as Variant) : 'normal' }
     }
   } catch {
     /* ignore */
   }
-  return { tier: 'A', timer: true, daily: false, learnDeck: 'roads', sound: true }
+  return { tier: 'A', timer: true, daily: false, learnDeck: 'roads', sound: true, variant: 'normal' }
 }
 
 export function saveSettings(s: Settings) {
@@ -222,13 +264,13 @@ export interface Best {
   date: string
 }
 
-function bestKey(mode: ModeId, tier: Tier, timer: boolean) {
-  return `tdhg:v1:best:${mode}:${tier}:${timer ? 't' : 'u'}`
+function bestKey(mode: ModeId, tier: Tier, timer: boolean, variant: Variant = 'normal') {
+  return `tdhg:v1:best:${mode}:${tier}:${timer ? 't' : 'u'}${variant === 'normal' ? '' : ':' + variant}`
 }
 
-export function getBest(mode: ModeId, tier: Tier, timer: boolean): Best | null {
+export function getBest(mode: ModeId, tier: Tier, timer: boolean, variant: Variant = 'normal'): Best | null {
   try {
-    const raw = localStorage.getItem(bestKey(mode, tier, timer))
+    const raw = localStorage.getItem(bestKey(mode, tier, timer, variant))
     return raw ? (JSON.parse(raw) as Best) : null
   } catch {
     return null
@@ -239,10 +281,10 @@ export function getBest(mode: ModeId, tier: Tier, timer: boolean): Best | null {
 export function submitBest(s: Session): boolean {
   const sum = summarize(s)
   if (sum.score <= 0) return false
-  const prev = getBest(s.mode, s.tier, s.timer)
+  const prev = getBest(s.mode, s.tier, s.timer, s.variant)
   if (prev && prev.score >= sum.score) return false
   try {
-    localStorage.setItem(bestKey(s.mode, s.tier, s.timer), JSON.stringify({ score: sum.score, accuracy: sum.accuracy, ms: sum.ms, date: dateKey() } satisfies Best))
+    localStorage.setItem(bestKey(s.mode, s.tier, s.timer, s.variant), JSON.stringify({ score: sum.score, accuracy: sum.accuracy, ms: sum.ms, date: dateKey() } satisfies Best))
   } catch {
     /* ignore */
   }

@@ -71,6 +71,14 @@ export interface MapViewProps {
   /** false: no gestures, buttons or scale bar (results mini map). */
   interactive?: boolean
   palette?: 'dark' | 'light'
+  /** Interchange names and exit labels at deep zoom (off in modes where they would give the answer away). */
+  labels?: boolean
+  /** Ignore all zoom gestures (hard mode). */
+  lockZoom?: boolean
+  /** Draw land only, no roads except highlighted ones (blind mode). */
+  hideRoads?: boolean
+  /** Extra polylines drawn in the accent colour, for example a computed route. */
+  paths?: number[][]
   className?: string
   onTap?: (tap: TapInfo) => void
   children?: ReactNode
@@ -91,6 +99,8 @@ const MIN_STEP = 0.75
 const POP_MS = 450
 const PULSE_MS = 700
 const LINE_MS = 700
+const FLY_MS = 1300
+const MIN_FLY_EXTENT = 4000 // metres
 export const COLORS = {
   bg: '#091b2c',
   land: '#1b4a8d',
@@ -291,7 +301,8 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
         anim.onDone?.()
       } else live = true
     }
-    const { data, tier, highlights = {}, shields = [], markers = [], lines = [], pulses = [], showJunctions } = propsRef.current
+    const { data, tier, highlights = {}, shields = [], markers = [], lines = [], pulses = [], paths = [], showJunctions, hideRoads } = propsRef.current
+    const labels = propsRef.current.labels !== false
     const C = propsRef.current.palette === 'light' ? LIGHT : COLORS
     const { w, h } = sizeRef.current
     const dpr = window.devicePixelRatio || 1
@@ -384,13 +395,14 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
           later.push(r)
           continue
         }
+        if (hideRoads) continue
         const inTier = tierIncludes(tier, r.kind)
         if (r.kind === 'P' && !inTier && z < 2.5) continue
         strokeLines(r.lines, C[r.kind], widths[r.kind], inTier ? 1 : 0.35)
       }
     }
     drawKind('P')
-    if (z > 1.5) {
+    if (z > 1.5 && !hideRoads) {
       for (const lk of data.links) {
         if (!inView(lk.b)) continue
         strokeLines([lk.l], C[lk.k], linkWidth[lk.k], tierIncludes(tier, lk.k) ? 0.95 : 0.35)
@@ -410,6 +422,90 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
       ctx.globalAlpha = 1
       ctx.lineWidth = widths[r.kind] + 1.5
       ctx.stroke()
+    }
+
+    for (const path of paths) {
+      ctx.beginPath()
+      trace(path)
+      ctx.strokeStyle = C.active
+      ctx.globalAlpha = 0.35
+      ctx.lineWidth = widths.A + 10
+      ctx.stroke()
+      ctx.globalAlpha = 1
+      ctx.lineWidth = Math.max(4, widths.A * 0.6)
+      ctx.stroke()
+    }
+
+    // Hectometre posts along motorways at deep zoom: a small green post every 100 m, beside the carriageway.
+    if (scale > 0.8 && !hideRoads) {
+      const off = 14 * scale
+      ctx.fillStyle = '#1f8f4e'
+      for (const r of data.roads) {
+        if (r.kind !== 'A' || !inView(r.bbox)) continue
+        for (const line of r.lines) {
+          let acc = 0
+          for (let i = 2; i < line.length; i += 2) {
+            const ax = line[i - 2]
+            const ay = line[i - 1]
+            const dx = line[i] - ax
+            const dy = line[i + 1] - ay
+            const seg = Math.hypot(dx, dy)
+            if (seg === 0) continue
+            let next = 100 - (acc % 100)
+            while (next <= seg) {
+              const px = ax + (dx * next) / seg
+              const py = ay + (dy * next) / seg
+              if (px >= vx0 && px <= vx1 && py >= vy0 && py <= vy1) {
+                const nx = (-dy / seg) * off
+                const ny = (dx / seg) * off
+                ctx.fillRect(X(px) + nx / scale - 1.5, Y(py) + ny / scale - 3, 3, 6)
+              }
+              next += 100
+            }
+            acc += seg
+          }
+        }
+      }
+    }
+
+    // Interchange names as small blue signs once the map is zoomed in enough to read them.
+    if (labels && z > 3.2) {
+      ctx.font = '700 11px "Barlow Condensed", system-ui, sans-serif'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      for (const j of data.junctions) {
+        const sx = X(j.x)
+        const sy = Y(j.y)
+        if (sx < -80 || sx > w + 80 || sy < -30 || sy > h + 30) continue
+        const label = 'Knooppunt ' + j.name
+        const tw = ctx.measureText(label).width + 12
+        roundRect(ctx, sx - tw / 2, sy - 22, tw, 17, 3)
+        ctx.fillStyle = '#0d4a9c'
+        ctx.fill()
+        ctx.strokeStyle = '#fff'
+        ctx.lineWidth = 1
+        ctx.stroke()
+        ctx.fillStyle = '#fff'
+        ctx.fillText(label, sx, sy - 13)
+        ctx.beginPath()
+        ctx.arc(sx, sy, 3, 0, Math.PI * 2)
+        ctx.fill()
+      }
+      if (scale > 0.5) {
+        ctx.font = '700 10px "Barlow Condensed", system-ui, sans-serif'
+        for (const e of data.exits) {
+          const sx = X(e.x)
+          const sy = Y(e.y)
+          if (sx < -80 || sx > w + 80 || sy < -30 || sy > h + 30) continue
+          const label = `${e.r} ${e.n}`
+          const tw = ctx.measureText(label).width + 10
+          roundRect(ctx, sx - tw / 2, sy + 8, tw, 15, 2)
+          ctx.fillStyle = '#fff'
+          ctx.fill()
+          ctx.fillStyle = '#0d4a9c'
+          ctx.fillText(label, sx, sy + 15.5)
+        }
+      }
     }
 
     if (showJunctions) {
@@ -545,7 +641,7 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
           const target = pendingRef.current
           pendingRef.current = null
           viewRef.current = { ...fit, scale: fit.scale * 1.4 }
-          animate(target, 700)
+          animate(target, FLY_MS)
         } else if (propsRef.current.intro && !reducedMotion()) {
           viewRef.current = { ...fit, scale: fit.scale * 2.4 }
           animate(fit, 1100, propsRef.current.drift ? scheduleDrift : undefined)
@@ -573,6 +669,7 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
     if (!canvas || !interactive) return
     const onWheel = (e: WheelEvent) => {
       e.preventDefault()
+      if (propsRef.current.lockZoom) return
       animRef.current = null
       const r = canvas.getBoundingClientRect()
       zoomAt(e.clientX - r.left, e.clientY - r.top, Math.exp(-e.deltaY * 0.0018))
@@ -584,7 +681,7 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
   // Redraw when overlays change
   useEffect(() => {
     requestRedraw()
-  }, [props.highlights, props.shields, props.markers, props.lines, props.pulses, props.showJunctions, props.tier, requestRedraw])
+  }, [props.highlights, props.shields, props.markers, props.lines, props.pulses, props.paths, props.showJunctions, props.hideRoads, props.tier, requestRedraw])
 
   useEffect(
     () => () => {
@@ -608,7 +705,7 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
     if (pointers.current.size === 1) {
       panRef.current = { x: p.x, y: p.y, view: { ...viewRef.current } }
       tapRef.current = { id: e.pointerId, x: p.x, y: p.y, t: performance.now(), moved: false }
-    } else if (pointers.current.size === 2) {
+    } else if (pointers.current.size === 2 && !propsRef.current.lockZoom) {
       const [a, b] = [...pointers.current.values()]
       const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
       const wp = screenToWorld(mid.x, mid.y)
@@ -666,15 +763,16 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
     () => ({
       flyToBounds(b, pad = 40) {
         const { w, h } = sizeRef.current
-        const bw = Math.max(50, b.x1 - b.x0)
-        const bh = Math.max(50, b.y1 - b.y0)
+        // Never zoom closer than a view of a few kilometres, so a short road still shows its surroundings.
+        const bw = Math.max(MIN_FLY_EXTENT, b.x1 - b.x0)
+        const bh = Math.max(MIN_FLY_EXTENT, b.y1 - b.y0)
         const target = { cx: (b.x0 + b.x1) / 2, cy: (b.y0 + b.y1) / 2, scale: Math.min((w - 2 * pad) / bw, (h - 2 * pad) / bh) }
         if (!initRef.current) {
           // Not measured yet: remember the target and resolve it once the size is known.
           pendingRef.current = target
           return
         }
-        animate(target)
+        animate(target, FLY_MS)
       },
       flyToPoint(x, y, scale) {
         animate({ cx: x, cy: y, scale: scale ?? viewRef.current.scale })
@@ -696,7 +794,7 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
   return (
     <div ref={wrapRef} className={'map-wrap' + (props.onTap ? ' map-tappable' : '') + (interactive ? '' : ' map-static') + (props.className ? ' ' + props.className : '')}>
       <canvas ref={canvasRef} className="map-canvas" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp} />
-      {interactive && (
+      {interactive && !props.lockZoom && (
         <div className="map-zoom">
           <button type="button" className="sign-btn" aria-label="Zoom in" onPointerDown={(e) => e.stopPropagation()} onClick={() => zoomAt(sizeRef.current.w / 2, sizeRef.current.h / 2, 1.7, 250)}>
             <IconPlus />

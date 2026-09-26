@@ -196,7 +196,15 @@ export async function loadData(): Promise<GameData> {
       }
     }
   }
-  return { roads, links, land, abroad, exits, places, junctions, byRef: new Map(roads.map((r) => [r.ref, r])), world, index: new SpatialIndex(roads) }
+  // Keep only places on the mainland map (the source also lists the Caribbean municipalities) and drop duplicate names.
+  const seen = new Set<string>()
+  const mainland = places.filter((p) => {
+    if (p.x < world.x0 - 20000 || p.x > world.x1 + 20000 || p.y < world.y0 - 20000 || p.y > world.y1 + 20000) return false
+    if (seen.has(p.n)) return false
+    seen.add(p.n)
+    return true
+  })
+  return { roads, links, land, abroad, exits, places: mainland, junctions, byRef: new Map(roads.map((r) => [r.ref, r])), world, index: new SpatialIndex(roads) }
 }
 
 export function roadsForTier(data: GameData, tier: Tier): Road[] {

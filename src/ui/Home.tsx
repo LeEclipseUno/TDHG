@@ -2,9 +2,9 @@ import { useMemo } from 'react'
 import type { GameData, Tier } from '../data'
 import { buildDeck, deckStats, loadStates, type Deck } from '../game/learn'
 import { useLang, type Lang } from '../i18n'
-import { MODES, getBest, type ModeId, type Settings } from '../game/session'
+import { MODES, VARIANTS, getBest, type Challenge, type ModeId, type Settings, type Variant } from '../game/session'
 import { Board } from './widgets'
-import { IconSignArrow, PictDrag, PictFind, PictJunction, PictLearn, PictQuiz } from './icons'
+import { IconSignArrow, PictDrag, PictExit, PictFind, PictJunction, PictLearn, PictQuiz, PictRoute, PictStats } from './icons'
 import MapView from '../map/MapView'
 
 export interface HomeProps {
@@ -13,10 +13,13 @@ export interface HomeProps {
   onSettings: (s: Settings) => void
   onPlay: (mode: ModeId) => void
   onLearn: () => void
+  onStats: () => void
+  challenge: Challenge | null
+  onChallenge: () => void
   onInstall?: () => void
 }
 
-const PICTS: Record<ModeId, typeof PictDrag> = { drag: PictDrag, find: PictFind, junction: PictJunction, quiz: PictQuiz }
+const PICTS: Record<ModeId, typeof PictDrag> = { drag: PictDrag, find: PictFind, junction: PictJunction, quiz: PictQuiz, exit: PictExit, route: PictRoute }
 
 function Seg<T extends string>({ value, options, onChange, label, wide = false }: { value: T; options: { v: T; label: string; title?: string }[]; onChange: (v: T) => void; label: string; wide?: boolean }) {
   return (
@@ -33,28 +36,52 @@ function Seg<T extends string>({ value, options, onChange, label, wide = false }
 const isIosSafari = /iphone|ipad|ipod/i.test(navigator.userAgent) && !('standalone' in navigator && (navigator as { standalone?: boolean }).standalone)
 const isStandalone = window.matchMedia('(display-mode: standalone)').matches
 
-export function Home({ data, settings, onSettings, onPlay, onLearn, onInstall }: HomeProps) {
+export function Home({ data, settings, onSettings, onPlay, onLearn, onStats, challenge, onChallenge, onInstall }: HomeProps) {
   const { t, lang, setLang } = useLang()
   const tiers: Tier[] = ['A', 'AN', 'ALL']
   const learnStats = useMemo(() => deckStats(buildDeck(data, settings.tier, settings.learnDeck), loadStates()), [data, settings.tier, settings.learnDeck])
   return (
     <div className="home">
       <div className="home-backdrop" aria-hidden>
-        <MapView data={data} tier="A" interactive={false} drift palette="light" />
+        <MapView data={data} tier="A" interactive={false} drift />
       </div>
       <div className="home-inner">
         <header className="home-header">
           <div className="home-lang">
             <Seg<Lang> label={t('language')} value={lang} onChange={setLang} options={[{ v: 'nl', label: 'NL' }, { v: 'en', label: 'EN' }]} />
           </div>
-          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="The Dutch Highway Guesser" className="home-logo" />
+          <div className="home-logo-wrap">
+            <img src={`${import.meta.env.BASE_URL}logo.png`} alt="The Dutch Highway Guesser" className="home-logo" />
+          </div>
           <p className="home-tagline">{t('tagline')}</p>
         </header>
+
+        {challenge && (
+          <Board tone="orange" className="challenge-board">
+            <div className="board-title">{t('challenge')}</div>
+            <button type="button" className="sign-row" onClick={onChallenge}>
+              <span className="sign-pict">
+                <PictStats />
+              </span>
+              <span className="sign-text">
+                <span className="sign-name">
+                  {t(`mode_${challenge.mode}`)} {'\u00b7'} {t(`tier_${challenge.tier}_short`)}
+                  {challenge.variant !== 'normal' && ` \u00b7 ${t(`variant_${challenge.variant}`)}`}
+                </span>
+                <span className="sign-desc">{t('challengeText')}</span>
+                <span className="sign-best">
+                  {t('challenger')} {challenge.score}
+                </span>
+              </span>
+              <IconSignArrow className="sign-arrow" />
+            </button>
+          </Board>
+        )}
 
         <Board className="modes-board">
           <div className="board-title">{t('chooseMode')}</div>
           {MODES.map((mode) => {
-            const best = getBest(mode, settings.tier, settings.timer)
+            const best = getBest(mode, settings.tier, settings.timer, settings.variant)
             const Pict = PICTS[mode]
             return (
               <button key={mode} type="button" className="sign-row" onClick={() => onPlay(mode)}>
@@ -115,11 +142,24 @@ export function Home({ data, settings, onSettings, onPlay, onLearn, onInstall }:
           </div>
           {settings.daily && <span className="setting-hint">{t('dailyHint')}</span>}
           <div className="setting">
+            <span className="setting-label">{t('variant')}</span>
+            <Seg<Variant> wide label={t('variant')} value={settings.variant} onChange={(variant) => onSettings({ ...settings, variant })} options={VARIANTS.map((v) => ({ v, label: t(`variant_${v}`) }))} />
+            <span className="setting-hint">{t(`variantHint_${settings.variant}`)}</span>
+          </div>
+          <div className="setting">
             <span className="setting-label">{t('learnDeck')}</span>
             <Seg<Deck> label={t('learnDeck')} value={settings.learnDeck} onChange={(learnDeck) => onSettings({ ...settings, learnDeck })} options={[{ v: 'roads', label: t('deck_roads') }, { v: 'junctions', label: t('deck_junctions') }]} />
           </div>
         </Board>
 
+        <button type="button" className="install-row" onClick={onStats}>
+          <span className="install-icon" aria-hidden>
+            <PictStats width={30} height={30} />
+          </span>
+          <span className="sign-text">
+            <span className="install-name">{t('stats')}</span>
+          </span>
+        </button>
         {!isStandalone && (onInstall || isIosSafari) && (
           <button type="button" className="install-row" onClick={onInstall} disabled={!onInstall}>
             <span className="install-icon" aria-hidden>

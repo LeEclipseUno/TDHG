@@ -4,15 +4,15 @@ public/logo.png (trimmed), icon-*.png and favicon.ico (square crop of the HG mar
 Usage: python scripts/build-brand.py   (needs Pillow; run after build-data.py)
 """
 import json, os
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PUB = os.path.join(ROOT, "public")
 DATA = os.path.join(PUB, "data")
-LIGHT_BG = (243, 245, 249)
+LIGHT_BG = (10, 22, 40)  # navy, matches the app background
 NAVY = (9, 27, 44)
 ORANGE = (239, 113, 47)
-LAND, EDGE, ABROAD = (213, 225, 239), (176, 196, 220), (232, 236, 242)
+LAND, EDGE, ABROAD = (27, 74, 141), (47, 111, 208), (21, 36, 58)
 
 logo = Image.open(os.path.join(ROOT, "branding", "logo.png")).convert("RGBA")
 logo = logo.crop(logo.getbbox())
@@ -25,6 +25,10 @@ mark = logo.crop((round(w * 0.495), 0, w, round(h * 0.78)))
 mark = mark.crop(mark.getbbox())
 side = max(mark.size) + 40
 sq = Image.new("RGBA", (side, side), LIGHT_BG + (255,))
+glow = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+ImageDraw.Draw(glow).ellipse((side * 0.08, side * 0.12, side * 0.92, side * 0.88), fill=(90, 150, 255, 120))
+glow = glow.filter(ImageFilter.GaussianBlur(side * 0.12))
+sq.alpha_composite(glow)
 sq.paste(mark, ((side - mark.size[0]) // 2, (side - mark.size[1]) // 2), mark)
 for s in (512, 192, 64, 32):
     sq.resize((s, s), Image.LANCZOS).save(os.path.join(PUB, f"icon-{s}.png"))
@@ -56,7 +60,7 @@ for poly in land:
     d.polygon([P(rings[0][i], rings[0][i + 1]) for i in range(0, len(rings[0]), 2)], fill=LAND, outline=EDGE)
     for hole in rings[1:]:
         d.polygon([P(hole[i], hole[i + 1]) for i in range(0, len(hole), 2)], fill=LIGHT_BG)
-for kind, col, wdt in (("N", ORANGE, 2), ("A", NAVY, 4)):
+for kind, col, wdt in (("N", (255, 210, 63), 2), ("A", (246, 248, 252), 4)):
     for r in roads:
         if r["kind"] != kind: continue
         for line in r["lines"]:
@@ -65,6 +69,12 @@ for kind, col, wdt in (("N", ORANGE, 2), ("A", NAVY, 4)):
 img = img.resize((W, H), Image.LANCZOS)
 lw = 500
 lg = logo.resize((lw, round(lw * h / w)), Image.LANCZOS)
+halo = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+ImageDraw.Draw(halo).ellipse((10, H // 2 - 190, 560, H // 2 + 190), fill=(90, 150, 255, 110))
+halo = halo.filter(ImageFilter.GaussianBlur(60))
+img = img.convert("RGBA")
+img.alpha_composite(halo)
 img.paste(lg, (30, (H - lg.size[1]) // 2), lg)
+img = img.convert("RGB")
 img.save(os.path.join(PUB, "og.jpg"), quality=88)
 print("wrote icons, favicon and og.jpg")

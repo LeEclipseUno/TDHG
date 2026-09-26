@@ -5,14 +5,16 @@ import { tierIncludes } from '../data'
 import { useLang } from '../i18n'
 import { HUD } from '../ui/HUD'
 import { Shield } from '../ui/Shield'
-import { mulberry32, pickRoads, QUESTION_COUNT, streakBonus, TIME_LIMITS, timeBonus, type QuestionResult } from '../game/session'
+import { BLITZ_BONUS_MS, BLITZ_MS, mulberry32, pickRoads, QUESTION_COUNT, shuffle, streakBonus, TIME_LIMITS, timeBonus, VARIANT_MULT, type QuestionResult } from '../game/session'
+import { roadsForTier } from '../data'
 import { useNow, useTimeout, useToast } from '../game/hooks'
 import type { ModeProps } from './types'
 
 export function FindMode({ data, session, onFinish, onQuit }: ModeProps) {
   const { t } = useLang()
   const mapRef = useRef<MapHandle>(null)
-  const questions = useMemo(() => pickRoads(data, session.tier, QUESTION_COUNT, mulberry32(session.seed)), [data, session.tier, session.seed])
+  const blitz = session.variant === 'blitz'
+  const questions = useMemo(() => (blitz ? shuffle(roadsForTier(data, session.tier), mulberry32(session.seed)) : pickRoads(data, session.tier, QUESTION_COUNT, mulberry32(session.seed))), [data, session.tier, session.seed, blitz])
   const [i, setI] = useState(0)
   const [results, setResults] = useState<QuestionResult[]>([])
   const [phase, setPhase] = useState<'ask' | 'reveal'>('ask')
@@ -24,8 +26,9 @@ export function FindMode({ data, session, onFinish, onQuit }: ModeProps) {
   const [feedback, setFeedback] = useState<{ text: string; ok: boolean } | null>(null)
   const [toast, showToast] = useToast()
   const now = useNow(true)
-  const limitMs = session.timer ? TIME_LIMITS.find * 1000 : 0
-  const remaining = limitMs ? Math.max(0, qStart + limitMs - now) : 0
+  const [deadline, setDeadline] = useState(() => Date.now() + BLITZ_MS)
+  const limitMs = blitz ? BLITZ_MS : session.timer ? TIME_LIMITS.find * 1000 : 0
+  const remaining = blitz ? Math.max(0, deadline - now) : limitMs ? Math.max(0, qStart + limitMs - now) : 0
   const target = questions[i]
   const score = results.reduce((a, r) => a + r.points, 0)
 
@@ -33,7 +36,8 @@ export function FindMode({ data, session, onFinish, onQuit }: ModeProps) {
     if (phase !== 'ask') return
     const ok = hitRef === target.ref
     const ms = Date.now() - qStart
-    const points = ok ? 100 + timeBonus(remaining, limitMs) + streakBonus(results) : 0
+    const points = ok ? Math.round((100 + (blitz ? 0 : timeBonus(remaining, limitMs)) + streakBonus(results)) * VARIANT_MULT[session.variant]) : 0
+    if (ok && blitz) setDeadline((d) => d + BLITZ_BONUS_MS)
     const res: QuestionResult = { label: target.ref, grade: ok ? 'good' : 'bad', points, ms, detail: ok ? undefined : hitRef ? t('thatWas', { ref: hitRef }) : t('timeUp') }
     setResults((r) => [...r, res])
     // A wrong tap only shows what was hit; the correct road stays hidden.
@@ -61,7 +65,10 @@ export function FindMode({ data, session, onFinish, onQuit }: ModeProps) {
   }
 
   useEffect(() => {
-    if (limitMs && phase === 'ask' && remaining <= 0) answer(null)
+    if (limitMs && phase === 'ask' && remaining <= 0) {
+      if (blitz) onFinish({ ...session, results, finishedAt: Date.now() })
+      else answer(null)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remaining, limitMs, phase])
 
@@ -86,7 +93,7 @@ export function FindMode({ data, session, onFinish, onQuit }: ModeProps) {
           setQStart(Date.now())
         }
       : null,
-    feedback?.ok ? 1100 : 1800,
+    blitz ? 500 : feedback?.ok ? 1100 : 1800,
     phase + i,
   )
 
@@ -108,7 +115,7 @@ export function FindMode({ data, session, onFinish, onQuit }: ModeProps) {
     <div className="game">
       <HUD
         index={i}
-        total={questions.length}
+        total={blitz ? Math.max(10, results.length + 1) : questions.length}
         grades={results.map((r) => r.grade)}
         score={score}
         remainingMs={remaining}
@@ -122,7 +129,7 @@ export function FindMode({ data, session, onFinish, onQuit }: ModeProps) {
           </div>
         }
       />
-      <MapView ref={mapRef} data={data} tier={session.tier} highlights={allHighlights} shields={allShields} pulses={pulses} onTap={onTap} intro>
+      <MapView ref={mapRef} data={data} tier={session.tier} highlights={allHighlights} shields={allShields} pulses={pulses} onTap={onTap} lockZoom={session.variant === 'nozoom'} hideRoads={session.variant === 'blind'} intro>
         {feedback && <div role="status" className={'feedback ' + (feedback.ok ? 'feedback-ok' : 'feedback-bad')}>{feedback.text}</div>}
         {toast && <div role="status" className="toast">{toast}</div>}
       </MapView>

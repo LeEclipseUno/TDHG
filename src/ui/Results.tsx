@@ -104,6 +104,17 @@ export function Results({ data, session, newBest, onAgain, onHome }: ResultsProp
               <span>{t(rankKey(sum.accuracy))}</span>
             </div>
             {newBest && <div className="newbest">{t('newBest')}</div>}
+            {session.challenge !== undefined && (
+              <div className="versus">
+                <span>
+                  {t('challenger')} <strong>{session.challenge}</strong>
+                </span>
+                <span className="versus-verdict">{sum.score > session.challenge ? t('youWon') : sum.score < session.challenge ? t('youLost') : t('tie')}</span>
+                <span>
+                  {t('you')} <strong>{sum.score}</strong>
+                </span>
+              </div>
+            )}
             <div className="results-stats">
               <div className="stat">
                 <IconCheck />

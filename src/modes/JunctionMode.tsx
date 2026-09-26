@@ -5,7 +5,7 @@ import { boundsOfPoints } from '../data'
 import { useLang } from '../i18n'
 import { HUD } from '../ui/HUD'
 import { IconHint } from '../ui/icons'
-import { HINT_COST, junctionPoints, mulberry32, pickJunctions, QUESTION_COUNT, TIME_LIMITS, timeBonus, type QuestionResult } from '../game/session'
+import { HINT_COST, junctionPoints, mulberry32, pickJunctions, QUESTION_COUNT, TIME_LIMITS, timeBonus, VARIANT_MULT, type QuestionResult } from '../game/session'
 import { useNow, useTimeout } from '../game/hooks'
 import type { ModeProps } from './types'
 
@@ -31,7 +31,7 @@ export function JunctionMode({ data, session, onFinish, onQuit }: ModeProps) {
     const dist = pt ? Math.hypot(pt.x - q.x, pt.y - q.y) : Infinity
     const base = pt ? junctionPoints(dist) : { points: 0, grade: 'bad' as const }
     const bonus = base.grade === 'good' ? timeBonus(remaining, limitMs) : 0
-    const points = Math.max(0, base.points + bonus - (hint ? HINT_COST : 0))
+    const points = Math.round(Math.max(0, base.points + bonus - (hint ? HINT_COST : 0)) * VARIANT_MULT[session.variant])
     const km = dist === Infinity ? null : Math.round(dist / 100) / 10
     const detail = km === null ? t('timeUp') : km < 0.8 ? t('spotOn') : t('distanceOff', { km })
     setResults((r) => [...r, { label: q.name, grade: base.grade, points, ms: Date.now() - qStart, detail }])
@@ -122,7 +122,7 @@ export function JunctionMode({ data, session, onFinish, onQuit }: ModeProps) {
           </div>
         }
       />
-      <MapView ref={mapRef} data={data} tier={session.tier} markers={markers} lines={lines} onTap={phase === 'ask' ? onTap : undefined} intro>
+      <MapView ref={mapRef} data={data} tier={session.tier} markers={markers} lines={lines} onTap={phase === 'ask' ? onTap : undefined} labels={false} lockZoom={session.variant === 'nozoom'} hideRoads={session.variant === 'blind'} intro>
         {feedback && (
           <div role="status" className={`feedback feedback-${feedback.grade === 'good' ? 'ok' : feedback.grade === 'partial' ? 'mid' : 'bad'}`}>
             {feedback.km === null ? t('timeUp') : feedback.km < 0.8 ? t('spotOn') : t('distanceOff', { km: (Math.round(feedback.km * Math.min(1, (now - feedback.at) / 700) * 10) / 10).toFixed(1) })} (+{feedback.points})

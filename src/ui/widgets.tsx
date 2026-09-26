@@ -53,7 +53,7 @@ export function RouteStrip({ grades, total, current = -1 }: { grades: (Grade | u
 }
 
 /** A sign board: blue panel with the white inner border of Dutch motorway signage. */
-export function Board({ children, className = '', tone = 'blue' }: { children: React.ReactNode; className?: string; tone?: 'blue' | 'dark' }) {
+export function Board({ children, className = '', tone = 'blue' }: { children: React.ReactNode; className?: string; tone?: 'blue' | 'dark' | 'orange' }) {
   return (
     <div className={`board board-${tone} ${className}`}>
       <div className="board-inner">{children}</div>

@@ -8,11 +8,13 @@ A phone-friendly guessing game about the Dutch road network: motorways (A), nati
 - **Find the road**: you get a number, tap the right road.
 - **Interchanges**: you get a knooppunt name, tap where it is. Distance based scoring, so zoom in.
 - **Which road is this?**: a road lights up, pick the right sign out of four.
+- **Exits**: a numbered exit with its name, tap where it is on the highlighted highway.
+- **Route planner**: pick or type a start and destination, then tap the road numbers you would drive, in order. Scored against the shortest route over the real road graph.
 - **Learn**: spaced repetition practice (FSRS-5 scheduler in `src/game/fsrs.ts`). Every card is answered on the map, wrong or slow answers come back sooner, progress is stored in the browser.
 
 Wrong guesses in the game modes never reveal the correct answer.
 
-Settings: road tier (A only, A + national N, or everything), per-question timers, daily challenge with a shared seed, Dutch or English.
+Settings: road tier (A only, A + national N, or everything), per-question timers, daily challenge with a shared seed, hard mode variants (no zoom, blind, blitz), sound, Dutch or English. Share links carry a challenge: whoever opens one plays the same questions and sees both scores. A statistics page tracks games, accuracy, and the hardest roads, all stored locally. The app installs as a PWA and works offline.
 
 ## Develop
 

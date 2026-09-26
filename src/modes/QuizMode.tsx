@@ -4,7 +4,8 @@ import type { Road } from '../data'
 import { useLang } from '../i18n'
 import { HUD } from '../ui/HUD'
 import { Shield } from '../ui/Shield'
-import { mulberry32, pickRoads, QUESTION_COUNT, quizOptions, streakBonus, TIME_LIMITS, timeBonus, type QuestionResult } from '../game/session'
+import { BLITZ_BONUS_MS, BLITZ_MS, mulberry32, pickRoads, QUESTION_COUNT, quizOptions, shuffle, streakBonus, TIME_LIMITS, timeBonus, VARIANT_MULT, type QuestionResult } from '../game/session'
+import { roadsForTier } from '../data'
 import { useNow, useTimeout } from '../game/hooks'
 import { haptic, sfx } from '../game/sound'
 import type { ModeProps } from './types'
@@ -12,10 +13,12 @@ import type { ModeProps } from './types'
 export function QuizMode({ data, session, onFinish, onQuit }: ModeProps) {
   const { t } = useLang()
   const mapRef = useRef<MapHandle>(null)
+  const blitz = session.variant === 'blitz'
   const questions = useMemo(() => {
     const rng = mulberry32(session.seed)
-    return pickRoads(data, session.tier, QUESTION_COUNT, rng).map((road) => ({ road, options: quizOptions(data, session.tier, road, rng) }))
-  }, [data, session.tier, session.seed])
+    const roads = blitz ? shuffle(roadsForTier(data, session.tier), rng) : pickRoads(data, session.tier, QUESTION_COUNT, rng)
+    return roads.map((road) => ({ road, options: quizOptions(data, session.tier, road, rng) }))
+  }, [data, session.tier, session.seed, blitz])
   const [i, setI] = useState(0)
   const [results, setResults] = useState<QuestionResult[]>([])
   const [phase, setPhase] = useState<'ask' | 'reveal'>('ask')
@@ -23,8 +26,9 @@ export function QuizMode({ data, session, onFinish, onQuit }: ModeProps) {
   const [chosen, setChosen] = useState<string | null>(null)
   const [solved, setSolved] = useState<Road[]>([]) // correct answers stay green for the whole round
   const now = useNow(true)
-  const limitMs = session.timer ? TIME_LIMITS.quiz * 1000 : 0
-  const remaining = limitMs ? Math.max(0, qStart + limitMs - now) : 0
+  const [deadline, setDeadline] = useState(() => Date.now() + BLITZ_MS)
+  const limitMs = blitz ? BLITZ_MS : session.timer ? TIME_LIMITS.quiz * 1000 : 0
+  const remaining = blitz ? Math.max(0, deadline - now) : limitMs ? Math.max(0, qStart + limitMs - now) : 0
   const q = questions[i]
   const score = results.reduce((a, r) => a + r.points, 0)
 
@@ -47,7 +51,8 @@ export function QuizMode({ data, session, onFinish, onQuit }: ModeProps) {
   const answer = (pick: Road | null) => {
     if (phase !== 'ask') return
     const ok = pick?.ref === q.road.ref
-    const points = ok ? 100 + timeBonus(remaining, limitMs) + streakBonus(results) : 0
+    const points = ok ? Math.round((100 + (blitz ? 0 : timeBonus(remaining, limitMs)) + streakBonus(results)) * VARIANT_MULT[session.variant]) : 0
+    if (ok && blitz) setDeadline((d) => d + BLITZ_BONUS_MS)
     setResults((r) => [...r, { label: q.road.ref, grade: ok ? 'good' : 'bad', points, ms: Date.now() - qStart, detail: ok ? undefined : pick ? t('youPicked', { ref: pick.ref }) : t('timeUp') }])
     setChosen(pick?.ref ?? '')
     if (ok) {
@@ -64,7 +69,10 @@ export function QuizMode({ data, session, onFinish, onQuit }: ModeProps) {
   }
 
   useEffect(() => {
-    if (limitMs && phase === 'ask' && remaining <= 0) answer(null)
+    if (limitMs && phase === 'ask' && remaining <= 0) {
+      if (blitz) onFinish({ ...session, results, finishedAt: Date.now() })
+      else answer(null)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remaining, limitMs, phase])
 
@@ -86,7 +94,7 @@ export function QuizMode({ data, session, onFinish, onQuit }: ModeProps) {
           setQStart(Date.now())
         }
       : null,
-    chosen === q.road.ref ? 1000 : 1600,
+    blitz ? 450 : chosen === q.road.ref ? 1000 : 1600,
     phase + i,
   )
 
@@ -98,8 +106,8 @@ export function QuizMode({ data, session, onFinish, onQuit }: ModeProps) {
 
   return (
     <div className="game">
-      <HUD index={i} total={questions.length} grades={results.map((r) => r.grade)} score={score} remainingMs={remaining} limitMs={limitMs} elapsedMs={limitMs ? undefined : now - session.startedAt} onQuit={onQuit} prompt={<span className="prompt-text">{t('quizPrompt')}</span>} />
-      <MapView ref={mapRef} data={data} tier={session.tier} highlights={highlights} shields={shields} />
+      <HUD index={i} total={blitz ? Math.max(10, results.length + 1) : questions.length} grades={results.map((r) => r.grade)} score={score} remainingMs={remaining} limitMs={limitMs} elapsedMs={limitMs ? undefined : now - session.startedAt} onQuit={onQuit} prompt={<span className="prompt-text">{t('quizPrompt')}</span>} />
+      <MapView ref={mapRef} data={data} tier={session.tier} highlights={highlights} shields={shields} lockZoom={session.variant === 'nozoom'} hideRoads={session.variant === 'blind'} />
       <div className="options">
         {q.options.map((o) => {
           let cls = 'option'

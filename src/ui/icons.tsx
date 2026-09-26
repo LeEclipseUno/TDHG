@@ -144,6 +144,34 @@ export const PictLearn = (p: P) => (
   </svg>
 )
 
+export const PictExit = (p: P) => (
+  <svg {...pict} {...p}>
+    <path d="M14 44V4" strokeWidth="3.4" />
+    <path d="M16 26c6 3 10 8 11 18" strokeWidth="3" />
+    <rect x="24" y="6" width="19" height="13" rx="2" fill="#fff" stroke="none" />
+    <text x="33.5" y="16" textAnchor="middle" fontFamily="'Barlow Condensed', system-ui, sans-serif" fontSize="11" fontWeight="800" fill="#0d4a9c" stroke="none">
+      12
+    </text>
+    <path d="M33 22v6M30 25l3 3 3-3" strokeWidth="2.2" />
+  </svg>
+)
+export const PictRoute = (p: P) => (
+  <svg {...pict} {...p}>
+    <circle cx="10" cy="38" r="5" fill="#fff" stroke="none" />
+    <circle cx="38" cy="10" r="5" fill="#fff" stroke="none" />
+    <path d="M10 33c0-10 6-12 14-12s14-2 14-11" strokeWidth="3" strokeDasharray="5 4" />
+    <rect x="18" y="19" width="14" height="8" rx="1.5" fill="#c8102e" stroke="#fff" strokeWidth="1.4" />
+  </svg>
+)
+export const PictStats = (p: P) => (
+  <svg {...pict} {...p}>
+    <path d="M8 40h32" strokeWidth="3" />
+    <rect x="11" y="24" width="7" height="14" rx="1" fill="#fff" stroke="none" />
+    <rect x="21" y="14" width="7" height="24" rx="1" fill="#fff" stroke="none" />
+    <rect x="31" y="20" width="7" height="18" rx="1" fill="#fff" stroke="none" />
+  </svg>
+)
+
 /** A hectometre post pictogram, used as the app's small brand mark. */
 export const PictPost = (p: P) => (
   <svg width="16" height="24" viewBox="0 0 16 24" aria-hidden {...p}>
