@@ -428,6 +428,24 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
       ctx.lineWidth = width
       ctx.stroke()
     }
+    // Rivers and main canals as water lines over the land.
+    if (z > 0.6 && data.water.length) {
+      const riverW = Math.max(1.4, 110 * scale)
+      const canalW = Math.max(1, 55 * scale)
+      for (const cls of ['c', 'r'] as const) {
+        ctx.beginPath()
+        for (const wl of data.water) {
+          if (wl.c !== cls || !inView(wl.b)) continue
+          trace(wl.l)
+        }
+        ctx.strokeStyle = C.bg
+        ctx.lineWidth = cls === 'r' ? riverW : canalW
+        ctx.globalAlpha = cls === 'r' ? 0.95 : 0.8
+        ctx.stroke()
+      }
+      ctx.globalAlpha = 1
+    }
+
     // Local roads as context: secondary from mid zoom, tertiary closer in. Thin, dim, never interactive.
     if (!hideRoads && z > 2.8) {
       const minorW = Math.max(Math.min(2.2, 0.5 + z * 0.25), 5.5 * scale)
@@ -549,38 +567,6 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
       ctx.globalAlpha = 1
       ctx.lineWidth = Math.max(4, widths.A * 0.6)
       ctx.stroke()
-    }
-
-    // Hectometre posts along motorways at deep zoom: a small green post every 100 m, beside the carriageway.
-    if (scale > 0.8 && !hideRoads) {
-      const off = 14 * scale
-      ctx.fillStyle = '#1f8f4e'
-      for (const r of data.roads) {
-        if (r.kind !== 'A' || !inView(r.bbox)) continue
-        for (const line of r.lines) {
-          let acc = 0
-          for (let i = 2; i < line.length; i += 2) {
-            const ax = line[i - 2]
-            const ay = line[i - 1]
-            const dx = line[i] - ax
-            const dy = line[i + 1] - ay
-            const seg = Math.hypot(dx, dy)
-            if (seg === 0) continue
-            let next = 100 - (acc % 100)
-            while (next <= seg) {
-              const px = ax + (dx * next) / seg
-              const py = ay + (dy * next) / seg
-              if (px >= vx0 && px <= vx1 && py >= vy0 && py <= vy1) {
-                const nx = (-dy / seg) * off
-                const ny = (dx / seg) * off
-                ctx.fillRect(X(px) + nx / scale - 1.5, Y(py) + ny / scale - 3, 3, 6)
-              }
-              next += 100
-            }
-            acc += seg
-          }
-        }
-      }
     }
 
     // Interchange names as small blue signs once the map is zoomed in enough to read them.

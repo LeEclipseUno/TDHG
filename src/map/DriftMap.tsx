@@ -86,6 +86,16 @@ export default function DriftMap({ data, focus, zoom = 2.3 }: Props) {
       fill(data.land, COLORS.land, COLORS.landEdge)
       o.lineCap = 'round'
       o.lineJoin = 'round'
+      o.beginPath()
+      for (const wl of data.water) {
+        if (wl.c !== 'r') continue
+        o.moveTo(X(wl.l[0]), Y(wl.l[1]))
+        for (let i = 2; i < wl.l.length; i += 2) o.lineTo(X(wl.l[i]), Y(wl.l[i + 1]))
+      }
+      o.strokeStyle = COLORS.bg
+      o.lineWidth = Math.max(1.2, 110 * s)
+      o.stroke()
+      o.lineJoin = 'round'
       for (const kind of ['N', 'A'] as const) {
         o.beginPath()
         for (const r of data.roads) {

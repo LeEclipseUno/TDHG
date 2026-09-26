@@ -42,6 +42,13 @@ export interface Minor {
   l: number[]
 }
 
+/** River (r) or major canal (c) centre line. */
+export interface Water {
+  c: 'r' | 'c'
+  b: [number, number, number, number]
+  l: number[]
+}
+
 export interface LandPoly {
   name: string
   rings: number[][]
@@ -161,6 +168,7 @@ export interface GameData {
   links: Link[]
   structures: Structure[]
   minor: Minor[]
+  water: Water[]
   land: LandPoly[]
   abroad: LandPoly[]
   exits: Exit[]
@@ -208,6 +216,7 @@ export async function loadData(): Promise<GameData> {
   const links: Link[] = []
   const structures: Structure[] = []
   const minor: Minor[] = []
+  const water: Water[] = []
   const world: Bounds = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity }
   for (const poly of land) {
     for (const ring of poly.rings) {
@@ -232,6 +241,7 @@ export async function loadData(): Promise<GameData> {
     links,
     structures,
     minor,
+    water,
     land,
     abroad,
     exits,
@@ -244,7 +254,9 @@ export async function loadData(): Promise<GameData> {
     listeners: new Set(),
     ready: Promise.resolve(),
   }
-  data.ready = Promise.all([get<Road[]>('roads-extra.json'), get<Link[]>('links.json'), get<Structure[]>('structures.json')]).then(([extra, lk, st]) => {
+  data.ready = Promise.all([get<Road[]>('roads-extra.json'), get<Link[]>('links.json'), get<Structure[]>('structures.json'), get<Water[]>('water.json').catch(() => [] as Water[])]).then(([extra, lk, st, wt]) => {
+    for (const w of wt) w.l = decode(w.l)
+    data.water.push(...wt)
     for (const r of extra) {
       r.lines = r.lines.map(decode)
       data.roads.push(r)

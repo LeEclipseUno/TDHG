@@ -97,6 +97,16 @@ export async function renderCard(data: GameData, session: Session, lang: Lang, f
   fillPolys(data.land, LAND)
   ctx.lineCap = 'round'
   ctx.lineJoin = 'round'
+  for (const wl of data.water) {
+    if (wl.c !== 'r') continue
+    ctx.beginPath()
+    ctx.moveTo(X(wl.l[0]), Y(wl.l[1]))
+    for (let i = 2; i < wl.l.length; i += 2) ctx.lineTo(X(wl.l[i]), Y(wl.l[i + 1]))
+    ctx.strokeStyle = NAVY
+    ctx.lineWidth = 2
+    ctx.stroke()
+  }
+  ctx.lineJoin = 'round'
   const stroke = (lines: number[][], color: string, width: number) => {
     ctx.beginPath()
     for (const line of lines) {

@@ -47,6 +47,7 @@ def download_all():
     overpass("structures.json", f'[out:json][timeout:300];{area}(way["highway"~"^(motorway|trunk|motorway_link|trunk_link)$"]["bridge"](area.a);way["highway"~"^(motorway|trunk|motorway_link|trunk_link)$"]["tunnel"](area.a););out geom;')
     overpass("minor_secondary.json", f'[out:json][timeout:600];{area}way["highway"~"^(secondary|secondary_link)$"](area.a);out geom;')
     overpass("minor_tertiary.json", f'[out:json][timeout:600];{area}way["highway"~"^(tertiary|tertiary_link)$"](area.a);out geom;')
+    overpass("water.json", f'[out:json][timeout:600];{area}(way["waterway"="river"](area.a);way["waterway"="canal"]["CEMT"](area.a););out geom;')
     overpass("abroad.json", '[out:json][timeout:300];(relation(52411);relation(62761);relation(62771););out geom;')  # Belgium, NRW, Lower Saxony
     overpass("exits_places.json", f'[out:json][timeout:300];{area}(node["highway"="motorway_junction"]["ref"](area.a);node["place"~"^(city|town)$"](area.a););out;')
     ne = os.path.join(RAW, "ne_land.geojson")
@@ -214,6 +215,29 @@ def build_minor():
     json.dump(out, open(os.path.join(OUT, "minor.json"), "w"), separators=(",", ":"))
     print("minor roads:", len(out), "points:", pts, dict(collections.Counter(o["c"] for o in out)))
 
+def build_water():
+    """Rivers and the main shipping canals (CEMT class III and up), drawn as water lines."""
+    d = json.load(open(os.path.join(RAW, "water.json"), encoding="utf-8"))["elements"]
+    big = {"III", "IV", "Va", "Vb", "VIa", "VIb", "VIc", "VII"}
+    groups = {"r": [], "c": []}
+    for e in d:
+        if "geometry" not in e: continue
+        t = e["tags"]
+        if t.get("waterway") == "canal":
+            if t.get("CEMT", "").strip() not in big: continue
+            groups["c"].append([proj(p["lon"], p["lat"]) for p in e["geometry"]])
+        else:
+            groups["r"].append([proj(p["lon"], p["lat"]) for p in e["geometry"]])
+    out = []; pts = 0
+    for cls, ways in groups.items():
+        for line in chain(ways):
+            line = [(round(x), round(y)) for x, y in dp(line, 5)]
+            if len(line) < 2: continue
+            xs = [p[0] for p in line]; ys = [p[1] for p in line]; pts += len(line)
+            out.append({"c": cls, "b": [min(xs), min(ys), max(xs), max(ys)], "l": encode([c for p in line for c in p])})
+    json.dump(out, open(os.path.join(OUT, "water.json"), "w"), separators=(",", ":"))
+    print("water lines:", len(out), "points:", pts, dict(collections.Counter(o["c"] for o in out)))
+
 def build_land():
     """Dissolve the CBS land-only municipality polygons into one detailed land shape (rivers and lakes stay open)."""
     from shapely.geometry import shape, mapping
@@ -347,4 +371,4 @@ def build_junctions(roads):
 
 if __name__ == "__main__":
     download_all()
-    roads = build_roads(); build_links(); build_structures(); build_minor(); build_land(); build_abroad(); build_junctions(roads); build_exits_places(roads)
+    roads = build_roads(); build_links(); build_structures(); build_minor(); build_water(); build_land(); build_abroad(); build_junctions(roads); build_exits_places(roads)
