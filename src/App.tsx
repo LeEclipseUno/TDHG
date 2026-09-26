@@ -60,6 +60,13 @@ function Shell() {
         if (ONLINE) {
           const acc = await getAccount().catch(() => ({ signedIn: false }) as Account)
           setAccount(acc)
+          // Back from Google: drop the one-time code (or error) from the address bar.
+          const q = new URLSearchParams(location.search)
+          if (q.has('code') || q.has('error')) {
+            for (const k of ['code', 'error', 'error_code', 'error_description']) q.delete(k)
+            const rest = q.toString()
+            history.replaceState(null, '', location.pathname + (rest ? '?' + rest : '') + location.hash)
+          }
           if (acc.signedIn) await syncNow().catch(() => {})
         }
         setData(d)

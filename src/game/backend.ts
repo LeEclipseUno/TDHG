@@ -15,7 +15,7 @@ function sb(): Promise<SupabaseClient | null> {
   if (!ONLINE) return Promise.resolve(null)
   if (!clientPromise) {
     clientPromise = import('@supabase/supabase-js')
-      .then(({ createClient }) => createClient(URL!, KEY!, { auth: { persistSession: true, autoRefreshToken: true } }))
+      .then(({ createClient }) => createClient(URL!, KEY!, { auth: { persistSession: true, autoRefreshToken: true, flowType: 'pkce' } }))
       .catch(() => null)
   }
   return clientPromise
