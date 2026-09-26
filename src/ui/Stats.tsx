@@ -5,7 +5,7 @@ import { clearHistory, loadHistory, loadLabelStats } from '../game/history'
 import { formatTime, MODES } from '../game/session'
 import { Board, Matrix } from './widgets'
 import { Shield } from './Shield'
-import { IconMenu, PictStats, PictDrag, PictFind, PictJunction, PictQuiz, PictRoute, PictPost } from './icons'
+import { IconLock, IconMenu, PictStats, PictDrag, PictFind, PictJunction, PictQuiz, PictRoute, PictPost } from './icons'
 import MapView, { type Highlight } from '../map/MapView'
 import { BADGES, computeBadges, loadBadges, type BadgeId } from '../game/achievements'
 import { Backdrop } from './Backdrop'
@@ -74,16 +74,19 @@ export function Stats({ data, account, plus, onSignOut, onPlus, onHome }: { data
         )}
         <Board className="results-board">
           <div className="board-title">{t('badges')}</div>
-          <ul className="badge-grid">
+          <ul className="badge-list">
             {BADGES.map((id) => {
               const on = earned.has(id)
               return (
-                <li key={id} className={'badge' + (on ? ' badge-on' : '')} title={t(`badge_${id}_desc`)}>
+                <li key={id} className={'badge-row' + (on ? ' badge-on' : '')}>
                   <span className="badge-sign">
                     <BadgeArt id={id} />
                   </span>
-                  <span className="badge-name">{t(`badge_${id}`)}</span>
-                  <span className="badge-desc">{on && earnedAt[id] ? new Date(earnedAt[id]).toLocaleDateString(lang === 'nl' ? 'nl-NL' : 'en-GB') : t(`badge_${id}_desc`)}</span>
+                  <span className="badge-text">
+                    <span className="badge-name">{t(`badge_${id}`)}</span>
+                    <span className="badge-desc">{t(`badge_${id}_desc`)}</span>
+                  </span>
+                  <span className="badge-when">{on ? (earnedAt[id] ? new Date(earnedAt[id]).toLocaleDateString(lang === 'nl' ? 'nl-NL' : 'en-GB', { day: 'numeric', month: 'short' }) : '') : <IconLock />}</span>
                 </li>
               )
             })}

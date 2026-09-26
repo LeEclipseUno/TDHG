@@ -346,19 +346,20 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
         </Board>
 
         <Board tone="dark" className="settings-board">
+          <div className="board-title">{t('settings')}</div>
           <div className="setting">
             <span className="setting-label">{t('roads')}</span>
             <Seg<Tier> wide label={t('roads')} value={settings.tier} onChange={(tier) => onSettings({ ...settings, tier })} options={tiers.map((v) => ({ v, label: t(`tier_${v}_short`), title: t(`tier_${v}`) }))} />
             <span className="setting-hint">{t(`tier_${settings.tier}`)}</span>
           </div>
-          <div className="setting-row">
+          <div className="setting-pair">
             <div className="setting">
               <span className="setting-label">{t('timer')}</span>
-              <Seg<'on' | 'off'> label={t('timer')} value={settings.timer ? 'on' : 'off'} onChange={(v) => onSettings({ ...settings, timer: v === 'on' })} options={[{ v: 'on', label: t('timerOn') }, { v: 'off', label: t('timerOff') }]} />
+              <Seg<'on' | 'off'> wide label={t('timer')} value={settings.timer ? 'on' : 'off'} onChange={(v) => onSettings({ ...settings, timer: v === 'on' })} options={[{ v: 'on', label: t('timerOn') }, { v: 'off', label: t('timerOff') }]} />
             </div>
             <div className="setting">
               <span className="setting-label">{t('sound')}</span>
-              <Seg<'on' | 'off'> label={t('sound')} value={settings.sound ? 'on' : 'off'} onChange={(v) => onSettings({ ...settings, sound: v === 'on' })} options={[{ v: 'on', label: t('timerOn') }, { v: 'off', label: t('timerOff') }]} />
+              <Seg<'on' | 'off'> wide label={t('sound')} value={settings.sound ? 'on' : 'off'} onChange={(v) => onSettings({ ...settings, sound: v === 'on' })} options={[{ v: 'on', label: t('timerOn') }, { v: 'off', label: t('timerOff') }]} />
             </div>
           </div>
           <div className="setting">
@@ -376,7 +377,7 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
             <div className="setting">
               <span className="setting-label">{t('reminder')}</span>
               <div className="reminder-row">
-                <Seg<string> label={t('reminder')} value={reminder.on ? 'on' : 'off'} onChange={(v) => void applyReminder(v === 'on', reminder.hour, reminder.minute)} options={[{ v: 'on', label: t('timerOn') }, { v: 'off', label: t('timerOff') }]} />
+                <Seg<string> wide label={t('reminder')} value={reminder.on ? 'on' : 'off'} onChange={(v) => void applyReminder(v === 'on', reminder.hour, reminder.minute)} options={[{ v: 'on', label: t('timerOn') }, { v: 'off', label: t('timerOff') }]} />
                 <input
                   type="time"
                   className="time-input"
@@ -393,10 +394,12 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
               <span className="setting-hint">{reminderNote || t('reminderHint')}</span>
             </div>
           )}
+          {plus && (
           <div className="setting">
             <span className="setting-label">{t('learnDeck')}</span>
-            <Seg<Deck> label={t('learnDeck')} value={settings.learnDeck} onChange={(learnDeck) => onSettings({ ...settings, learnDeck })} options={[{ v: 'roads', label: t('deck_roads') }, { v: 'junctions', label: t('deck_junctions') }]} />
+            <Seg<Deck> wide label={t('learnDeck')} value={settings.learnDeck} onChange={(learnDeck) => onSettings({ ...settings, learnDeck })} options={[{ v: 'roads', label: t('deck_roads') }, { v: 'junctions', label: t('deck_junctions') }]} />
           </div>
+          )}
         </Board>
 
         {!isStandalone && (onInstall || isIosSafari) && (

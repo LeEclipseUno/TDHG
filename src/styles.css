@@ -2348,67 +2348,6 @@ body,
 }
 
 /* ---------- badges ---------- */
-.badge-grid {
-  list-style: none;
-  margin: 0;
-  padding: 12px;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-  gap: 10px;
-}
-.badge {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 4px;
-  color: var(--white);
-  opacity: 0.38;
-  filter: grayscale(1);
-}
-.badge-on {
-  opacity: 1;
-  filter: none;
-}
-.badge-sign {
-  position: relative;
-  width: 72px;
-  height: 72px;
-  border-radius: 8px;
-  background: var(--sign-blue);
-  box-shadow: inset 0 0 0 2px var(--sign-blue), inset 0 0 0 4px var(--white);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.badge-sign svg {
-  width: 40px;
-  height: 40px;
-}
-.badge-mark {
-  position: absolute;
-  right: 5px;
-  bottom: 5px;
-  background: var(--white);
-  color: var(--sign-blue);
-  font-family: var(--font-sign);
-  font-weight: 800;
-  font-size: 11px;
-  line-height: 1;
-  padding: 2px 4px;
-  border-radius: 3px;
-}
-.badge-name {
-  font-family: var(--font-sign);
-  font-weight: 700;
-  font-size: 14px;
-  line-height: 1.1;
-}
-.badge-desc {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.75);
-  line-height: 1.2;
-}
 .newbadge {
   background: var(--amber);
   color: var(--navy);
@@ -2473,4 +2412,136 @@ body,
   border: 2px solid rgba(255, 255, 255, 0.5);
   background: rgba(0, 0, 0, 0.2);
   color: var(--white);
+}
+
+/* badges as rows */
+.badge-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+.badge-row {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.28);
+  color: var(--white);
+}
+.badge-row:first-child {
+  border-top: 0;
+}
+.badge-row:not(.badge-on) .badge-sign,
+.badge-row:not(.badge-on) .badge-name {
+  opacity: 0.45;
+}
+.badge-row:not(.badge-on) .badge-sign {
+  filter: grayscale(1);
+}
+.badge-sign {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: 7px;
+  background: var(--sign-blue);
+  box-shadow: inset 0 0 0 2px var(--sign-blue), inset 0 0 0 3.5px var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.badge-sign svg {
+  width: 32px;
+  height: 32px;
+}
+.badge-sign .shield {
+  font-size: 15px;
+}
+.badge-mark {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  background: var(--white);
+  color: var(--sign-blue);
+  font-family: var(--font-sign);
+  font-weight: 800;
+  font-size: 10px;
+  line-height: 1;
+  padding: 2px 3px;
+  border-radius: 3px;
+}
+.badge-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+.badge-name {
+  font-family: var(--font-sign);
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 1.05;
+}
+.badge-desc {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.78);
+  line-height: 1.25;
+}
+.badge-when {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+}
+.badge-when svg {
+  width: 18px;
+  height: 18px;
+  opacity: 0.6;
+}
+
+/* settings board: one control per row, full width */
+.settings-board .board-inner {
+  padding: 0;
+  gap: 0;
+}
+.settings-board .board-title {
+  border-bottom-color: var(--asphalt-3);
+}
+.settings-board .setting {
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--asphalt-3);
+}
+.settings-board .board-title + .setting {
+  border-top: 0;
+}
+.setting-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--asphalt-3);
+}
+.settings-board .setting-pair .setting {
+  padding: 0;
+  border-top: 0;
+}
+.seg-wide .seg-btn {
+  flex: 1 1 0;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+.reminder-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: stretch;
+}
+.reminder-row .seg {
+  align-self: stretch;
+}
+.time-input {
+  height: 42px;
+  padding: 0 10px;
 }
