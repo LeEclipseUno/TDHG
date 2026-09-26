@@ -2246,3 +2246,59 @@ body,
   color: var(--white);
   color-scheme: dark;
 }
+
+.avatar-btn.avatar-plus {
+  border-color: var(--amber);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 176, 0, 0.35);
+}
+.profile-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  color: var(--white);
+}
+.profile-avatar {
+  width: 56px;
+  height: 56px;
+  font-size: 24px;
+  border: 2.5px solid rgba(255, 255, 255, 0.35);
+}
+.profile-avatar.avatar-plus {
+  border-color: var(--amber);
+}
+.profile-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  line-height: 1.2;
+}
+.profile-name {
+  font-family: var(--font-sign);
+  font-weight: 700;
+  font-size: 20px;
+}
+.profile-email {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.72);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.profile-plus {
+  font-size: 13px;
+  color: var(--amber);
+  font-weight: 600;
+}
+.profile-plus-link {
+  align-self: flex-start;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: 13px;
+  color: var(--amber);
+  text-decoration: underline;
+  cursor: pointer;
+}

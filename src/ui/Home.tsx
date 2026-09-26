@@ -29,7 +29,6 @@ export interface HomeProps {
   onInstall?: () => void
   account: Account
   onSignIn: () => void
-  onSignOut: () => void
   plus: boolean
   onPlus: () => void
   onArchive: () => void
@@ -98,7 +97,7 @@ export function StreakPosts({ count }: { count: number }) {
 const isIosSafari = /iphone|ipad|ipod/i.test(navigator.userAgent) && !('standalone' in navigator && (navigator as { standalone?: boolean }).standalone)
 const isStandalone = window.matchMedia('(display-mode: standalone)').matches
 
-export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onStats, onAbout, onGroups, challenge, onChallenge, onInstall, account, onSignIn, onSignOut, plus, onPlus, onArchive }: HomeProps) {
+export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onStats, onAbout, onGroups, challenge, onChallenge, onInstall, account, onSignIn, plus, onPlus, onArchive }: HomeProps) {
   const { t, lang, setLang } = useLang()
   const tiers: Tier[] = ['A', 'N', 'AN']
   const n = dailyNumber()
@@ -149,7 +148,7 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
         <header className="home-header">
           <div className="home-topbar">
             {ONLINE && account.signedIn ? (
-              <button type="button" className="avatar-btn" onClick={onStats} aria-label={t('stats')}>
+              <button type="button" className={'avatar-btn' + (plus ? ' avatar-plus' : '')} onClick={onStats} aria-label={t('stats')}>
                 {account.avatar ? <img className="avatar-img" src={account.avatar} alt="" referrerPolicy="no-referrer" /> : <span className="avatar-img avatar-fallback">{(account.name ?? account.email ?? '?').slice(0, 1).toUpperCase()}</span>}
                 <span className="avatar-text">
                   <span className="avatar-name">{account.name ?? account.email?.split('@')[0]}</span>
@@ -356,19 +355,6 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
             <Seg<Variant> wide label={t('variant')} value={settings.variant} onChange={(variant) => onSettings({ ...settings, variant })} options={VARIANTS.map((v) => ({ v, label: t(`variant_${v}`) }))} />
             <span className="setting-hint">{t(`variantHint_${settings.variant}`)}</span>
           </div>
-          {ONLINE && account.signedIn && (
-            <div className="setting">
-              <span className="setting-label">{t('account')}</span>
-              <div className="account-row">
-                <span className="setting-hint">
-                  {t('signedInAs')} {account.email}
-                </span>
-                <button type="button" className="btn btn-small btn-ghost" onClick={onSignOut}>
-                  {t('signOut')}
-                </button>
-              </div>
-            </div>
-          )}
           {ONLINE && pushSupported() && (
             <div className="setting">
               <span className="setting-label">{t('reminder')}</span>

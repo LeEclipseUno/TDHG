@@ -7,9 +7,11 @@ import { Board, Matrix } from './widgets'
 import { Shield } from './Shield'
 import { IconMenu, PictStats } from './icons'
 import { Backdrop } from './Backdrop'
+import { ONLINE, type Account } from '../game/backend'
 
-export function Stats({ data, onHome }: { data: GameData; onHome: () => void }) {
-  const { t } = useLang()
+export function Stats({ data, account, plus, onSignOut, onPlus, onHome }: { data: GameData; account: Account; plus: boolean; onSignOut: () => void; onPlus: () => void; onHome: () => void }) {
+  const { t, lang } = useLang()
+  const until = account.plusUntil ? new Date(account.plusUntil).toLocaleDateString(lang === 'nl' ? 'nl-NL' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : ''
   const [tick, setTick] = useState(0)
   const hist = useMemo(() => loadHistory(), [tick])
   const labels = useMemo(() => loadLabelStats(), [tick])
@@ -30,8 +32,24 @@ export function Stats({ data, onHome }: { data: GameData; onHome: () => void }) 
     <div className="results">
       <Backdrop data={data} />
       <div className="results-inner">
+        {ONLINE && account.signedIn && (
+          <Board className="results-board profile-board">
+            <div className="board-title">{t('stats')}</div>
+            <div className="profile-body">
+              {account.avatar ? <img className={'avatar-img profile-avatar' + (plus ? ' avatar-plus' : '')} src={account.avatar} alt="" referrerPolicy="no-referrer" /> : <span className={'avatar-img avatar-fallback profile-avatar' + (plus ? ' avatar-plus' : '')}>{(account.name ?? account.email ?? '?').slice(0, 1).toUpperCase()}</span>}
+              <div className="profile-text">
+                <span className="profile-name">{account.name ?? account.email?.split('@')[0]}</span>
+                <span className="profile-email">{account.email}</span>
+                {plus ? <span className="profile-plus">{t('plusActive', { date: until })}</span> : <button type="button" className="profile-plus-link" onClick={onPlus}>{t('plus')}</button>}
+              </div>
+              <button type="button" className="btn btn-small btn-ghost" onClick={onSignOut}>
+                {t('signOut')}
+              </button>
+            </div>
+          </Board>
+        )}
         <Board className="results-board">
-          <div className="board-title">{t('stats')}</div>
+          <div className="board-title">{t('statsSection')}</div>
           <div className="learn-stats">
             <div>
               <span className="stat-value">{games}</span>

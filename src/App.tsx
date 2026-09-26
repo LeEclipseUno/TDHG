@@ -227,7 +227,7 @@ function Shell() {
     return wrap('game' + screen.session.seed, <Mode data={data} session={screen.session} onQuit={() => go('home')} onFinish={finish} />)
   }
   if (screen.kind === 'learn') return wrap('learn', <LearnMode data={data} settings={settings} onExit={() => go('home')} />)
-  if (screen.kind === 'stats') return wrap('stats', <Stats data={data} onHome={() => go('home')} />)
+  if (screen.kind === 'stats') return wrap('stats', <Stats data={data} account={account} plus={plus} onSignOut={doSignOut} onPlus={() => go('plus')} onHome={() => go('home')} />)
   if (screen.kind === 'about') return wrap('about', <About data={data} onHome={() => go('home')} />)
   if (screen.kind === 'plus') return wrap('plus', <Plus data={data} account={account} onSignIn={signIn} onRefresh={refreshAccount} onHome={() => go('home')} />)
   if (screen.kind === 'archive') return wrap('archive', <Archive data={data} onPlay={(n) => void playDaily(n)} onHome={() => go('home')} />)
@@ -256,7 +256,6 @@ function Shell() {
       onInstall={installEvt ? () => installEvt.prompt().then(() => setInstallEvt(null)) : undefined}
       account={account}
       onSignIn={signIn}
-      onSignOut={doSignOut}
     />,
   )
 }
