@@ -1,23 +1,28 @@
 // Online features on Supabase: friend groups, daily percentile, share previews.
 // Everything degrades silently when the project is not configured (no env vars) or the player is offline.
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 const URL = import.meta.env.VITE_SUPABASE_URL as string | undefined
 const KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
 export const ONLINE = Boolean(URL && KEY)
 
-let client: SupabaseClient | null = null
+let clientPromise: Promise<SupabaseClient | null> | null = null
 let session: Promise<boolean> | null = null
 
-function sb(): SupabaseClient | null {
-  if (!ONLINE) return null
-  if (!client) client = createClient(URL!, KEY!, { auth: { persistSession: true, autoRefreshToken: true } })
-  return client
+/** The library loads on first use only, so the game itself stays small. */
+function sb(): Promise<SupabaseClient | null> {
+  if (!ONLINE) return Promise.resolve(null)
+  if (!clientPromise) {
+    clientPromise = import('@supabase/supabase-js')
+      .then(({ createClient }) => createClient(URL!, KEY!, { auth: { persistSession: true, autoRefreshToken: true } }))
+      .catch(() => null)
+  }
+  return clientPromise
 }
 
 /** Anonymous sign-in: gives this device a stable id without any account. */
 async function ensureSession(): Promise<boolean> {
-  const c = sb()
+  const c = await sb()
   if (!c) return false
   if (!session) {
     session = (async () => {
@@ -76,7 +81,7 @@ export interface WeekRow {
 }
 
 async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T | null> {
-  const c = sb()
+  const c = await sb()
   if (!c || !(await ensureSession())) return null
   const { data, error } = await c.rpc(fn, args)
   if (error) {
@@ -119,7 +124,7 @@ export async function groupWeek(code: string, daily: number): Promise<WeekRow[]>
   return (await rpc<WeekRow[]>('group_week', { p_code: code, p_daily: daily })) ?? []
 }
 export async function leaveGroup(code: string): Promise<boolean> {
-  const c = sb()
+  const c = await sb()
   if (!c || !(await ensureSession())) return false
   const { data: g } = await c.from('groups').select('id').eq('code', code).maybeSingle()
   if (!g) return false
@@ -131,7 +136,7 @@ export async function leaveGroup(code: string): Promise<boolean> {
 
 /** Uploads the card and registers a share. Returns the preview link, or null when offline. */
 export async function createShare(blob: Blob, title: string, text: string, param: string | null): Promise<string | null> {
-  const c = sb()
+  const c = await sb()
   if (!c || !(await ensureSession())) return null
   const { data: u } = await c.auth.getUser()
   if (!u.user) return null
