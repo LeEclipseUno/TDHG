@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
-import MapView, { type Highlight, type MapHandle, type PlacedShield } from '../map/MapView'
+import MapView, { type Highlight, type MapHandle, type PlacedShield, type Pulse } from '../map/MapView'
+import { haptic, sfx } from '../game/sound'
 import { tierIncludes } from '../data'
 import { useLang } from '../i18n'
 import { HUD } from '../ui/HUD'
@@ -27,7 +28,8 @@ export function DragMode({ data, session, onFinish, onQuit }: ModeProps) {
   const { t } = useLang()
   const mapRef = useRef<MapHandle>(null)
   const items = useMemo(() => pickRoads(data, session.tier, QUESTION_COUNT, mulberry32(session.seed)), [data, session.tier, session.seed])
-  const [placed, setPlaced] = useState<Record<string, { x: number; y: number }>>({})
+  const [placed, setPlaced] = useState<Record<string, { x: number; y: number; at: number }>>({})
+  const [pulses, setPulses] = useState<Pulse[]>([])
   const [attempts, setAttempts] = useState<Record<string, number>>({})
   const [drag, setDrag] = useState<DragState | null>(null)
   const dragStart = useRef<{ ref: string; id: number; x: number; y: number; active: boolean } | null>(null)
@@ -39,6 +41,10 @@ export function DragMode({ data, session, onFinish, onQuit }: ModeProps) {
   const limitMs = session.timer ? TIME_LIMITS.drag * 1000 : 0
   const remaining = limitMs ? Math.max(0, session.startedAt + limitMs - now) : 0
   const placedCount = Object.keys(placed).length
+  const secsLeft = Math.ceil(remaining / 1000)
+  useEffect(() => {
+    if (limitMs && phase === 'play' && secsLeft <= 5 && secsLeft > 0) sfx.tick()
+  }, [secsLeft, limitMs, phase])
   const allPlaced = placedCount === items.length
 
   const score = items.reduce((sum, r) => (placed[r.ref] ? sum + Math.max(25, 100 - 25 * (attempts[r.ref] ?? 0)) : sum), 0)
@@ -83,9 +89,14 @@ export function DragMode({ data, session, onFinish, onQuit }: ModeProps) {
       return
     }
     if (hit.road.ref === ref) {
-      setPlaced((p) => ({ ...p, [ref]: { x: hit.px, y: hit.py } }))
-      showFlash({ highlights: { [ref]: 'correct' } }, 900)
+      const at = Date.now()
+      setPlaced((p) => ({ ...p, [ref]: { x: hit.px, y: hit.py, at } }))
+      setPulses((p) => [...p.slice(-4), { x: hit.px, y: hit.py, t0: at }])
+      sfx.place()
+      haptic([15, 30, 25])
     } else {
+      sfx.wrong()
+      haptic([30, 40, 30])
       setAttempts((a) => ({ ...a, [ref]: (a[ref] ?? 0) + 1 }))
       showFlash({ highlights: { [hit.road.ref]: 'wrong' }, shield: { ref: hit.road.ref, x: hit.px, y: hit.py, state: 'wrong' } }, 1400)
       showToast(`${t('wrong')} ${t('thatWas', { ref: hit.road.ref })}`)
@@ -97,6 +108,7 @@ export function DragMode({ data, session, onFinish, onQuit }: ModeProps) {
     if (phase !== 'play') return
     const active = e.pointerType === 'mouse'
     dragStart.current = { ref, id: e.pointerId, x: e.clientX, y: e.clientY, active }
+    sfx.tap()
     if (active) {
       capture(e.currentTarget, e.pointerId)
       setDrag({ ref, x: e.clientX, y: e.clientY })
@@ -124,7 +136,7 @@ export function DragMode({ data, session, onFinish, onQuit }: ModeProps) {
     setDrag(null)
   }
 
-  const shields: PlacedShield[] = items.filter((r) => placed[r.ref]).map((r) => ({ ref: r.ref, x: placed[r.ref].x, y: placed[r.ref].y, state: 'correct' }))
+  const shields: PlacedShield[] = items.filter((r) => placed[r.ref]).map((r) => ({ ref: r.ref, x: placed[r.ref].x, y: placed[r.ref].y, state: 'correct', born: placed[r.ref].at }))
   if (phase === 'reveal') {
     for (const r of items) if (!placed[r.ref]) shields.push({ ref: r.ref, x: r.anchor[0], y: r.anchor[1], state: 'wrong' })
   }
@@ -156,7 +168,7 @@ export function DragMode({ data, session, onFinish, onQuit }: ModeProps) {
           </div>
         }
       />
-      <MapView ref={mapRef} data={data} tier={session.tier} highlights={highlights} shields={shields}>
+      <MapView ref={mapRef} data={data} tier={session.tier} highlights={highlights} shields={shields} pulses={pulses} intro>
         {toast && <div className="toast">{toast}</div>}
       </MapView>
       {phase === 'play' ? (

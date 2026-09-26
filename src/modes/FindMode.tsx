@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import MapView, { type Highlight, type MapHandle, type PlacedShield, type TapInfo } from '../map/MapView'
+import MapView, { type Highlight, type MapHandle, type PlacedShield, type Pulse, type TapInfo } from '../map/MapView'
+import { haptic, sfx } from '../game/sound'
 import { tierIncludes } from '../data'
 import { useLang } from '../i18n'
 import { HUD } from '../ui/HUD'
@@ -19,6 +20,7 @@ export function FindMode({ data, session, onFinish, onQuit }: ModeProps) {
   const [highlights, setHighlights] = useState<Record<string, Highlight>>({})
   const [shields, setShields] = useState<PlacedShield[]>([])
   const [solved, setSolved] = useState<PlacedShield[]>([]) // correct answers stay on the map for the whole round
+  const [pulses, setPulses] = useState<Pulse[]>([])
   const [feedback, setFeedback] = useState<{ text: string; ok: boolean } | null>(null)
   const [toast, showToast] = useToast()
   const now = useNow(true)
@@ -38,8 +40,17 @@ export function FindMode({ data, session, onFinish, onQuit }: ModeProps) {
     const hl: Record<string, Highlight> = {}
     const sh: PlacedShield[] = []
     if (ok && hitPt) {
-      setSolved((s) => [...s, { ref: target.ref, x: hitPt.x, y: hitPt.y, state: 'correct' }])
-    } else if (hitRef && hitPt) {
+      setSolved((s) => [...s, { ref: target.ref, x: hitPt.x, y: hitPt.y, state: 'correct', born: Date.now() }])
+      setPulses((p) => [...p.slice(-4), { x: hitPt.x, y: hitPt.y, t0: Date.now() }])
+      const streak = streakBonus(results)
+      if (streak > 0) sfx.combo(streak / 10)
+      else sfx.correct()
+      haptic(20)
+    } else {
+      sfx.wrong()
+      haptic([30, 40, 30])
+    }
+    if (!ok && hitRef && hitPt) {
       hl[hitRef] = 'wrong'
       sh.push({ ref: hitRef, x: hitPt.x, y: hitPt.y, state: 'wrong' })
     }
@@ -53,6 +64,11 @@ export function FindMode({ data, session, onFinish, onQuit }: ModeProps) {
     if (limitMs && phase === 'ask' && remaining <= 0) answer(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remaining, limitMs, phase])
+
+  const secsLeft = Math.ceil(remaining / 1000)
+  useEffect(() => {
+    if (limitMs && phase === 'ask' && secsLeft <= 5 && secsLeft > 0) sfx.tick()
+  }, [secsLeft, limitMs, phase])
 
   useTimeout(
     phase === 'reveal'
@@ -106,7 +122,7 @@ export function FindMode({ data, session, onFinish, onQuit }: ModeProps) {
           </div>
         }
       />
-      <MapView ref={mapRef} data={data} tier={session.tier} highlights={allHighlights} shields={allShields} onTap={onTap}>
+      <MapView ref={mapRef} data={data} tier={session.tier} highlights={allHighlights} shields={allShields} pulses={pulses} onTap={onTap} intro>
         {feedback && <div role="status" className={'feedback ' + (feedback.ok ? 'feedback-ok' : 'feedback-bad')}>{feedback.text}</div>}
         {toast && <div role="status" className="toast">{toast}</div>}
       </MapView>

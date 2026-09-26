@@ -6,6 +6,7 @@ import { HUD } from '../ui/HUD'
 import { Shield } from '../ui/Shield'
 import { mulberry32, pickRoads, QUESTION_COUNT, quizOptions, streakBonus, TIME_LIMITS, timeBonus, type QuestionResult } from '../game/session'
 import { useNow, useTimeout } from '../game/hooks'
+import { haptic, sfx } from '../game/sound'
 import type { ModeProps } from './types'
 
 export function QuizMode({ data, session, onFinish, onQuit }: ModeProps) {
@@ -49,7 +50,16 @@ export function QuizMode({ data, session, onFinish, onQuit }: ModeProps) {
     const points = ok ? 100 + timeBonus(remaining, limitMs) + streakBonus(results) : 0
     setResults((r) => [...r, { label: q.road.ref, grade: ok ? 'good' : 'bad', points, ms: Date.now() - qStart, detail: ok ? undefined : pick ? t('youPicked', { ref: pick.ref }) : t('timeUp') }])
     setChosen(pick?.ref ?? '')
-    if (ok) setSolved((s) => [...s, q.road])
+    if (ok) {
+      setSolved((s) => [...s, q.road])
+      const streak = streakBonus(results)
+      if (streak > 0) sfx.combo(streak / 10)
+      else sfx.correct()
+      haptic(20)
+    } else {
+      sfx.wrong()
+      haptic([30, 40, 30])
+    }
     setPhase('reveal')
   }
 
@@ -57,6 +67,11 @@ export function QuizMode({ data, session, onFinish, onQuit }: ModeProps) {
     if (limitMs && phase === 'ask' && remaining <= 0) answer(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remaining, limitMs, phase])
+
+  const secsLeft = Math.ceil(remaining / 1000)
+  useEffect(() => {
+    if (limitMs && phase === 'ask' && secsLeft <= 5 && secsLeft > 0) sfx.tick()
+  }, [secsLeft, limitMs, phase])
 
   useTimeout(
     phase === 'reveal'
@@ -79,7 +94,7 @@ export function QuizMode({ data, session, onFinish, onQuit }: ModeProps) {
   for (const r of solved) highlights[r.ref] = 'correct'
   highlights[q.road.ref] = phase === 'ask' ? 'active' : chosen === q.road.ref ? 'correct' : 'wrong'
   // Only correct answers get their sign on the map, and they keep it for the rest of the round.
-  const shields: PlacedShield[] = solved.map((r) => ({ ref: r.ref, x: r.anchor[0], y: r.anchor[1], state: 'correct' }))
+  const shields: PlacedShield[] = solved.map((r, idx) => ({ ref: r.ref, x: r.anchor[0], y: r.anchor[1], state: 'correct', born: idx === solved.length - 1 ? qStart + 1 : undefined }))
 
   return (
     <div className="game">

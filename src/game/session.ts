@@ -21,6 +21,7 @@ export interface Settings {
   timer: boolean
   daily: boolean
   learnDeck: Deck
+  sound: boolean
 }
 
 export interface Session {
@@ -198,12 +199,12 @@ export function loadSettings(): Settings {
     const raw = localStorage.getItem(SETTINGS_KEY)
     if (raw) {
       const p = JSON.parse(raw) as Partial<Settings>
-      return { tier: p.tier === 'AN' || p.tier === 'ALL' ? p.tier : 'A', timer: p.timer !== false, daily: p.daily === true, learnDeck: p.learnDeck === 'junctions' ? 'junctions' : 'roads' }
+      return { tier: p.tier === 'AN' || p.tier === 'ALL' ? p.tier : 'A', timer: p.timer !== false, daily: p.daily === true, learnDeck: p.learnDeck === 'junctions' ? 'junctions' : 'roads', sound: p.sound !== false }
     }
   } catch {
     /* ignore */
   }
-  return { tier: 'A', timer: true, daily: false, learnDeck: 'roads' }
+  return { tier: 'A', timer: true, daily: false, learnDeck: 'roads', sound: true }
 }
 
 export function saveSettings(s: Settings) {

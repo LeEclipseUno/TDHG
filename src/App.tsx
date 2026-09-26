@@ -9,6 +9,7 @@ import { FindMode } from './modes/FindMode'
 import { JunctionMode } from './modes/JunctionMode'
 import { QuizMode } from './modes/QuizMode'
 import { LearnMode } from './modes/LearnMode'
+import { setSoundEnabled } from './game/sound'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>
@@ -43,7 +44,13 @@ function Shell() {
   const setSettings = (s: Settings) => {
     setSettingsState(s)
     saveSettings(s)
+    setSoundEnabled(s.sound)
   }
+
+  useEffect(() => {
+    setSoundEnabled(settings.sound)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const play = (mode: ModeId) => setScreen({ kind: 'game', session: newSession(mode, settings) })
 

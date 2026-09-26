@@ -5,6 +5,7 @@ import { useLang, type Lang } from '../i18n'
 import { MODES, getBest, type ModeId, type Settings } from '../game/session'
 import { Board } from './widgets'
 import { IconSignArrow, PictDrag, PictFind, PictJunction, PictLearn, PictQuiz } from './icons'
+import MapView from '../map/MapView'
 
 export interface HomeProps {
   data: GameData
@@ -38,6 +39,9 @@ export function Home({ data, settings, onSettings, onPlay, onLearn, onInstall }:
   const learnStats = useMemo(() => deckStats(buildDeck(data, settings.tier, settings.learnDeck), loadStates()), [data, settings.tier, settings.learnDeck])
   return (
     <div className="home">
+      <div className="home-backdrop" aria-hidden>
+        <MapView data={data} tier="A" interactive={false} drift />
+      </div>
       <div className="home-inner">
         <header className="home-header">
           <div className="home-lang">
@@ -99,6 +103,10 @@ export function Home({ data, settings, onSettings, onPlay, onLearn, onInstall }:
             <div className="setting">
               <span className="setting-label">{t('timer')}</span>
               <Seg<'on' | 'off'> label={t('timer')} value={settings.timer ? 'on' : 'off'} onChange={(v) => onSettings({ ...settings, timer: v === 'on' })} options={[{ v: 'on', label: t('timerOn') }, { v: 'off', label: t('timerOff') }]} />
+            </div>
+            <div className="setting">
+              <span className="setting-label">{t('sound')}</span>
+              <Seg<'on' | 'off'> label={t('sound')} value={settings.sound ? 'on' : 'off'} onChange={(v) => onSettings({ ...settings, sound: v === 'on' })} options={[{ v: 'on', label: t('timerOn') }, { v: 'off', label: t('timerOff') }]} />
             </div>
             <div className="setting">
               <span className="setting-label">{t('daily')}</span>

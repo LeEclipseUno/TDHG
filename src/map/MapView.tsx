@@ -18,12 +18,29 @@ export interface PlacedShield {
   x: number
   y: number
   state: ShieldState
+  /** Timestamp of placement; the sign pops in during the first 450 ms. */
+  born?: number
 }
 export interface Marker {
   x: number
   y: number
   kind: 'guess' | 'answer'
   label?: string
+}
+/** Expanding ring, for example where a sign lands. */
+export interface Pulse {
+  x: number
+  y: number
+  t0: number
+  color?: string
+}
+export interface MapLine {
+  x0: number
+  y0: number
+  x1: number
+  y1: number
+  /** When set, the line draws itself over 700 ms starting at t0. */
+  t0?: number
 }
 export interface View {
   cx: number
@@ -44,8 +61,16 @@ export interface MapViewProps {
   highlights?: Record<string, Highlight>
   shields?: PlacedShield[]
   markers?: Marker[]
-  lines?: [number, number, number, number][]
+  lines?: MapLine[]
+  pulses?: Pulse[]
   showJunctions?: boolean
+  /** Fly in from a closer view when the map first appears. */
+  intro?: boolean
+  /** Slowly wander over the country (home screen backdrop). */
+  drift?: boolean
+  /** false: no gestures, buttons or scale bar (results mini map). */
+  interactive?: boolean
+  className?: string
   onTap?: (tap: TapInfo) => void
   children?: ReactNode
 }
@@ -61,7 +86,11 @@ export interface MapHandle {
 }
 
 const MAX_SCALE = 5
-const COLORS = {
+const MIN_STEP = 0.75
+const POP_MS = 450
+const PULSE_MS = 700
+const LINE_MS = 700
+export const COLORS = {
   bg: '#0a1628',
   land: '#1b4a8d',
   landEdge: '#2f6fd0',
@@ -72,6 +101,14 @@ const COLORS = {
   wrong: '#ff4d5e',
   active: '#ff9d1c',
 }
+
+const easeOutCubic = (p: number) => 1 - Math.pow(1 - p, 3)
+const easeOutBack = (p: number) => {
+  const c1 = 1.70158
+  const c3 = c1 + 1
+  return 1 + c3 * Math.pow(p - 1, 3) + c1 * Math.pow(p - 1, 2)
+}
+const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath()
@@ -87,13 +124,16 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.closePath()
 }
 
-export function drawShield(ctx: CanvasRenderingContext2D, ref: string, kind: RoadKind, x: number, y: number, state: ShieldState) {
+export function drawShield(ctx: CanvasRenderingContext2D, ref: string, kind: RoadKind, x: number, y: number, state: ShieldState, scale = 1) {
+  ctx.save()
+  ctx.translate(x, y)
+  ctx.scale(scale, scale)
   ctx.font = '800 13px Overpass, "Barlow Condensed", system-ui, sans-serif'
   const tw = ctx.measureText(ref).width
   const bw = tw + 14
   const bh = 22
-  const bx = x - bw / 2
-  const by = y - bh / 2
+  const bx = -bw / 2
+  const by = -bh / 2
   ctx.shadowColor = 'rgba(0,0,0,.5)'
   ctx.shadowBlur = 6
   ctx.shadowOffsetY = 2
@@ -118,7 +158,8 @@ export function drawShield(ctx: CanvasRenderingContext2D, ref: string, kind: Roa
   ctx.fillStyle = kind === 'A' ? '#fff' : '#111'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillText(ref, x, y + 0.5)
+  ctx.fillText(ref, 0, 1)
+  ctx.restore()
 }
 
 function drawMarker(ctx: CanvasRenderingContext2D, x: number, y: number, m: Marker) {
@@ -137,7 +178,7 @@ function drawMarker(ctx: CanvasRenderingContext2D, x: number, y: number, m: Mark
   ctx.lineWidth = 2
   ctx.stroke()
   if (m.label) {
-    ctx.font = '700 12px system-ui, sans-serif'
+    ctx.font = '700 12px "Barlow Condensed", system-ui, sans-serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'top'
     ctx.lineWidth = 4
@@ -167,7 +208,7 @@ function drawScaleBar(ctx: CanvasRenderingContext2D, h: number, scale: number) {
   ctx.lineTo(x + px, y)
   ctx.stroke()
   ctx.fillStyle = 'rgba(255,255,255,.85)'
-  ctx.font = '11px system-ui, sans-serif'
+  ctx.font = '11px Barlow, system-ui, sans-serif'
   ctx.textAlign = 'left'
   ctx.textBaseline = 'bottom'
   ctx.fillText(m >= 1000 ? m / 1000 + ' km' : m + ' m', x, y - 3)
@@ -182,12 +223,15 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
   const viewRef = useRef<View>({ cx: 0, cy: 0, scale: 1 })
   const minScaleRef = useRef(0.001)
   const initRef = useRef(false)
+  const pendingRef = useRef<View | null>(null)
   const rafRef = useRef(0)
-  const animRef = useRef<{ from: View; to: View; t0: number; ms: number } | null>(null)
+  const animRef = useRef<{ from: View; to: View; t0: number; ms: number; onDone?: () => void } | null>(null)
+  const driftTimer = useRef(0)
   const pointers = useRef(new Map<number, { x: number; y: number }>())
   const panRef = useRef<{ x: number; y: number; view: View } | null>(null)
   const pinchRef = useRef<{ d0: number; view0: View; wx: number; wy: number } | null>(null)
   const tapRef = useRef<{ id: number; x: number; y: number; t: number; moved: boolean } | null>(null)
+  const interactive = props.interactive !== false
 
   const clampView = useCallback((v: View): View => {
     const w = propsRef.current.data.world
@@ -212,20 +256,25 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
+    const now = performance.now()
+    const wall = Date.now()
+    let live = false
     const anim = animRef.current
     if (anim) {
-      const p = Math.min(1, (performance.now() - anim.t0) / anim.ms)
-      const e = 1 - Math.pow(1 - p, 3)
+      const p = Math.min(1, (now - anim.t0) / anim.ms)
+      const e = easeOutCubic(p)
       const ls = Math.log(anim.from.scale) + (Math.log(anim.to.scale) - Math.log(anim.from.scale)) * e
       viewRef.current = {
         cx: anim.from.cx + (anim.to.cx - anim.from.cx) * e,
         cy: anim.from.cy + (anim.to.cy - anim.from.cy) * e,
         scale: Math.exp(ls),
       }
-      if (p >= 1) animRef.current = null
-      else rafRef.current = requestAnimationFrame(draw)
+      if (p >= 1) {
+        animRef.current = null
+        anim.onDone?.()
+      } else live = true
     }
-    const { data, tier, highlights = {}, shields = [], markers = [], lines = [], showJunctions } = propsRef.current
+    const { data, tier, highlights = {}, shields = [], markers = [], lines = [], pulses = [], showJunctions } = propsRef.current
     const { w, h } = sizeRef.current
     const dpr = window.devicePixelRatio || 1
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
@@ -238,8 +287,7 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
     ctx.fillStyle = COLORS.bg
     ctx.fillRect(0, 0, w, h)
 
-    // Screen-space decimation: skip vertices that land within a pixel of the previous one.
-    const MIN_STEP = 0.75
+    // Land. Screen-space decimation skips vertices within a pixel of the previous one.
     ctx.beginPath()
     for (const poly of data.land) {
       for (const ring of poly.rings) {
@@ -293,9 +341,9 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
       }
       if (smooth) ctx.lineTo(px, py)
     }
-    const strokeLines = (lines: number[][], color: string, width: number, alpha: number) => {
+    const strokeLines = (ls: number[][], color: string, width: number, alpha: number) => {
       ctx.beginPath()
-      for (const line of lines) trace(line)
+      for (const line of ls) trace(line)
       ctx.globalAlpha = alpha
       if (detailed) {
         ctx.strokeStyle = COLORS.bg
@@ -357,22 +405,48 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
       }
     }
 
-    for (const [x0, y0, x1, y1] of lines) {
+    for (const l of lines) {
+      let p = 1
+      if (l.t0) {
+        p = Math.min(1, (wall - l.t0) / LINE_MS)
+        if (p < 1) live = true
+      }
+      const ex = l.x0 + (l.x1 - l.x0) * easeOutCubic(p)
+      const ey = l.y0 + (l.y1 - l.y0) * easeOutCubic(p)
       ctx.setLineDash([6, 6])
       ctx.strokeStyle = '#fff'
       ctx.lineWidth = 2
       ctx.beginPath()
-      ctx.moveTo(X(x0), Y(y0))
-      ctx.lineTo(X(x1), Y(y1))
+      ctx.moveTo(X(l.x0), Y(l.y0))
+      ctx.lineTo(X(ex), Y(ey))
       ctx.stroke()
       ctx.setLineDash([])
+    }
+    for (const pu of pulses) {
+      const p = (wall - pu.t0) / PULSE_MS
+      if (p < 0 || p >= 1) continue
+      live = true
+      ctx.beginPath()
+      ctx.arc(X(pu.x), Y(pu.y), 6 + 40 * easeOutCubic(p), 0, Math.PI * 2)
+      ctx.strokeStyle = pu.color ?? COLORS.correct
+      ctx.globalAlpha = 1 - p
+      ctx.lineWidth = 3
+      ctx.stroke()
+      ctx.globalAlpha = 1
     }
     for (const m of markers) drawMarker(ctx, X(m.x), Y(m.y), m)
     for (const s of shields) {
       const road = data.byRef.get(s.ref)
-      drawShield(ctx, s.ref, road?.kind ?? 'N', X(s.x), Y(s.y), s.state)
+      let pop = 1
+      if (s.born) {
+        const p = Math.min(1, (wall - s.born) / POP_MS)
+        if (p < 1) live = true
+        pop = 0.4 + 0.6 * easeOutBack(p)
+      }
+      drawShield(ctx, s.ref, road?.kind ?? 'N', X(s.x), Y(s.y), s.state, pop)
     }
-    drawScaleBar(ctx, h, scale)
+    if (propsRef.current.interactive !== false) drawScaleBar(ctx, h, scale)
+    if (live && !rafRef.current) rafRef.current = requestAnimationFrame(draw)
   }, [])
 
   const requestRedraw = useCallback(() => {
@@ -388,8 +462,13 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
   )
 
   const animate = useCallback(
-    (to: View, ms = 600) => {
-      animRef.current = { from: { ...viewRef.current }, to: clampView(to), t0: performance.now(), ms }
+    (to: View, ms = 600, onDone?: () => void) => {
+      if (!initRef.current) {
+        pendingRef.current = to
+        return
+      }
+      if (reducedMotion()) ms = Math.min(ms, 1)
+      animRef.current = { from: { ...viewRef.current }, to: clampView(to), t0: performance.now(), ms, onDone }
       requestRedraw()
     },
     [clampView, requestRedraw],
@@ -407,7 +486,19 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
     [animate, screenToWorld, setView],
   )
 
-  // Resize handling
+  // Home screen backdrop: wander to a random spot, pause, wander again.
+  const scheduleDrift = useCallback(() => {
+    window.clearTimeout(driftTimer.current)
+    if (!propsRef.current.drift || reducedMotion()) return
+    driftTimer.current = window.setTimeout(() => {
+      const wb = propsRef.current.data.world
+      const cx = wb.x0 + (0.25 + Math.random() * 0.5) * (wb.x1 - wb.x0)
+      const cy = wb.y0 + (0.2 + Math.random() * 0.6) * (wb.y1 - wb.y0)
+      animate({ cx, cy, scale: minScaleRef.current * (2 + Math.random() * 1.5) }, 9000, scheduleDrift)
+    }, 600)
+  }, [animate])
+
+  // Resize handling and first layout
   useEffect(() => {
     const wrap = wrapRef.current
     const canvas = canvasRef.current
@@ -426,22 +517,38 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
       minScaleRef.current = Math.min(w / (world.x1 - world.x0), h / (world.y1 - world.y0)) * 0.95
       if (!initRef.current) {
         initRef.current = true
-        viewRef.current = fitView()
+        const fit = fitView()
+        viewRef.current = fit
+        if (pendingRef.current) {
+          const target = pendingRef.current
+          pendingRef.current = null
+          viewRef.current = { ...fit, scale: fit.scale * 1.4 }
+          animate(target, 700)
+        } else if (propsRef.current.intro && !reducedMotion()) {
+          viewRef.current = { ...fit, scale: fit.scale * 2.4 }
+          animate(fit, 1100, propsRef.current.drift ? scheduleDrift : undefined)
+        } else if (propsRef.current.drift) {
+          scheduleDrift()
+        }
       } else {
         viewRef.current = clampView(viewRef.current)
       }
       // Draw synchronously: setting the canvas size cleared it, and rAF may be paused in a hidden tab.
       cancelAnimationFrame(rafRef.current)
+      rafRef.current = 0
       draw()
     })
     ro.observe(wrap)
-    return () => ro.disconnect()
-  }, [clampView, draw, fitView])
+    return () => {
+      ro.disconnect()
+      window.clearTimeout(driftTimer.current)
+    }
+  }, [animate, clampView, draw, fitView, scheduleDrift])
 
   // Wheel zoom (non-passive to prevent page scroll)
   useEffect(() => {
     const canvas = canvasRef.current
-    if (!canvas) return
+    if (!canvas || !interactive) return
     const onWheel = (e: WheelEvent) => {
       e.preventDefault()
       animRef.current = null
@@ -450,12 +557,12 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
     }
     canvas.addEventListener('wheel', onWheel, { passive: false })
     return () => canvas.removeEventListener('wheel', onWheel)
-  }, [zoomAt])
+  }, [zoomAt, interactive])
 
   // Redraw when overlays change
   useEffect(() => {
     requestRedraw()
-  }, [props.highlights, props.shields, props.markers, props.lines, props.showJunctions, props.tier, requestRedraw])
+  }, [props.highlights, props.shields, props.markers, props.lines, props.pulses, props.showJunctions, props.tier, requestRedraw])
 
   useEffect(
     () => () => {
@@ -471,6 +578,7 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
   }
 
   const onPointerDown = (e: ReactPointerEvent<HTMLCanvasElement>) => {
+    if (!interactive) return
     capture(e.currentTarget, e.pointerId)
     animRef.current = null
     const p = local(e)
@@ -510,6 +618,7 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
   }
 
   const onPointerUp = (e: ReactPointerEvent<HTMLCanvasElement>) => {
+    if (!pointers.current.has(e.pointerId)) return
     const p = local(e)
     pointers.current.delete(e.pointerId)
     const tap = tapRef.current
@@ -537,8 +646,13 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
         const { w, h } = sizeRef.current
         const bw = Math.max(50, b.x1 - b.x0)
         const bh = Math.max(50, b.y1 - b.y0)
-        const scale = Math.min((w - 2 * pad) / bw, (h - 2 * pad) / bh)
-        animate({ cx: (b.x0 + b.x1) / 2, cy: (b.y0 + b.y1) / 2, scale })
+        const target = { cx: (b.x0 + b.x1) / 2, cy: (b.y0 + b.y1) / 2, scale: Math.min((w - 2 * pad) / bw, (h - 2 * pad) / bh) }
+        if (!initRef.current) {
+          // Not measured yet: remember the target and resolve it once the size is known.
+          pendingRef.current = target
+          return
+        }
+        animate(target)
       },
       flyToPoint(x, y, scale) {
         animate({ cx: x, cy: y, scale: scale ?? viewRef.current.scale })
@@ -558,26 +672,21 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
   )
 
   return (
-    <div ref={wrapRef} className={'map-wrap' + (props.onTap ? ' map-tappable' : '')}>
-      <canvas
-        ref={canvasRef}
-        className="map-canvas"
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-      />
-      <div className="map-zoom">
-        <button type="button" className="sign-btn" aria-label="Zoom in" onPointerDown={(e) => e.stopPropagation()} onClick={() => zoomAt(sizeRef.current.w / 2, sizeRef.current.h / 2, 1.7, 250)}>
-          <IconPlus />
-        </button>
-        <button type="button" className="sign-btn" aria-label="Zoom out" onPointerDown={(e) => e.stopPropagation()} onClick={() => zoomAt(sizeRef.current.w / 2, sizeRef.current.h / 2, 1 / 1.7, 250)}>
-          <IconMinus />
-        </button>
-        <button type="button" className="sign-btn" aria-label="Reset view" onPointerDown={(e) => e.stopPropagation()} onClick={() => animate(fitView())}>
-          <IconFit />
-        </button>
-      </div>
+    <div ref={wrapRef} className={'map-wrap' + (props.onTap ? ' map-tappable' : '') + (interactive ? '' : ' map-static') + (props.className ? ' ' + props.className : '')}>
+      <canvas ref={canvasRef} className="map-canvas" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp} />
+      {interactive && (
+        <div className="map-zoom">
+          <button type="button" className="sign-btn" aria-label="Zoom in" onPointerDown={(e) => e.stopPropagation()} onClick={() => zoomAt(sizeRef.current.w / 2, sizeRef.current.h / 2, 1.7, 250)}>
+            <IconPlus />
+          </button>
+          <button type="button" className="sign-btn" aria-label="Zoom out" onPointerDown={(e) => e.stopPropagation()} onClick={() => zoomAt(sizeRef.current.w / 2, sizeRef.current.h / 2, 1 / 1.7, 250)}>
+            <IconMinus />
+          </button>
+          <button type="button" className="sign-btn" aria-label="Reset view" onPointerDown={(e) => e.stopPropagation()} onClick={() => animate(fitView())}>
+            <IconFit />
+          </button>
+        </div>
+      )}
       {props.children}
     </div>
   )

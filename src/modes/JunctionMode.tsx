@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import MapView, { type MapHandle, type Marker, type TapInfo } from '../map/MapView'
+import MapView, { type MapHandle, type MapLine, type Marker, type TapInfo } from '../map/MapView'
+import { haptic, sfx } from '../game/sound'
 import { boundsOfPoints } from '../data'
 import { useLang } from '../i18n'
 import { HUD } from '../ui/HUD'
@@ -18,8 +19,8 @@ export function JunctionMode({ data, session, onFinish, onQuit }: ModeProps) {
   const [qStart, setQStart] = useState(() => Date.now())
   const [hint, setHint] = useState(false)
   const [guess, setGuess] = useState<{ x: number; y: number } | null>(null)
-  const [feedback, setFeedback] = useState<{ text: string; grade: 'good' | 'partial' | 'bad' } | null>(null)
-  const now = useNow(true)
+  const [feedback, setFeedback] = useState<{ km: number | null; grade: 'good' | 'partial' | 'bad'; points: number; at: number } | null>(null)
+  const now = useNow(true, 50)
   const limitMs = session.timer ? TIME_LIMITS.junction * 1000 : 0
   const remaining = limitMs ? Math.max(0, qStart + limitMs - now) : 0
   const q = questions[i]
@@ -35,7 +36,17 @@ export function JunctionMode({ data, session, onFinish, onQuit }: ModeProps) {
     const detail = km === null ? t('timeUp') : km < 0.8 ? t('spotOn') : t('distanceOff', { km })
     setResults((r) => [...r, { label: q.name, grade: base.grade, points, ms: Date.now() - qStart, detail }])
     setGuess(pt)
-    setFeedback({ text: `${detail} (+${points})`, grade: base.grade })
+    setFeedback({ km, grade: base.grade, points, at: Date.now() })
+    if (base.grade === 'good') {
+      sfx.correct()
+      haptic(20)
+    } else if (base.grade === 'partial') {
+      sfx.tap()
+      haptic(15)
+    } else {
+      sfx.wrong()
+      haptic([30, 40, 30])
+    }
     setPhase('reveal')
     // Only a decent guess reveals where the interchange really is.
     if (pt && base.grade !== 'bad') mapRef.current?.flyToBounds(boundsOfPoints([[q.x, q.y], [pt.x, pt.y]], 3000), 60)
@@ -45,6 +56,11 @@ export function JunctionMode({ data, session, onFinish, onQuit }: ModeProps) {
     if (limitMs && phase === 'ask' && remaining <= 0) answer(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remaining, limitMs, phase])
+
+  const secsLeft = Math.ceil(remaining / 1000)
+  useEffect(() => {
+    if (limitMs && phase === 'ask' && secsLeft <= 5 && secsLeft > 0) sfx.tick()
+  }, [secsLeft, limitMs, phase])
 
   useTimeout(
     phase === 'reveal'
@@ -68,13 +84,13 @@ export function JunctionMode({ data, session, onFinish, onQuit }: ModeProps) {
   const onTap = (tap: TapInfo) => answer({ x: tap.x, y: tap.y })
 
   const markers: Marker[] = []
-  const lines: [number, number, number, number][] = []
+  const lines: MapLine[] = []
   if (phase === 'reveal') {
     const revealed = results[results.length - 1]?.grade !== 'bad'
     if (revealed) markers.push({ x: q.x, y: q.y, kind: 'answer', label: q.name })
     if (guess) {
       markers.push({ x: guess.x, y: guess.y, kind: 'guess' })
-      if (revealed) lines.push([guess.x, guess.y, q.x, q.y])
+      if (revealed) lines.push({ x0: guess.x, y0: guess.y, x1: q.x, y1: q.y, t0: feedback?.at })
     }
   }
 
@@ -106,8 +122,12 @@ export function JunctionMode({ data, session, onFinish, onQuit }: ModeProps) {
           </div>
         }
       />
-      <MapView ref={mapRef} data={data} tier={session.tier} markers={markers} lines={lines} onTap={phase === 'ask' ? onTap : undefined}>
-        {feedback && <div role="status" className={`feedback feedback-${feedback.grade === 'good' ? 'ok' : feedback.grade === 'partial' ? 'mid' : 'bad'}`}>{feedback.text}</div>}
+      <MapView ref={mapRef} data={data} tier={session.tier} markers={markers} lines={lines} onTap={phase === 'ask' ? onTap : undefined} intro>
+        {feedback && (
+          <div role="status" className={`feedback feedback-${feedback.grade === 'good' ? 'ok' : feedback.grade === 'partial' ? 'mid' : 'bad'}`}>
+            {feedback.km === null ? t('timeUp') : feedback.km < 0.8 ? t('spotOn') : t('distanceOff', { km: (Math.round(feedback.km * Math.min(1, (now - feedback.at) / 700) * 10) / 10).toFixed(1) })} (+{feedback.points})
+          </div>
+        )}
       </MapView>
     </div>
   )

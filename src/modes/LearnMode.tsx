@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import MapView, { type Highlight, type MapHandle, type Marker, type PlacedShield, type TapInfo } from '../map/MapView'
+import MapView, { type Highlight, type MapHandle, type MapLine, type Marker, type PlacedShield, type TapInfo } from '../map/MapView'
+import { haptic, sfx } from '../game/sound'
 import { boundsOfPoints, tierIncludes, type GameData, type Road } from '../data'
 import { useLang } from '../i18n'
 import { HUD } from '../ui/HUD'
@@ -34,7 +35,7 @@ export function LearnMode({ data, settings, onExit }: Props) {
   const [chosen, setChosen] = useState<string | null>(null)
   const [guess, setGuess] = useState<{ x: number; y: number } | null>(null)
   const [hitShield, setHitShield] = useState<PlacedShield | null>(null)
-  const [outcome, setOutcome] = useState<{ rating: Rating; state: CardState; correct: boolean } | null>(null)
+  const [outcome, setOutcome] = useState<{ rating: Rating; state: CardState; correct: boolean; at: number } | null>(null)
   const [solved, setSolved] = useState<Road[]>([]) // correctly answered roads stay green during the session
   const [toast, showToast] = useToast()
   const now = useNow(phase === 'ask', 500)
@@ -53,7 +54,14 @@ export function LearnMode({ data, settings, onExit }: Props) {
     if (!card || phase !== 'ask') return
     const rating = ratingFor(correct, Date.now() - qStart)
     const state = applyReview(statesRef.current, card, rating)
-    setOutcome({ rating, state, correct })
+    setOutcome({ rating, state, correct, at: Date.now() })
+    if (correct) {
+      sfx.correct()
+      haptic(20)
+    } else {
+      sfx.wrong()
+      haptic([30, 40, 30])
+    }
     if (correct && road && !solved.includes(road)) setSolved((s) => [...s, road])
     setGrades((g) => [...g, gradeOf(rating)])
     setPhase('reveal')
@@ -130,7 +138,7 @@ export function LearnMode({ data, settings, onExit }: Props) {
     shields.push({ ref: r.ref, x: r.anchor[0], y: r.anchor[1], state: 'correct' })
   }
   const markers: Marker[] = []
-  const lines: [number, number, number, number][] = []
+  const lines: MapLine[] = []
   if (road) {
     if (phase === 'ask' && card?.kind === 'rec') highlights[road.ref] = 'active'
     if (phase === 'reveal') {
@@ -139,14 +147,14 @@ export function LearnMode({ data, settings, onExit }: Props) {
         highlights[hitShield.ref] = 'wrong'
         shields.push(hitShield)
       }
-      shields.push(hitShield && outcome?.correct ? hitShield : { ref: road.ref, x: road.anchor[0], y: road.anchor[1], state: outcome?.correct ? 'correct' : 'neutral' })
+      shields.push(hitShield && outcome?.correct ? { ...hitShield, born: outcome?.at } : { ref: road.ref, x: road.anchor[0], y: road.anchor[1], state: outcome?.correct ? 'correct' : 'neutral', born: outcome?.at })
     }
   }
   if (junction && phase === 'reveal') {
     markers.push({ x: junction.x, y: junction.y, kind: 'answer', label: junction.name })
     if (guess) {
       markers.push({ x: guess.x, y: guess.y, kind: 'guess' })
-      lines.push([guess.x, guess.y, junction.x, junction.y])
+      lines.push({ x0: guess.x, y0: guess.y, x1: junction.x, y1: junction.y, t0: outcome?.at })
     }
   }
 
@@ -218,7 +226,7 @@ export function LearnMode({ data, settings, onExit }: Props) {
   return (
     <div className="game">
       <HUD index={i} total={queue.length} grades={grades} score={correctCount} scoreLabel={t('accuracy')} elapsedMs={now - qStart} onQuit={onExit} countLabel={t('cardCount', { n: i + 1, total: queue.length })} prompt={prompt} />
-      <MapView ref={mapRef} data={data} tier={settings.tier} highlights={highlights} shields={shields} markers={markers} lines={lines} onTap={phase === 'ask' && card?.kind !== 'rec' ? onTap : undefined}>
+      <MapView ref={mapRef} data={data} tier={settings.tier} highlights={highlights} shields={shields} markers={markers} lines={lines} onTap={phase === 'ask' && card?.kind !== 'rec' ? onTap : undefined} intro>
         {toast && <div className="toast">{toast}</div>}
       </MapView>
       {phase === 'reveal' && outcome && (
