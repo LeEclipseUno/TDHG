@@ -70,6 +70,7 @@ export interface MapViewProps {
   drift?: boolean
   /** false: no gestures, buttons or scale bar (results mini map). */
   interactive?: boolean
+  palette?: 'dark' | 'light'
   className?: string
   onTap?: (tap: TapInfo) => void
   children?: ReactNode
@@ -91,15 +92,31 @@ const POP_MS = 450
 const PULSE_MS = 700
 const LINE_MS = 700
 export const COLORS = {
-  bg: '#0a1628',
+  bg: '#091b2c',
   land: '#1b4a8d',
   landEdge: '#2f6fd0',
+  abroad: '#15243a',
+  abroadEdge: '#22344d',
   A: '#f6f8fc',
   N: '#ffd23f',
   P: '#8aa4c8',
   correct: '#34d17c',
   wrong: '#ff4d5e',
-  active: '#ff9d1c',
+  active: '#ef712f',
+}
+/** Light palette for the menu backdrop: paper map in the brand colours. */
+export const LIGHT: typeof COLORS = {
+  bg: '#f3f5f9',
+  land: '#dbe5f1',
+  landEdge: '#b7c8dd',
+  abroad: '#e9edf3',
+  abroadEdge: '#d9e0ea',
+  A: '#091b2c',
+  N: '#ef712f',
+  P: '#9fb1c8',
+  correct: '#34d17c',
+  wrong: '#ff4d5e',
+  active: '#ef712f',
 }
 
 const easeOutCubic = (p: number) => 1 - Math.pow(1 - p, 3)
@@ -275,6 +292,7 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
       } else live = true
     }
     const { data, tier, highlights = {}, shields = [], markers = [], lines = [], pulses = [], showJunctions } = propsRef.current
+    const C = propsRef.current.palette === 'light' ? LIGHT : COLORS
     const { w, h } = sizeRef.current
     const dpr = window.devicePixelRatio || 1
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
@@ -284,32 +302,36 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
     const X = (x: number) => x * scale + tx
     const Y = (y: number) => y * scale + ty
 
-    ctx.fillStyle = COLORS.bg
+    ctx.fillStyle = C.bg
     ctx.fillRect(0, 0, w, h)
 
-    // Land. Screen-space decimation skips vertices within a pixel of the previous one.
-    ctx.beginPath()
-    for (const poly of data.land) {
-      for (const ring of poly.rings) {
-        let lx = X(ring[0])
-        let ly = Y(ring[1])
-        ctx.moveTo(lx, ly)
-        for (let i = 2; i < ring.length; i += 2) {
-          const sx = X(ring[i])
-          const sy = Y(ring[i + 1])
-          if (Math.abs(sx - lx) + Math.abs(sy - ly) < MIN_STEP) continue
-          ctx.lineTo(sx, sy)
-          lx = sx
-          ly = sy
+    // Land polygons. Screen-space decimation skips vertices within a pixel of the previous one.
+    const fillLand = (polys: typeof data.land, fill: string, edge: string) => {
+      ctx.beginPath()
+      for (const poly of polys) {
+        for (const ring of poly.rings) {
+          let lx = X(ring[0])
+          let ly = Y(ring[1])
+          ctx.moveTo(lx, ly)
+          for (let i = 2; i < ring.length; i += 2) {
+            const sx = X(ring[i])
+            const sy = Y(ring[i + 1])
+            if (Math.abs(sx - lx) + Math.abs(sy - ly) < MIN_STEP) continue
+            ctx.lineTo(sx, sy)
+            lx = sx
+            ly = sy
+          }
+          ctx.closePath()
         }
-        ctx.closePath()
       }
+      ctx.fillStyle = fill
+      ctx.fill('evenodd')
+      ctx.strokeStyle = edge
+      ctx.lineWidth = 1
+      ctx.stroke()
     }
-    ctx.fillStyle = COLORS.land
-    ctx.fill('evenodd')
-    ctx.strokeStyle = COLORS.landEdge
-    ctx.lineWidth = 1
-    ctx.stroke()
+    fillLand(data.abroad, C.abroad, C.abroadEdge) // neighbours, muted, so the country does not float in the void
+    fillLand(data.land, C.land, C.landEdge)
 
     const z = Math.log2(scale / minScaleRef.current)
     // Line widths: a zoom-dependent minimum in px, or the real road width once zoomed in far enough.
@@ -346,7 +368,7 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
       for (const line of ls) trace(line)
       ctx.globalAlpha = alpha
       if (detailed) {
-        ctx.strokeStyle = COLORS.bg
+        ctx.strokeStyle = C.bg
         ctx.lineWidth = width + 3
         ctx.stroke()
       }
@@ -364,14 +386,14 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
         }
         const inTier = tierIncludes(tier, r.kind)
         if (r.kind === 'P' && !inTier && z < 2.5) continue
-        strokeLines(r.lines, COLORS[r.kind], widths[r.kind], inTier ? 1 : 0.35)
+        strokeLines(r.lines, C[r.kind], widths[r.kind], inTier ? 1 : 0.35)
       }
     }
     drawKind('P')
     if (z > 1.5) {
       for (const lk of data.links) {
         if (!inView(lk.b)) continue
-        strokeLines([lk.l], COLORS[lk.k], linkWidth[lk.k], tierIncludes(tier, lk.k) ? 0.95 : 0.35)
+        strokeLines([lk.l], C[lk.k], linkWidth[lk.k], tierIncludes(tier, lk.k) ? 0.95 : 0.35)
       }
     }
     drawKind('N')
@@ -399,7 +421,7 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
         ctx.arc(sx, sy, 4, 0, Math.PI * 2)
         ctx.fillStyle = '#fff'
         ctx.fill()
-        ctx.strokeStyle = COLORS.bg
+        ctx.strokeStyle = C.bg
         ctx.lineWidth = 1.5
         ctx.stroke()
       }

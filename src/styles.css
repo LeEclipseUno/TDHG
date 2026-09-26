@@ -3,19 +3,30 @@
    speed limit discs and amber matrix boards. */
 
 :root {
-  --bg: #0a1628;
-  --asphalt: #1b1f27;
-  --asphalt-2: #262b35;
-  --asphalt-3: #343a46;
+  /* Brand: navy and orange from the logo, blue signage boards, light paper background for menus,
+     dark "windshield" for the game screens. */
+  --bg: #f3f5f9;
+  --paper: #ffffff;
+  --navy: #091b2c;
+  --navy-2: #12283f;
+  --navy-3: #1f3550;
+  --asphalt: #091b2c;
+  --asphalt-2: #12283f;
+  --asphalt-3: #24394f;
   --sign-blue: #0d4a9c;
   --sign-blue-2: #0b3f85;
-  --sign-red: #c8102e;
+  --sign-red: #c90002;
   --sign-yellow: #f7d117;
   --post-green: #1f8f4e;
   --amber: #ffb000;
+  --orange: #ef712f;
+  --orange-2: #d85f21;
   --white: #f7f8fa;
-  --text: #f4f7fb;
-  --muted: #a7b6cc;
+  --text: #091b2c;
+  --text-on-dark: #f4f7fb;
+  --muted: #5b6b80;
+  --muted-on-dark: #a7b6cc;
+  --line: #d9dfe8;
   --good: #2ecc71;
   --bad: #ff4757;
   --font-sign: 'Barlow Condensed', 'Arial Narrow', system-ui, sans-serif;
@@ -23,7 +34,7 @@
   --font-shield: 'Overpass', 'Barlow Condensed', system-ui, sans-serif;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 * {
@@ -59,7 +70,8 @@ button {
   background: var(--sign-blue);
 }
 .board-dark {
-  background: var(--asphalt);
+  background: var(--paper);
+  box-shadow: 0 8px 24px rgba(9, 27, 44, 0.12);
 }
 .board-inner {
   border: 3px solid var(--white);
@@ -67,7 +79,7 @@ button {
   overflow: hidden;
 }
 .board-dark .board-inner {
-  border-color: var(--asphalt-3);
+  border-color: var(--navy);
   padding: 14px;
   display: flex;
   flex-direction: column;
@@ -166,10 +178,10 @@ button {
 .seg {
   display: inline-flex;
   align-self: flex-start;
-  border: 2px solid var(--white);
+  border: 2px solid var(--navy);
   border-radius: 5px;
   overflow: hidden;
-  background: var(--asphalt-2);
+  background: var(--paper);
 }
 .seg-wide {
   align-self: stretch;
@@ -178,7 +190,7 @@ button {
   flex: 1 1 auto;
   background: transparent;
   border: 0;
-  color: var(--white);
+  color: var(--navy);
   padding: 8px 14px;
   min-height: 38px;
   font-family: var(--font-sign);
@@ -194,11 +206,11 @@ button {
   left: -1px;
   top: 6px;
   bottom: 6px;
-  border-left: 2px dashed rgba(255, 255, 255, 0.45);
+  border-left: 2px dashed rgba(9, 27, 44, 0.35);
 }
 .seg-on {
-  background: var(--white);
-  color: var(--asphalt);
+  background: var(--navy);
+  color: var(--white);
 }
 .seg-on + .seg-btn::before,
 .seg-btn + .seg-on::before {
@@ -212,9 +224,9 @@ button {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border: 2px solid var(--white);
-  background: var(--white);
-  color: var(--asphalt);
+  border: 2px solid var(--navy);
+  background: var(--paper);
+  color: var(--navy);
   border-radius: 5px;
   padding: 10px 18px;
   min-height: 46px;
@@ -233,11 +245,32 @@ button {
   transform: scale(0.97);
 }
 .btn-primary {
-  background: var(--sign-blue);
+  background: var(--orange);
+  border-color: var(--orange);
   color: var(--white);
-  box-shadow: inset 0 0 0 2px var(--sign-blue), inset 0 0 0 4px var(--white);
+}
+.btn-primary:hover {
+  background: var(--orange-2);
 }
 .btn-ghost {
+  background: transparent;
+  color: var(--navy);
+}
+.game .btn,
+.reveal-bar .btn,
+.drawer .btn {
+  border-color: var(--white);
+  background: var(--white);
+  color: var(--navy);
+}
+.game .btn-primary,
+.reveal-bar .btn-primary,
+.drawer .btn-primary {
+  background: var(--orange);
+  border-color: var(--orange);
+  color: var(--white);
+}
+.game .btn-ghost {
   background: transparent;
   color: var(--white);
 }
@@ -462,14 +495,14 @@ button {
   text-transform: uppercase;
 }
 .loading-logo {
-  width: 170px;
-  height: 170px;
+  width: min(80vw, 380px);
+  height: auto;
 }
 .road-loader {
   width: 180px;
   height: 10px;
   border-radius: 3px;
-  background: var(--asphalt-2);
+  background: var(--navy);
   position: relative;
   overflow: hidden;
 }
@@ -480,7 +513,7 @@ button {
   left: 0;
   right: 0;
   height: 2px;
-  background: repeating-linear-gradient(90deg, var(--white) 0 14px, transparent 14px 28px);
+  background: repeating-linear-gradient(90deg, var(--orange) 0 14px, transparent 14px 28px);
   animation: dash 0.5s linear infinite;
 }
 @keyframes dash {
@@ -495,7 +528,7 @@ button {
   min-height: 100%;
   overflow-y: auto;
   padding: calc(14px + var(--safe-top)) 16px calc(24px + var(--safe-bottom));
-  background: radial-gradient(1200px 600px at 50% -200px, #12305c 0%, var(--bg) 60%);
+  background: var(--bg);
 }
 .home-inner {
   max-width: 560px;
@@ -523,10 +556,10 @@ button {
   font-size: 13px;
 }
 .home-logo {
-  width: min(60vw, 240px);
+  width: min(88vw, 460px);
   height: auto;
-  margin-top: 8px;
-  filter: drop-shadow(0 10px 30px rgba(21, 101, 192, 0.4));
+  margin-top: 26px;
+  filter: drop-shadow(0 12px 24px rgba(9, 27, 44, 0.18));
 }
 .home-tagline {
   margin: 0;
@@ -573,6 +606,7 @@ button {
 }
 .hud {
   background: var(--asphalt);
+  color: var(--text-on-dark);
   border-bottom: 3px solid var(--asphalt-3);
   padding: calc(8px + var(--safe-top)) 10px 8px;
   display: flex;
@@ -599,7 +633,7 @@ button {
   font-size: 15px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--muted-on-dark);
 }
 .hud-prompt {
   display: flex;
@@ -631,7 +665,7 @@ button {
   color: var(--amber);
 }
 .prompt-hint {
-  color: var(--muted);
+  color: var(--muted-on-dark);
   font-size: 13px;
 }
 
@@ -738,6 +772,7 @@ button {
   gap: 10px;
   padding: 12px 12px calc(12px + var(--safe-bottom));
   background: var(--asphalt);
+  color: var(--text-on-dark);
   border-top: 3px solid var(--asphalt-3);
 }
 .option {
@@ -781,6 +816,7 @@ button {
 .drawer {
   flex: none;
   background: var(--asphalt);
+  color: var(--text-on-dark);
   border-top: 3px solid var(--asphalt-3);
   padding: 8px 0 calc(6px + var(--safe-bottom));
   display: flex;
@@ -866,8 +902,9 @@ button {
   padding: 16px;
 }
 .modal {
-  background: var(--asphalt);
-  border: 3px solid var(--asphalt-3);
+  background: var(--paper);
+  color: var(--navy);
+  border: 3px solid var(--navy);
   border-radius: 8px;
   padding: 20px;
   max-width: 360px;
@@ -891,7 +928,7 @@ button {
   min-height: 100%;
   overflow-y: auto;
   padding: calc(16px + var(--safe-top)) 16px calc(24px + var(--safe-bottom));
-  background: radial-gradient(1200px 600px at 50% -200px, #12305c 0%, var(--bg) 60%);
+  background: var(--bg);
 }
 .results-inner {
   max-width: 480px;
@@ -969,6 +1006,14 @@ button {
   height: 22px;
   opacity: 0.8;
 }
+.results-board .stat,
+.results-board .results-mode,
+.results-board .learn-note {
+  color: var(--white);
+}
+.results-board .stat-label {
+  color: rgba(255, 255, 255, 0.75);
+}
 .stat small {
   font-size: 16px;
   color: var(--amber);
@@ -993,8 +1038,8 @@ button {
   grid-template-columns: 28px auto 1fr auto;
   align-items: center;
   gap: 10px;
-  background: var(--asphalt);
-  border: 2px solid var(--asphalt-3);
+  background: var(--paper);
+  border: 2px solid var(--line);
   border-radius: 6px;
   padding: 7px 12px;
   font-size: 14px;
@@ -1035,7 +1080,7 @@ button {
   font-family: var(--font-sign);
   font-weight: 700;
   font-size: 18px;
-  color: var(--amber);
+  color: var(--orange);
   font-variant-numeric: tabular-nums;
 }
 .results-actions {
@@ -1054,6 +1099,7 @@ button {
   gap: 12px;
   padding: 10px 12px;
   background: var(--asphalt);
+  color: var(--text-on-dark);
   border-top: 3px solid var(--asphalt-3);
   flex-wrap: wrap;
 }
@@ -1088,11 +1134,11 @@ button {
   font-size: 18px;
 }
 .reveal-answer small {
-  color: var(--muted);
+  color: var(--muted-on-dark);
   font-size: 13px;
 }
 .reveal-next {
-  color: var(--muted);
+  color: var(--muted-on-dark);
   font-size: 13px;
   flex: 1;
 }
@@ -1156,8 +1202,8 @@ button {
   align-items: center;
   gap: 12px;
   text-align: left;
-  background: var(--asphalt);
-  border: 2px solid var(--asphalt-3);
+  background: var(--paper);
+  border: 2px solid var(--line);
   border-radius: 8px;
   padding: 12px 14px;
   cursor: pointer;
@@ -1170,8 +1216,8 @@ button {
   width: 44px;
   height: 44px;
   border-radius: 8px;
-  background: var(--white);
-  color: var(--asphalt);
+  background: var(--navy);
+  color: var(--white);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1190,10 +1236,10 @@ button {
 .home-backdrop {
   position: fixed;
   inset: 0;
-  opacity: 0.22;
+  opacity: 0.55;
   pointer-events: none;
   z-index: 0;
-  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 1) 40%, rgba(0, 0, 0, 0.5));
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.5) 45%, rgba(0, 0, 0, 0.15));
 }
 .home-backdrop .map-wrap {
   height: 100%;
@@ -1210,6 +1256,7 @@ button {
   width: 100%;
   height: 210px;
   border-bottom: 2px solid var(--white);
+  background: var(--navy);
 }
 .results-map .map-wrap {
   height: 100%;

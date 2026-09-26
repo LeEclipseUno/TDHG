@@ -40,7 +40,7 @@ export function Home({ data, settings, onSettings, onPlay, onLearn, onInstall }:
   return (
     <div className="home">
       <div className="home-backdrop" aria-hidden>
-        <MapView data={data} tier="A" interactive={false} drift />
+        <MapView data={data} tier="A" interactive={false} drift palette="light" />
       </div>
       <div className="home-inner">
         <header className="home-header">

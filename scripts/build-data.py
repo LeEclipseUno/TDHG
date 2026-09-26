@@ -3,7 +3,7 @@
 Usage:  python scripts/build-data.py            (uses cached downloads in data-raw/ when present)
         python scripts/build-data.py --refresh  (re-downloads everything)
 
-Outputs public/data/roads.json, links.json, land.json and junctions.json (fetched by the app at runtime).
+Outputs public/data/roads.json, links.json, land.json, abroad.json, junctions.json, exits.json and places.json.
 Polylines are delta encoded: [x0, y0, dx1, dy1, dx2, dy2, ...] in whole metres.
 Coordinates are projected to a local metre grid (x east, y south) so the app never needs a projection library.
 Data (c) OpenStreetMap contributors, ODbL. Land outline: CBS Wijk- en Buurtkaart via PDOK (CC BY 4.0).
@@ -43,16 +43,24 @@ def download_all():
     for name, rx in batches.items():
         overpass(f"geom_{name}.json", f'[out:json][timeout:300];{area}relation["type"="route"]["route"="road"]["ref"~"{rx}"]["network"~"^NL:[AN]$"](area.a);out geom;')
     overpass("links.json", f'[out:json][timeout:300];{area}way["highway"~"^(motorway_link|trunk_link)$"](area.a);out geom;')
+    overpass("abroad.json", '[out:json][timeout:300];(relation(52411);relation(62761);relation(62771););out geom;')  # Belgium, NRW, Lower Saxony
+    overpass("exits_places.json", f'[out:json][timeout:300];{area}(node["highway"="motorway_junction"]["ref"](area.a);node["place"~"^(city|town)$"](area.a););out;')
+    ne = os.path.join(RAW, "ne_land.geojson")
+    if REFRESH or not os.path.exists(ne):
+        subprocess.run(["curl", "-sL", "-A", UA, "-o", ne, "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_land.geojson"])
     overpass("knooppunten_geo.json", f'[out:json][timeout:180];{area}(node["highway"="motorway_junction"]["name"~"^Knooppunt ",i](area.a);node["junction"="yes"]["name"~"^Knooppunt ",i](area.a);node["highway"="motorway_junction"]["name"~"^(Heerenveen)$"](area.a););out;')
     gem = os.path.join(RAW, "gemeenten.json")
     if REFRESH or not os.path.exists(gem) or os.path.getsize(gem) < 10_000_000:
         print("downloading CBS municipality polygons (about 100 MB)")
         subprocess.run(["curl", "-sL", "-A", UA, "-o", gem, "https://service.pdok.nl/cbs/wijkenbuurten/2023/wfs/v1_0?request=GetFeature&service=WFS&version=2.0.0&typeName=wijkenbuurten:gemeenten&outputFormat=json&srsName=EPSG:4326&count=2000"])
 
-def dp(pts, tol):
-    """Douglas-Peucker line simplification."""
+def dp(pts, tol, must_keep=None):
+    """Douglas-Peucker line simplification. Points in must_keep (rounded coordinate tuples) are never dropped."""
     if len(pts) < 3: return pts
     keep = [False] * len(pts); keep[0] = keep[-1] = True
+    if must_keep:
+        for i, p in enumerate(pts):
+            if (round(p[0], 1), round(p[1], 1)) in must_keep: keep[i] = True
     stack = [(0, len(pts) - 1)]
     while stack:
         a, b = stack.pop()
@@ -65,7 +73,27 @@ def dp(pts, tol):
                 t = max(0, min(1, ((px - ax) * dx + (py - ay) * dy) / L2)); d = math.hypot(px - (ax + t * dx), py - (ay + t * dy))
             if d > best: best = d; bi = i
         if best > tol: keep[bi] = True; stack.append((a, bi)); stack.append((bi, b))
+    # Forced points split the recursion so the tolerance is honoured on both sides of them.
+    if must_keep:
+        forced = [i for i in range(1, len(pts) - 1) if keep[i] and (round(pts[i][0], 1), round(pts[i][1], 1)) in must_keep]
+        bounds = [0, *forced, len(pts) - 1]
+        for a, b in zip(bounds, bounds[1:]):
+            if b - a < 2: continue
+            sub = dp(pts[a:b + 1], tol)
+            subset = {(round(q[0], 1), round(q[1], 1)) for q in sub}
+            for i in range(a + 1, b):
+                if (round(pts[i][0], 1), round(pts[i][1], 1)) in subset: keep[i] = True
     return [p for p, k in zip(pts, keep) if k]
+
+SHARED = set()   # coordinates where two different ways meet: kept through simplification so the road graph stays connected
+
+def collect_shared(way_lists):
+    counts = collections.Counter()
+    for ways in way_lists:
+        for w in ways:
+            for p in {(round(x, 1), round(y, 1)) for x, y in w}:
+                counts[p] += 1
+    SHARED.update(p for p, c in counts.items() if c >= 2)
 
 def chain(ways):
     """Join way geometries that share an endpoint into longer polylines."""
@@ -108,9 +136,12 @@ def build_roads():
             for m in e.get("members", []):
                 if m["type"] == "way" and "geometry" in m:
                     roads[e["tags"]["ref"]].append([proj(p["lon"], p["lat"]) for p in m["geometry"]])
+    links = json.load(open(os.path.join(RAW, "links.json"), encoding="utf-8"))["elements"]
+    link_ways = [[proj(p["lon"], p["lat"]) for p in e["geometry"]] for e in links if "geometry" in e]
+    collect_shared([w for w in roads.values()] + [link_ways])
     out = []; total = 0
     for ref, ways in roads.items():
-        k = kind(ref); lines = [dp(l, 1) for l in chain(ways)]
+        k = kind(ref); lines = [dp(l, 1, SHARED) for l in chain(ways)]
         lines = [[(round(x), round(y)) for x, y in l] for l in lines]
         total += sum(len(l) for l in lines)
         length = sum(math.hypot(l[i + 1][0] - l[i][0], l[i + 1][1] - l[i][1]) for l in lines for i in range(len(l) - 1))
@@ -137,7 +168,7 @@ def build_links():
     out = []; pts = 0
     for k, ways in groups.items():
         for line in chain(ways):
-            line = [(round(x), round(y)) for x, y in dp(line, 1)]
+            line = [(round(x), round(y)) for x, y in dp(line, 1, SHARED)]
             if len(line) < 2: continue
             xs = [p[0] for p in line]; ys = [p[1] for p in line]; pts += len(line)
             out.append({"k": k, "b": [min(xs), min(ys), max(xs), max(ys)], "l": encode([c for p in line for c in p])})
@@ -165,6 +196,72 @@ def build_land():
         out.append({"name": "", "rings": rings})
     json.dump(out, open(os.path.join(OUT, "land.json"), "w"), separators=(",", ":"))
     print("land polygons:", len(out), "points:", pts)
+
+def build_abroad():
+    """Neighbouring land (Belgium, NRW, Lower Saxony) clipped to a band around the country, drawn muted under the map."""
+    from shapely.geometry import shape, LineString, box, MultiPolygon
+    from shapely.ops import unary_union, polygonize, transform
+    d = json.load(open(os.path.join(RAW, "abroad.json"), encoding="utf-8"))["elements"]
+    lines = []
+    for rel in d:
+        for m in rel.get("members", []):
+            if m["type"] == "way" and m.get("role") in ("outer", "") and "geometry" in m:
+                pts = [proj(p["lon"], p["lat"]) for p in m["geometry"]]
+                if len(pts) >= 2: lines.append(LineString(pts))
+    polys = list(polygonize(unary_union(lines)))
+    region = unary_union(polys)
+    land_mask = unary_union([transform(lambda lon, lat, z=None: proj(lon, lat), shape(f["geometry"])) for f in json.load(open(os.path.join(RAW, "ne_land.geojson"), encoding="utf-8"))["features"]
+                             if shape(f["geometry"]).intersects(box(0, 48, 12, 56))])
+    nl = json.load(open(os.path.join(OUT, "land.json"), encoding="utf-8"))
+    xs = [c for p in nl for r in p["rings"] for c in r[0::2]]; ys = [c for p in nl for r in p["rings"] for c in r[1::2]]
+    band = box(min(xs) - 140000, min(ys) - 140000, max(xs) + 140000, max(ys) + 140000)
+    abroad = region.intersection(land_mask).intersection(band).simplify(40, preserve_topology=True)
+    geoms = list(abroad.geoms) if isinstance(abroad, MultiPolygon) else [abroad]
+    out = []; pts = 0
+    for poly in geoms:
+        if poly.is_empty or poly.area < 2e6: continue
+        rings = []
+        for ring in [poly.exterior, *poly.interiors]:
+            flat = []
+            for x, y in ring.coords:
+                flat.append(round(x)); flat.append(round(y))
+            rings.append(flat); pts += len(flat) // 2
+        out.append({"name": "", "rings": rings})
+    json.dump(out, open(os.path.join(OUT, "abroad.json"), "w"), separators=(",", ":"))
+    print("abroad polygons:", len(out), "points:", pts)
+
+def build_exits_places(roads):
+    """Numbered motorway exits (clustered per number and name, attached to the nearest A or N road) and the city/town gazetteer."""
+    d = json.load(open(os.path.join(RAW, "exits_places.json"), encoding="utf-8"))["elements"]
+    big = [r for r in roads if r["kind"] in ("A", "N")]
+    by = collections.defaultdict(list)
+    places = []
+    for e in d:
+        t = e["tags"]
+        if t.get("place"):
+            places.append({"n": t.get("name", ""), "x": round(proj(e["lon"], e["lat"])[0]), "y": round(proj(e["lon"], e["lat"])[1]), "c": 1 if t["place"] == "city" else 0})
+            continue
+        if not t.get("name"): continue
+        by[(t["ref"].strip(), t["name"].strip())].append(proj(e["lon"], e["lat"]))
+    exits = []
+    for (ref, name), pts in by.items():
+        x = sum(p[0] for p in pts) / len(pts); y = sum(p[1] for p in pts) / len(pts)
+        best = None; bestd = 400
+        for r in big:
+            bx0, by0, bx1, by1 = r["bbox"]
+            if x < bx0 - 400 or x > bx1 + 400 or y < by0 - 400 or y > by1 + 400: continue
+            for l in r["lines"]:
+                for i in range(0, len(l) - 2, 2):
+                    dd = seg_dist(x, y, l[i], l[i + 1], l[i + 2], l[i + 3])
+                    if dd < bestd: bestd = dd; best = r["ref"]
+        if best and ref.replace("-", "").isalnum():
+            exits.append({"n": name, "r": ref, "road": best, "x": round(x), "y": round(y)})
+    exits.sort(key=lambda e: (e["road"][0], int(e["road"][1:]), e["n"]))
+    places = [p for p in places if p["n"]]
+    places.sort(key=lambda p: (-p["c"], p["n"]))
+    json.dump(exits, open(os.path.join(OUT, "exits.json"), "w", encoding="utf-8"), separators=(",", ":"), ensure_ascii=False)
+    json.dump(places, open(os.path.join(OUT, "places.json"), "w", encoding="utf-8"), separators=(",", ":"), ensure_ascii=False)
+    print("exits:", len(exits), "places:", len(places))
 
 def seg_dist(px, py, ax, ay, bx, by):
     dx, dy = bx - ax, by - ay; L2 = dx * dx + dy * dy
@@ -211,4 +308,4 @@ def build_junctions(roads):
 
 if __name__ == "__main__":
     download_all()
-    roads = build_roads(); build_links(); build_land(); build_junctions(roads)
+    roads = build_roads(); build_links(); build_land(); build_abroad(); build_junctions(roads); build_exits_places(roads)

@@ -33,6 +33,21 @@ export interface LandPoly {
   rings: number[][]
 }
 
+export interface Exit {
+  n: string // name
+  r: string // exit number
+  road: string
+  x: number
+  y: number
+}
+
+export interface Place {
+  n: string
+  x: number
+  y: number
+  c: 0 | 1 // 1 = city
+}
+
 export interface Bounds {
   x0: number
   y0: number
@@ -131,6 +146,9 @@ export interface GameData {
   roads: Road[]
   links: Link[]
   land: LandPoly[]
+  abroad: LandPoly[]
+  exits: Exit[]
+  places: Place[]
   junctions: Junction[]
   byRef: Map<string, Road>
   world: Bounds
@@ -156,7 +174,15 @@ export async function loadData(): Promise<GameData> {
     if (!res.ok) throw new Error(`Failed to load ${name}: ${res.status}`)
     return (await res.json()) as T
   }
-  const [roads, links, land, junctions] = await Promise.all([get<Road[]>('roads.json'), get<Link[]>('links.json'), get<LandPoly[]>('land.json'), get<Junction[]>('junctions.json')])
+  const [roads, links, land, abroad, junctions, exits, places] = await Promise.all([
+    get<Road[]>('roads.json'),
+    get<Link[]>('links.json'),
+    get<LandPoly[]>('land.json'),
+    get<LandPoly[]>('abroad.json'),
+    get<Junction[]>('junctions.json'),
+    get<Exit[]>('exits.json'),
+    get<Place[]>('places.json'),
+  ])
   for (const r of roads) r.lines = r.lines.map(decode)
   for (const lk of links) lk.l = decode(lk.l)
   const world: Bounds = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity }
@@ -170,7 +196,7 @@ export async function loadData(): Promise<GameData> {
       }
     }
   }
-  return { roads, links, land, junctions, byRef: new Map(roads.map((r) => [r.ref, r])), world, index: new SpatialIndex(roads) }
+  return { roads, links, land, abroad, exits, places, junctions, byRef: new Map(roads.map((r) => [r.ref, r])), world, index: new SpatialIndex(roads) }
 }
 
 export function roadsForTier(data: GameData, tier: Tier): Road[] {
