@@ -5,7 +5,7 @@ import { tierIncludes } from '../data'
 import { useLang } from '../i18n'
 import { HUD } from '../ui/HUD'
 import { Shield } from '../ui/Shield'
-import { mulberry32, pickRoads, QUESTION_COUNT, TIME_LIMITS, type QuestionResult } from '../game/session'
+import { mulberry32, pickRoads, QUESTION_COUNT, roadsFromPicks, TIME_LIMITS, type QuestionResult } from '../game/session'
 import { useNow, useToast } from '../game/hooks'
 import type { ModeProps } from './types'
 
@@ -27,7 +27,7 @@ interface DragState {
 export function DragMode({ data, session, onFinish, onQuit }: ModeProps) {
   const { t } = useLang()
   const mapRef = useRef<MapHandle>(null)
-  const items = useMemo(() => pickRoads(data, session.tier, QUESTION_COUNT, mulberry32(session.seed), session.province), [data, session.tier, session.seed, session.province])
+  const items = useMemo(() => (session.picks ? roadsFromPicks(data, session.picks) : pickRoads(data, session.tier, QUESTION_COUNT, mulberry32(session.seed), session.province)), [data, session.tier, session.seed, session.province, session.picks])
   const [placed, setPlaced] = useState<Record<string, { x: number; y: number; at: number }>>({})
   const [pulses, setPulses] = useState<Pulse[]>([])
   const [attempts, setAttempts] = useState<Record<string, number>>({})

@@ -177,3 +177,44 @@ alter table player_state enable row level security;
 drop policy if exists "own state" on player_state;
 create policy "own state" on player_state for all to authenticated
   using (player_id = auth.uid()) with check (player_id = auth.uid());
+
+-- ---------- Wegenkenner Plus (yearly pass, written by the plus-hook function) ----------
+create table if not exists premium (
+  player_id uuid primary key,
+  until timestamptz not null,
+  source text,
+  updated_at timestamptz not null default now()
+);
+alter table premium enable row level security;
+drop policy if exists "own premium" on premium;
+create policy "own premium" on premium for select to authenticated using (player_id = auth.uid());
+-- Give someone Plus by hand (for testing, or a gift):
+--   insert into premium (player_id, until, source) values ('<player uuid>', now() + interval '1 year', 'manual')
+--   on conflict (player_id) do update set until = excluded.until, source = excluded.source, updated_at = now();
+
+-- ---------- daily reminders (Web Push) ----------
+create table if not exists push_subs (
+  endpoint text primary key,
+  player_id uuid not null default auth.uid(),
+  p256dh text not null,
+  auth text not null,
+  hour int not null default 18 check (hour between 0 and 23),
+  tz text not null default 'Europe/Amsterdam',
+  lang text not null default 'nl',
+  updated_at timestamptz not null default now()
+);
+create index if not exists push_subs_player on push_subs(player_id);
+alter table push_subs enable row level security;
+drop policy if exists "own push subs" on push_subs;
+create policy "own push subs" on push_subs for all to authenticated
+  using (player_id = auth.uid()) with check (player_id = auth.uid());
+
+-- Hourly trigger for the remind function. Enable the pg_cron and pg_net extensions first
+-- (Database, Extensions), then run this once with your project ref, anon key and CRON_SECRET filled in:
+--
+-- select cron.schedule('remind-hourly', '0 * * * *', $$
+--   select net.http_post(
+--     url := 'https://<project-ref>.supabase.co/functions/v1/remind',
+--     headers := '{"Content-Type":"application/json","Authorization":"Bearer <anon key>","x-cron-secret":"<CRON_SECRET>"}'::jsonb,
+--     body := '{}'::jsonb)
+-- $$);

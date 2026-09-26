@@ -1,4 +1,4 @@
-import type { GameData, Junction, Road, Tier } from '../data'
+import type { Exit, GameData, Junction, Road, Tier } from '../data'
 import { roadsForTier } from '../data'
 import { translate, type Lang } from '../i18n'
 import type { Deck } from './learn'
@@ -43,8 +43,12 @@ export interface Session {
   province: string
   /** Score of the player who sent a challenge link, when playing one. */
   challenge?: number
-  /** Set when this is today's daily challenge. */
+  /** Set when this is a daily challenge (today's, or one from the archive). */
   dailyNumber?: number
+  /** Frozen questions of a daily: road refs, interchange names or exit keys. */
+  picks?: string[]
+  /** A replay of a daily already scored today: nothing is recorded or posted. */
+  practice?: boolean
   startedAt: number
   finishedAt: number
   results: QuestionResult[]
@@ -82,7 +86,10 @@ function hashString(s: string): number {
 }
 
 export function dailySeed(mode: ModeId, tier: Tier): number {
-  return hashString(`${dateKey()}|${mode}|${tier}`)
+  return dailySeedOn(dateKey(), mode, tier)
+}
+export function dailySeedOn(key: string, mode: ModeId, tier: Tier): number {
+  return hashString(`${key}|${mode}|${tier}`)
 }
 
 export function shuffle<T>(arr: readonly T[], rng: () => number): T[] {
@@ -94,9 +101,9 @@ export function shuffle<T>(arr: readonly T[], rng: () => number): T[] {
   return a
 }
 
-export function newSession(mode: ModeId, s: Settings, challenge?: Challenge, daily?: number): Session {
+export function newSession(mode: ModeId, s: Settings, challenge?: Challenge, daily?: number, extra?: { picks?: string[]; practice?: boolean; seed?: number }): Session {
   if (daily) {
-    return { mode, tier: 'A', timer: true, daily: true, seed: dailySeed(mode, 'A'), variant: 'normal', province: '', dailyNumber: daily, startedAt: Date.now(), finishedAt: 0, results: [] }
+    return { mode, tier: 'A', timer: true, daily: true, seed: extra?.seed ?? dailySeed(mode, 'A'), variant: 'normal', province: '', dailyNumber: daily, picks: extra?.picks, practice: extra?.practice, startedAt: Date.now(), finishedAt: 0, results: [] }
   }
   if (challenge) {
     return { mode: challenge.mode, tier: challenge.tier, timer: challenge.timer, daily: false, seed: challenge.seed, variant: challenge.variant, province: challenge.province, challenge: challenge.score, startedAt: Date.now(), finishedAt: 0, results: [] }
@@ -140,6 +147,17 @@ export function pickRoads(data: GameData, tier: Tier, n: number, rng: () => numb
   const nn = shuffle(pool.filter((r) => r.kind === 'N'), rng)
   const wantA = Math.round(n * 0.6)
   return shuffle([...a.slice(0, wantA), ...nn.slice(0, n - wantA)], rng).slice(0, n)
+}
+
+/** Questions of a frozen daily, in the frozen order. Unknown entries (data changed) are skipped. */
+export function roadsFromPicks(data: GameData, picks: string[]): Road[] {
+  return picks.map((ref) => data.byRef.get(ref)).filter((r): r is Road => !!r)
+}
+export function junctionsFromPicks(data: GameData, picks: string[]): Junction[] {
+  return picks.map((name) => data.junctions.find((j) => j.name === name)).filter((j): j is Junction => !!j)
+}
+export function exitsFromPicks(data: GameData, picks: string[]): Exit[] {
+  return picks.map((k) => data.exits.find((e) => `${e.road}|${e.r}|${e.n}` === k)).filter((e): e is Exit => !!e)
 }
 
 export function pickJunctions(data: GameData, n: number, rng: () => number, province = ''): Junction[] {
@@ -219,6 +237,11 @@ export function rankKey(accuracy: number): 'rank_4' | 'rank_3' | 'rank_2' | 'ran
   if (accuracy >= 0.65) return 'rank_3'
   if (accuracy >= 0.35) return 'rank_2'
   return 'rank_1'
+}
+
+/** Share line for a finished daily, from the home board. */
+export function dailyShareText(n: number, score: number, lang: Lang, url: string): string {
+  return [`Wegenkenner #${n}`, `${score} ${translate(lang, 'points')}`, `${url}#daily`].join(String.fromCharCode(10))
 }
 
 export function shareText(s: Session, lang: Lang, url: string): string {

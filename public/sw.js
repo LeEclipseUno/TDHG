@@ -52,3 +52,30 @@ self.addEventListener('fetch', (e) => {
     }),
   )
 })
+
+// Daily reminder (see supabase/functions/remind).
+self.addEventListener('push', (e) => {
+  let p = { title: 'Wegenkenner', body: '', url: '/#daily' }
+  try {
+    p = Object.assign(p, e.data ? e.data.json() : {})
+  } catch {
+    /* plain text or empty payload */
+  }
+  e.waitUntil(self.registration.showNotification(p.title, { body: p.body, icon: '/icon-192.png', badge: '/icon-64.png', tag: 'daily', data: { url: p.url } }))
+})
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close()
+  const url = (e.notification.data && e.notification.data.url) || '/#daily'
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      for (const c of list) {
+        if ('focus' in c) {
+          c.navigate(url)
+          return c.focus()
+        }
+      }
+      return self.clients.openWindow(url)
+    }),
+  )
+})

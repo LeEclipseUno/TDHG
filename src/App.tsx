@@ -1,8 +1,12 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { loadData, type GameData } from './data'
 import { LangProvider, useLang } from './i18n'
-import { loadSettings, MODES, newSession, parseChallenge, saveSettings, submitBest, summarize, type Challenge, type ModeId, type Session, type Settings } from './game/session'
-import { dailyMode, dailyNumber, marksOf, saveDailyResult, updateBadge } from './game/daily'
+import { dailySeedOn, dateKey, loadSettings, MODES, newSession, parseChallenge, saveSettings, submitBest, summarize, type Challenge, type ModeId, type Session, type Settings } from './game/session'
+import { dailyDate, dailyMode, dailyNumber, getDailyResult, marksOf, saveDailyResult, updateBadge } from './game/daily'
+import { loadArchive, picksFor } from './game/archive'
+import { hasPlus, isPlusMode, rememberPlus } from './game/premium'
+import { Plus } from './ui/Plus'
+import { Archive } from './ui/Archive'
 import { Home } from './ui/Home'
 import { Results } from './ui/Results'
 import { Stats } from './ui/Stats'
@@ -24,7 +28,7 @@ interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>
 }
 
-type Screen = { kind: 'home' } | { kind: 'learn' } | { kind: 'stats' } | { kind: 'about' } | { kind: 'groups'; joinCode?: string } | { kind: 'game'; session: Session } | { kind: 'results'; session: Session; newBest: boolean; streak: number }
+type Screen = { kind: 'home' } | { kind: 'learn' } | { kind: 'stats' } | { kind: 'about' } | { kind: 'plus' } | { kind: 'archive' } | { kind: 'groups'; joinCode?: string } | { kind: 'game'; session: Session } | { kind: 'results'; session: Session; newBest: boolean; streak: number }
 
 const MODE_COMPONENTS = { drag: DragMode, find: FindMode, junction: JunctionMode, quiz: QuizMode, exit: ExitMode, route: RouteMode } as const
 
@@ -58,7 +62,8 @@ function Shell() {
     loadData()
       .then(async (d) => {
         if (ONLINE) {
-          const acc = await getAccount().catch(() => ({ signedIn: false }) as Account)
+          // Only a successful answer may clear a cached Plus pass; offline keeps the last known state.
+          const acc = await getAccount().then((a) => (rememberPlus(a.plusUntil), a)).catch(() => ({ signedIn: false }) as Account)
           setAccount(acc)
           // Back from Google: drop the one-time code (or error) from the address bar.
           const q = new URLSearchParams(location.search)
@@ -108,7 +113,13 @@ function Shell() {
   const doSignOut = async () => {
     await signOut()
     setAccount({ signedIn: false })
+    rememberPlus(undefined)
   }
+  const refreshAccount = async () => {
+    const acc = await getAccount().then((a) => (rememberPlus(a.plusUntil), a)).catch(() => ({ signedIn: false }) as Account)
+    setAccount(acc)
+  }
+  const plus = hasPlus(account)
 
   useEffect(() => {
     setSoundEnabled(settings.sound)
@@ -116,13 +127,21 @@ function Shell() {
   }, [])
 
   const play = (mode: ModeId) => {
+    if (isPlusMode(mode) && !plus) return go('plus')
     setHash(mode)
     setScreen({ kind: 'game', session: newSession(mode, settings) })
   }
-  const playDaily = () => {
-    const n = dailyNumber()
+  /** Today's daily, or an earlier one from the archive (Plus). A day already scored replays as practice. */
+  const playDaily = async (n?: number) => {
+    const today = dailyNumber()
+    const num = n ?? today
+    if (num !== today && !plus) return go('plus')
+    if (num > today || num < 1) return
     setHash('daily')
-    setScreen({ kind: 'game', session: newSession(dailyMode(n), settings, undefined, n) })
+    const picks = picksFor(await loadArchive(), num)
+    const mode = dailyMode(num)
+    const seed = num === today ? undefined : dailySeedOn(dateKey(dailyDate(num)), mode, 'A')
+    setScreen({ kind: 'game', session: newSession(mode, settings, undefined, num, { picks: picks ?? undefined, practice: !!getDailyResult(num), seed }) })
   }
   const playChallenge = () => {
     if (!challenge) return
@@ -130,16 +149,21 @@ function Shell() {
     setScreen({ kind: 'game', session: newSession(challenge.mode, settings, challenge) })
     setChallenge(null)
   }
-  const go = (kind: 'home' | 'learn' | 'stats' | 'about' | 'groups') => {
+  const go = (kind: 'home' | 'learn' | 'stats' | 'about' | 'groups' | 'plus' | 'archive') => {
     setHash(kind === 'home' ? '' : kind)
     setScreen({ kind })
   }
   const finish = (session: Session) => {
+    if (session.practice) {
+      setScreen({ kind: 'results', session, newBest: false, streak: 0 })
+      return
+    }
     recordSession(session)
     let streak = 0
     if (session.dailyNumber) {
       const sum = summarize(session)
-      streak = saveDailyResult(session.dailyNumber, { score: sum.score, good: sum.good, total: sum.total, ms: sum.ms, marks: marksOf(session) }).count
+      const st = saveDailyResult(session.dailyNumber, { score: sum.score, good: sum.good, total: sum.total, ms: sum.ms, marks: marksOf(session) })
+      if (session.dailyNumber === dailyNumber()) streak = st.count
       updateBadge()
     }
     setScreen({ kind: 'results', session, newBest: submitBest(session), streak })
@@ -150,8 +174,9 @@ function Shell() {
   const route = (h: string) => {
     if (h === 'daily') playDaily()
     else if (MODES.includes(h as ModeId)) play(h as ModeId)
-    else if (h === 'stats' || h === 'about' || h === 'groups') go(h)
-    else if (h === 'learn') go('home') // locked for now
+    else if (h === 'stats' || h === 'about' || h === 'groups' || h === 'plus') go(h)
+    else if (h === 'archive') go(plus ? 'archive' : 'plus')
+    else if (h === 'learn') go(plus ? 'learn' : 'plus')
     else if (h.startsWith('join-')) setScreen({ kind: 'groups', joinCode: h.slice(5).toUpperCase() })
     else if (h === '') setScreen({ kind: 'home' })
   }
@@ -197,9 +222,11 @@ function Shell() {
   if (screen.kind === 'learn') return wrap('learn', <LearnMode data={data} settings={settings} onExit={() => go('home')} />)
   if (screen.kind === 'stats') return wrap('stats', <Stats data={data} onHome={() => go('home')} />)
   if (screen.kind === 'about') return wrap('about', <About data={data} onHome={() => go('home')} />)
+  if (screen.kind === 'plus') return wrap('plus', <Plus data={data} account={account} onSignIn={signIn} onRefresh={refreshAccount} onHome={() => go('home')} />)
+  if (screen.kind === 'archive') return wrap('archive', <Archive data={data} onPlay={(n) => void playDaily(n)} onHome={() => go('home')} />)
   if (screen.kind === 'groups') return wrap('groups', <Groups data={data} onHome={() => go('home')} joinCode={screen.joinCode} />)
   if (screen.kind === 'results') {
-    const again = () => (screen.session.dailyNumber ? playDaily() : play(screen.session.mode))
+    const again = () => (screen.session.dailyNumber ? void playDaily(screen.session.dailyNumber) : play(screen.session.mode))
     return wrap('results', <Results data={data} session={screen.session} newBest={screen.newBest} streak={screen.streak} onAgain={again} onHome={() => go('home')} />)
   }
   return wrap(
@@ -209,8 +236,11 @@ function Shell() {
       settings={settings}
       onSettings={setSettings}
       onPlay={play}
-      onDaily={playDaily}
-      onLearn={() => go('learn')}
+      onDaily={() => void playDaily()}
+      onLearn={() => go(plus ? 'learn' : 'plus')}
+      plus={plus}
+      onPlus={() => go('plus')}
+      onArchive={() => go(plus ? 'archive' : 'plus')}
       onStats={() => go('stats')}
       onAbout={() => go('about')}
       onGroups={() => go('groups')}

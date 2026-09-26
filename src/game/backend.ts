@@ -11,7 +11,7 @@ let clientPromise: Promise<SupabaseClient | null> | null = null
 let session: Promise<boolean> | null = null
 
 /** The library loads on first use only, so the game itself stays small. */
-function sb(): Promise<SupabaseClient | null> {
+export function sb(): Promise<SupabaseClient | null> {
   if (!ONLINE) return Promise.resolve(null)
   if (!clientPromise) {
     clientPromise = import('@supabase/supabase-js')
@@ -22,7 +22,7 @@ function sb(): Promise<SupabaseClient | null> {
 }
 
 /** Anonymous sign-in: gives this device a stable id without any account. */
-async function ensureSession(): Promise<boolean> {
+export async function ensureSession(): Promise<boolean> {
   const c = await sb()
   if (!c) return false
   if (!session) {
@@ -155,9 +155,13 @@ export async function createShare(blob: Blob, title: string, text: string, param
 
 export interface Account {
   signedIn: boolean
+  /** Player id (also the anonymous device id when not signed in). */
+  id?: string
   email?: string
   name?: string
   avatar?: string
+  /** Wegenkenner Plus valid until this time (ms), when bought. */
+  plusUntil?: number
 }
 
 /** Signed in means a real (Google) identity, not the anonymous device account. */
@@ -166,10 +170,13 @@ export async function getAccount(): Promise<Account> {
   if (!c) return { signedIn: false }
   const { data } = await c.auth.getUser()
   const u = data.user
-  if (!u || u.is_anonymous) return { signedIn: false }
+  if (!u) return { signedIn: false }
+  const plus = await c.from('premium').select('until').eq('player_id', u.id).maybeSingle()
+  const plusUntil = plus.data?.until ? Date.parse(plus.data.until as string) : undefined
+  if (u.is_anonymous) return { signedIn: false, id: u.id, plusUntil }
   const m = (u.user_metadata ?? {}) as Record<string, unknown>
   const str = (k: string) => (typeof m[k] === 'string' && (m[k] as string).trim() ? (m[k] as string).trim() : undefined)
-  return { signedIn: true, email: u.email ?? undefined, name: str('full_name') ?? str('name') ?? str('given_name'), avatar: str('avatar_url') ?? str('picture') }
+  return { signedIn: true, id: u.id, email: u.email ?? undefined, name: str('full_name') ?? str('name') ?? str('given_name'), avatar: str('avatar_url') ?? str('picture'), plusUntil }
 }
 
 export async function isSignedIn(): Promise<boolean> {

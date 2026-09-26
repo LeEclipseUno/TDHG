@@ -1,11 +1,14 @@
+import { useState } from 'react'
 import type { GameData, Tier } from '../data'
 import type { Deck } from '../game/learn'
 import { useLang, type Lang } from '../i18n'
-import { MODES, VARIANTS, getBest, type Challenge, type ModeId, type Settings, type Variant } from '../game/session'
+import { MODES, VARIANTS, dailyShareText, getBest, type Challenge, type ModeId, type Settings, type Variant } from '../game/session'
+import { isPlusMode } from '../game/premium'
+import { disableReminder, enableReminder, getReminder, pushSupported } from '../game/push'
 import { dailyMode, dailyNumber, getDailyResult, getStreak, msUntilNextDaily } from '../game/daily'
 import { season, SEASON_TEXT } from '../game/season'
 import { Board, Matrix } from './widgets'
-import { IconGoogle, IconLock, IconSignArrow, PictDrag, PictExit, PictFind, PictGroup, PictJunction, PictLearn, PictQuiz, PictRoute, PictStats, SeasonIcon } from './icons'
+import { IconGoogle, IconLock, IconReplay, IconShare, IconSignArrow, PictDrag, PictExit, PictFind, PictGroup, PictJunction, PictLearn, PictQuiz, PictRoute, PictStats, SeasonIcon } from './icons'
 import { ONLINE, type Account } from '../game/backend'
 import DriftMap from '../map/DriftMap'
 import { useNow } from '../game/hooks'
@@ -27,6 +30,9 @@ export interface HomeProps {
   account: Account
   onSignIn: () => void
   onSignOut: () => void
+  plus: boolean
+  onPlus: () => void
+  onArchive: () => void
 }
 
 const PICTS: Record<ModeId, typeof PictDrag> = { drag: PictDrag, find: PictFind, junction: PictJunction, quiz: PictQuiz, exit: PictExit, route: PictRoute }
@@ -92,7 +98,7 @@ export function StreakPosts({ count }: { count: number }) {
 const isIosSafari = /iphone|ipad|ipod/i.test(navigator.userAgent) && !('standalone' in navigator && (navigator as { standalone?: boolean }).standalone)
 const isStandalone = window.matchMedia('(display-mode: standalone)').matches
 
-export function Home({ data, settings, onSettings, onPlay, onDaily, onStats, onAbout, onGroups, challenge, onChallenge, onInstall, account, onSignIn, onSignOut }: HomeProps) {
+export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onStats, onAbout, onGroups, challenge, onChallenge, onInstall, account, onSignIn, onSignOut, plus, onPlus, onArchive }: HomeProps) {
   const { t, lang, setLang } = useLang()
   const tiers: Tier[] = ['A', 'N', 'AN']
   const n = dailyNumber()
@@ -104,6 +110,35 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onStats, onA
   const mm = Math.floor((left % 3_600_000) / 60_000)
   const s = season()
   const DailyPict = PICTS[dailyMode(n)]
+  const [copied, setCopied] = useState(false)
+  const shareDaily = async () => {
+    if (!daily) return
+    const text = dailyShareText(n, daily.score, lang, `${location.origin}${import.meta.env.BASE_URL}`)
+    try {
+      if (navigator.share) await navigator.share({ text })
+      else {
+        await navigator.clipboard.writeText(text)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      }
+    } catch {
+      /* cancelled */
+    }
+  }
+  const [reminder, setReminder] = useState(getReminder)
+  const [reminderNote, setReminderNote] = useState('')
+  const setReminderHour = async (v: string) => {
+    setReminderNote('')
+    if (v === 'off') {
+      await disableReminder()
+      setReminder({ on: false, hour: reminder.hour })
+      return
+    }
+    const hour = Number(v)
+    const ok = await enableReminder(hour, lang)
+    if (ok) setReminder({ on: true, hour })
+    else setReminderNote(isIosSafari && !isStandalone ? t('reminderInstall') : t('reminderDenied'))
+  }
 
   return (
     <div className={'home' + (s ? ` season-${s}` : '')}>
@@ -170,12 +205,27 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onStats, onA
             </div>
             {daily ? <Matrix value={daily.score} label={t('score')} /> : null}
           </div>
-          <button type="button" className="sign-row daily-play" onClick={onDaily}>
-            <span className="sign-text">
-              <span className="sign-name">{daily ? t('playAgain') : t('playDaily')}</span>
-            </span>
-            <IconSignArrow className="sign-arrow" />
-          </button>
+          {daily ? (
+            <div className="daily-actions">
+              <button type="button" className="btn btn-primary" onClick={shareDaily}>
+                <IconShare /> {copied ? t('copied') : t('share')}
+              </button>
+              <button type="button" className="btn btn-ghost" onClick={onDaily}>
+                <IconReplay /> {t('practice')}
+              </button>
+              <button type="button" className="btn btn-ghost" onClick={onArchive}>
+                {t('archive')}
+                {!plus && <span className="locked-tag">{t('plusTag')}</span>}
+              </button>
+            </div>
+          ) : (
+            <button type="button" className="sign-row daily-play" onClick={onDaily}>
+              <span className="sign-text">
+                <span className="sign-name">{t('playDaily')}</span>
+              </span>
+              <IconSignArrow className="sign-arrow" />
+            </button>
+          )}
         </Board>
 
         {ONLINE && !account.signedIn && (
@@ -218,13 +268,17 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onStats, onA
           {MODES.map((mode) => {
             const best = getBest(mode, settings.tier, settings.timer, settings.variant, settings.province)
             const Pict = PICTS[mode]
+            const locked = isPlusMode(mode) && !plus
             return (
-              <button key={mode} type="button" className="sign-row" onClick={() => onPlay(mode)}>
+              <button key={mode} type="button" className={'sign-row' + (locked ? ' sign-row-locked' : '')} onClick={() => (locked ? onPlus() : onPlay(mode))}>
                 <span className="sign-pict">
                   <Pict />
                 </span>
                 <span className="sign-text">
-                  <span className="sign-name">{t(`mode_${mode}`)}</span>
+                  <span className="sign-name">
+                    {t(`mode_${mode}`)}
+                    {locked && <span className="locked-tag">{t('plusTag')}</span>}
+                  </span>
                   <span className="sign-desc">{t(`mode_${mode}_desc`)}</span>
                   {best && (
                     <span className="sign-best">
@@ -232,11 +286,22 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onStats, onA
                     </span>
                   )}
                 </span>
-                <IconSignArrow className="sign-arrow" />
+                {locked ? <IconLock className="sign-arrow" /> : <IconSignArrow className="sign-arrow" />}
               </button>
             )
           })}
         </Board>
+
+        {!plus && (
+          <button type="button" className="google-row plus-row" onClick={onPlus}>
+            <span className="google-row-icon plus-row-icon">+</span>
+            <span className="sign-text">
+              <span className="google-row-name">{t('plus')}</span>
+              <span className="google-row-sub">{t('plusPitch')}</span>
+            </span>
+            <IconSignArrow className="sign-arrow" />
+          </button>
+        )}
 
         {ONLINE && (
           <Board className="groups-board">
@@ -254,11 +319,11 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onStats, onA
           </Board>
         )}
 
-        <Board className="learn-board board-locked">
+        <Board className={'learn-board' + (plus ? '' : ' board-plus')}>
           <div className="board-title">
-            {t('learn')} <span className="locked-tag">{t('comingSoon')}</span>
+            {t('learn')} {!plus && <span className="locked-tag">{t('plusTag')}</span>}
           </div>
-          <button type="button" className="sign-row" disabled aria-disabled="true">
+          <button type="button" className={'sign-row' + (plus ? '' : ' sign-row-locked')} onClick={plus ? onLearn : onPlus}>
             <span className="sign-pict">
               <PictLearn />
             </span>
@@ -266,7 +331,7 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onStats, onA
               <span className="sign-name">{t('learnTitle')}</span>
               <span className="sign-desc">{t('learn_desc')}</span>
             </span>
-            <IconLock className="sign-arrow" />
+            {plus ? <IconSignArrow className="sign-arrow" /> : <IconLock className="sign-arrow" />}
           </button>
         </Board>
 
@@ -302,6 +367,13 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onStats, onA
                   {t('signOut')}
                 </button>
               </div>
+            </div>
+          )}
+          {ONLINE && pushSupported() && (
+            <div className="setting">
+              <span className="setting-label">{t('reminder')}</span>
+              <Seg<string> wide label={t('reminder')} value={reminder.on ? String(reminder.hour) : 'off'} onChange={(v) => void setReminderHour(v)} options={[{ v: 'off', label: t('reminderOff') }, ...[8, 12, 18, 20].map((h) => ({ v: String(h), label: `${h}:00` }))]} />
+              <span className="setting-hint">{reminderNote || t('reminderHint')}</span>
             </div>
           )}
           <div className="setting">

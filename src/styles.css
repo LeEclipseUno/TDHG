@@ -2106,3 +2106,124 @@ body,
 .google-row-arrow {
   color: var(--navy);
 }
+
+/* ---------- Plus, archive, reminders ---------- */
+.sign-row-locked .sign-pict,
+.sign-row-locked .sign-desc {
+  opacity: 0.6;
+}
+.sign-name .locked-tag {
+  float: none;
+  margin-left: 8px;
+  vertical-align: middle;
+  background: var(--amber);
+  color: var(--navy);
+}
+.board-plus .board-title .locked-tag {
+  background: var(--amber);
+  color: var(--navy);
+}
+.plus-row {
+  background: var(--amber);
+  color: var(--navy);
+}
+.plus-row-icon {
+  border-color: rgba(10, 22, 40, 0.25);
+  font-family: var(--font-sign);
+  font-weight: 800;
+  font-size: 34px;
+  line-height: 1;
+}
+.plus-row .sign-arrow {
+  color: var(--navy);
+}
+.daily-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 14px 14px;
+}
+.daily-actions .btn {
+  flex: 1 1 auto;
+  justify-content: center;
+}
+.daily-actions .locked-tag {
+  float: none;
+  margin-left: 6px;
+  background: var(--amber);
+  color: var(--navy);
+}
+.plus-body {
+  padding: 14px 16px 16px;
+  color: var(--white);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.plus-pitch {
+  margin: 0;
+  font-family: var(--font-sign);
+  font-size: 22px;
+  font-weight: 700;
+}
+.plus-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.plus-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+}
+.plus-pict {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.plus-pict svg {
+  width: 34px;
+  height: 34px;
+}
+.plus-note {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.85);
+}
+.plus-active {
+  margin: 0;
+  font-weight: 600;
+  color: var(--amber);
+}
+.btn-wide {
+  width: 100%;
+  justify-content: center;
+}
+.plus-buy {
+  text-decoration: none;
+}
+.plus-price {
+  margin-left: 8px;
+  opacity: 0.8;
+  font-weight: 500;
+}
+.archive-list {
+  display: flex;
+  flex-direction: column;
+}
+.archive-row {
+  grid-template-columns: 56px 1fr 28px;
+}
+.archive-num {
+  font-family: var(--font-sign);
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--amber);
+  text-align: center;
+}

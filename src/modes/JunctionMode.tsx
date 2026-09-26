@@ -5,14 +5,14 @@ import { boundsOfPoints } from '../data'
 import { useLang } from '../i18n'
 import { HUD } from '../ui/HUD'
 import { IconHint } from '../ui/icons'
-import { HINT_COST, junctionPoints, mulberry32, pickJunctions, QUESTION_COUNT, TIME_LIMITS, timeBonus, VARIANT_MULT, type QuestionResult } from '../game/session'
+import { HINT_COST, junctionPoints, junctionsFromPicks, mulberry32, pickJunctions, QUESTION_COUNT, TIME_LIMITS, timeBonus, VARIANT_MULT, type QuestionResult } from '../game/session'
 import { useNow, useTimeout } from '../game/hooks'
 import type { ModeProps } from './types'
 
 export function JunctionMode({ data, session, onFinish, onQuit }: ModeProps) {
   const { t } = useLang()
   const mapRef = useRef<MapHandle>(null)
-  const questions = useMemo(() => pickJunctions(data, QUESTION_COUNT, mulberry32(session.seed), session.province), [data, session.seed, session.province])
+  const questions = useMemo(() => (session.picks ? junctionsFromPicks(data, session.picks) : pickJunctions(data, QUESTION_COUNT, mulberry32(session.seed), session.province)), [data, session.seed, session.province, session.picks])
   const [i, setI] = useState(0)
   const [results, setResults] = useState<QuestionResult[]>([])
   const [phase, setPhase] = useState<'ask' | 'reveal'>('ask')

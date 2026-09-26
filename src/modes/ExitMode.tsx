@@ -4,7 +4,7 @@ import { boundsOfPoints, tierIncludes, type Exit } from '../data'
 import { useLang } from '../i18n'
 import { HUD } from '../ui/HUD'
 import { Shield } from '../ui/Shield'
-import { mulberry32, QUESTION_COUNT, shuffle, TIME_LIMITS, timeBonus, VARIANT_MULT, type Grade, type QuestionResult } from '../game/session'
+import { exitsFromPicks, mulberry32, QUESTION_COUNT, shuffle, TIME_LIMITS, timeBonus, VARIANT_MULT, type Grade, type QuestionResult } from '../game/session'
 import { useNow, useTimeout } from '../game/hooks'
 import { haptic, sfx } from '../game/sound'
 import type { ModeProps } from './types'
@@ -22,13 +22,14 @@ export function ExitMode({ data, session, onFinish, onQuit }: ModeProps) {
   const { t } = useLang()
   const mapRef = useRef<MapHandle>(null)
   const questions = useMemo<Exit[]>(() => {
+    if (session.picks) return exitsFromPicks(data, session.picks)
     const rng = mulberry32(session.seed)
     const pool = data.exits.filter((e) => {
       const r = data.byRef.get(e.road)
       return r && tierIncludes(session.tier, r.kind) && (!session.province || e.p?.includes(session.province))
     })
     return shuffle(pool, rng).slice(0, QUESTION_COUNT)
-  }, [data, session.tier, session.seed, session.province])
+  }, [data, session.tier, session.seed, session.province, session.picks])
   const [i, setI] = useState(0)
   const [results, setResults] = useState<QuestionResult[]>([])
   const [phase, setPhase] = useState<'ask' | 'reveal'>('ask')

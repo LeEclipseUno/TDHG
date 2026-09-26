@@ -13,6 +13,7 @@ import { renderCard } from '../game/card'
 import { StreakPosts } from './Home'
 import { createShare, ONLINE, submitDaily, type Percentile } from '../game/backend'
 import { challengeParam } from '../game/session'
+import { dailyNumber } from '../game/daily'
 
 export interface ResultsProps {
   data: GameData
@@ -50,7 +51,7 @@ export function Results({ data, session, newBest, streak, onAgain, onHome }: Res
 
   // Daily scores go to the board, and come back as a percentile.
   useEffect(() => {
-    if (!ONLINE || !session.dailyNumber) return
+    if (!ONLINE || !session.dailyNumber || session.practice || session.dailyNumber !== dailyNumber()) return
     let alive = true
     submitDaily(session.dailyNumber, sum.score, sum.good, sum.total, sum.ms).then((p) => alive && setPct(p))
     return () => {
@@ -147,6 +148,11 @@ export function Results({ data, session, newBest, streak, onAgain, onHome }: Res
                 <span className="sep" /> {dateKey()}
               </>
             )}
+            {session.practice && (
+              <>
+                <span className="sep" /> {t('practiceNote')}
+              </>
+            )}
           </div>
           <div className="results-map">
             <MapView data={data} tier={session.tier} highlights={highlights} markers={markers} interactive={false} />
@@ -215,10 +221,12 @@ export function Results({ data, session, newBest, streak, onAgain, onHome }: Res
         </ul>
 
         <div className="results-actions">
-          <button type="button" className="btn btn-primary" disabled={busy} onClick={share}>
-            <IconShare /> {copied ? t('copied') : t('share')}
-          </button>
-          {!navigator.share && (
+          {!session.practice && (
+            <button type="button" className="btn btn-primary" disabled={busy} onClick={share}>
+              <IconShare /> {copied ? t('copied') : t('share')}
+            </button>
+          )}
+          {!navigator.share && !session.practice && (
             <a className="btn" href={whatsapp} target="_blank" rel="noreferrer">
               <IconChat /> {t('whatsapp')}
             </a>

@@ -51,16 +51,31 @@ export function getDailyResult(n = dailyNumber()): DailyResult | null {
   }
 }
 
-/** Stores today's result (keeps the best of the day) and advances the streak. Returns the streak. */
+/** Stores the first result of a daily. Only today's daily advances the streak; archive days just get recorded. */
 export function saveDailyResult(n: number, r: DailyResult): Streak {
   try {
     const all = JSON.parse(localStorage.getItem(RESULTS_KEY) ?? '{}') as Record<string, DailyResult>
-    if (!all[n] || all[n].score < r.score) all[n] = r
+    if (!all[n]) all[n] = r
     localStorage.setItem(RESULTS_KEY, JSON.stringify(all))
   } catch {
     /* ignore */
   }
-  return bumpStreak()
+  return n === dailyNumber() ? bumpStreak() : getStreak()
+}
+
+/** Every daily played so far, keyed by number. */
+export function allDailyResults(): Record<string, DailyResult> {
+  try {
+    return JSON.parse(localStorage.getItem(RESULTS_KEY) ?? '{}') as Record<string, DailyResult>
+  } catch {
+    return {}
+  }
+}
+
+/** Local date of daily #n. */
+export function dailyDate(n: number): Date {
+  const [y, m, d] = DAILY_EPOCH.split('-').map(Number)
+  return new Date(y, m - 1, d + (n - 1))
 }
 
 export interface Streak {

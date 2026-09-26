@@ -18,7 +18,7 @@ function serviceWorkerAssets(): Plugin {
       const html = fs.readFileSync(path.join(dist, 'index.html'), 'utf8')
       const built = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map((m) => m[1]).filter((u) => u.startsWith(base) && /\.(js|css)$/.test(u))
       const fonts = fs.readdirSync(path.join(dist, 'fonts')).map((f) => `${base}fonts/${f}`)
-      const data = ['roads-core', 'roads-extra', 'links', 'structures', 'minor', 'water', 'provinces', 'land', 'abroad', 'junctions', 'exits', 'places'].map((n) => `${base}data/${n}.json`)
+      const data = ['roads-core', 'roads-extra', 'links', 'structures', 'minor', 'water', 'provinces', 'land', 'abroad', 'junctions', 'exits', 'places', 'daily'].map((n) => `${base}data/${n}.json`)
       const list = [base, ...built, ...data, ...fonts, `${base}logo.png`, `${base}icon-192.png`, `${base}manifest.webmanifest`]
       const swPath = path.join(dist, 'sw.js')
       const sw = fs.readFileSync(swPath, 'utf8').replace('__ASSETS__', JSON.stringify(list)).replace('__BUILD__', Date.now().toString(36))
