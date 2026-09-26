@@ -104,15 +104,20 @@ function Shell() {
     setScreen({ kind: 'results', session, newBest: submitBest(session), streak })
   }
 
-  // Deep link on first load, once the data is there.
-  useEffect(() => {
-    if (!data) return
-    const h = readHash()
-    if (!h) return
+  // Deep links: on first load and whenever the hash changes while the app is open (invite links, back button).
+  const route = (h: string) => {
     if (h === 'daily') playDaily()
     else if (MODES.includes(h as ModeId)) play(h as ModeId)
     else if (h === 'learn' || h === 'stats' || h === 'about' || h === 'groups') go(h)
     else if (h.startsWith('join-')) setScreen({ kind: 'groups', joinCode: h.slice(5).toUpperCase() })
+    else if (h === '') setScreen({ kind: 'home' })
+  }
+  useEffect(() => {
+    if (!data) return
+    if (readHash()) route(readHash())
+    const onHash = () => route(readHash())
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data])
 
