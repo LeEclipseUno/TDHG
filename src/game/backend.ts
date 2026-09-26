@@ -184,12 +184,14 @@ export async function isSignedIn(): Promise<boolean> {
 }
 
 /** Links the anonymous device account to Google (keeps groups and scores), or signs in fresh. Redirects away. */
-export async function signInWithGoogle(): Promise<'redirect' | 'off' | 'error'> {
+export async function signInWithGoogle(fresh = false): Promise<'redirect' | 'off' | 'error'> {
   const c = await sb()
   if (!c || !(await ensureSession())) return 'error'
   const redirectTo = `${location.origin}${import.meta.env.BASE_URL}`
   const { data } = await c.auth.getUser()
-  const link = data.user?.is_anonymous ? await c.auth.linkIdentity({ provider: 'google', options: { redirectTo } }) : null
+  // Linking keeps this device's groups and scores. When the Google account already belongs to another
+  // player (signed in on a phone first), Supabase refuses the link and we sign in as that player instead.
+  const link = !fresh && data.user?.is_anonymous ? await c.auth.linkIdentity({ provider: 'google', options: { redirectTo } }) : null
   if (link && !link.error) return 'redirect'
   const res = await c.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } })
   if (res.error) return /not enabled|unsupported|disabled/i.test(res.error.message) ? 'off' : 'error'

@@ -59,6 +59,13 @@ function Shell() {
 
   useEffect(() => {
     // Cloud state comes in before the menu reads local storage, so a signed-in player sees their progress at once.
+    // Back from Google with "identity already linked to another user": that account exists already,
+    // so sign in as it instead of linking this device's anonymous player.
+    if (ONLINE && /error_code=identity_already_exists/.test(location.hash)) {
+      history.replaceState(null, '', location.pathname + location.search)
+      void signInWithGoogle(true)
+      return
+    }
     loadData()
       .then(async (d) => {
         if (ONLINE) {
