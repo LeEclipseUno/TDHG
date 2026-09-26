@@ -92,7 +92,7 @@ const isStandalone = window.matchMedia('(display-mode: standalone)').matches
 
 export function Home({ data, settings, onSettings, onPlay, onDaily, onStats, onAbout, onGroups, challenge, onChallenge, onInstall }: HomeProps) {
   const { t, lang, setLang } = useLang()
-  const tiers: Tier[] = ['A', 'AN', 'ALL']
+  const tiers: Tier[] = ['A', 'N', 'AN']
   const n = dailyNumber()
   const daily = getDailyResult(n)
   const streak = getStreak()

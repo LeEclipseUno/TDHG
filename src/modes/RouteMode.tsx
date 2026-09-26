@@ -95,7 +95,7 @@ export function RouteMode({ data, session, onFinish, onQuit }: ModeProps) {
     const xs = r.path.filter((_, i) => i % 2 === 0)
     const ys = r.path.filter((_, i) => i % 2 === 1)
     const bx = [Math.min(...xs) - 30000, Math.min(...ys) - 30000, Math.max(...xs) + 30000, Math.max(...ys) + 30000]
-    const nearby = roadsForTier(data, session.tier === 'A' ? 'AN' : session.tier).filter((rd) => !inRoute.has(rd.ref) && rd.bbox[2] >= bx[0] && rd.bbox[0] <= bx[2] && rd.bbox[3] >= bx[1] && rd.bbox[1] <= bx[3])
+    const nearby = roadsForTier(data, 'AN').filter((rd) => !inRoute.has(rd.ref) && rd.bbox[2] >= bx[0] && rd.bbox[0] <= bx[2] && rd.bbox[3] >= bx[1] && rd.bbox[1] <= bx[3])
     const distract = shuffle(nearby, Math.random).slice(0, Math.max(3, Math.min(6, 10 - r.refs.length)))
     const all = [...r.refs.map((ref) => data.byRef.get(ref)!).filter(Boolean), ...distract]
     setCandidates(shuffle(all, Math.random))

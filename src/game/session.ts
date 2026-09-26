@@ -120,7 +120,7 @@ export function parseChallenge(search: string): Challenge | null {
   const c = new URLSearchParams(search).get('c')
   if (!c) return null
   const [mode, tier, timer, seed, score, variant] = c.split('.')
-  if (!MODES.includes(mode as ModeId) || !['A', 'AN', 'ALL'].includes(tier)) return null
+  if (!MODES.includes(mode as ModeId) || !['A', 'N', 'AN'].includes(tier)) return null
   const v = VARIANTS.includes(variant as Variant) ? (variant as Variant) : 'normal'
   const n = Number(seed)
   const sc = Number(score)
@@ -131,14 +131,11 @@ export function parseChallenge(search: string): Challenge | null {
 /** Pick n roads for a tier. Mixes kinds so that the harder tiers do not drown in provincial roads. */
 export function pickRoads(data: GameData, tier: Tier, n: number, rng: () => number): Road[] {
   const pool = roadsForTier(data, tier)
-  if (tier === 'A') return shuffle(pool, rng).slice(0, n)
+  if (tier !== 'AN') return shuffle(pool, rng).slice(0, n)
   const a = shuffle(pool.filter((r) => r.kind === 'A'), rng)
   const nn = shuffle(pool.filter((r) => r.kind === 'N'), rng)
-  const p = shuffle(pool.filter((r) => r.kind === 'P'), rng)
-  const wantA = Math.round(n * (tier === 'AN' ? 0.6 : 0.4))
-  const wantN = tier === 'AN' ? n - wantA : Math.round(n * 0.25)
-  const picked = [...a.slice(0, wantA), ...nn.slice(0, wantN), ...p.slice(0, n - wantA - wantN)]
-  return shuffle(picked, rng).slice(0, n)
+  const wantA = Math.round(n * 0.6)
+  return shuffle([...a.slice(0, wantA), ...nn.slice(0, n - wantA)], rng).slice(0, n)
 }
 
 export function pickJunctions(data: GameData, n: number, rng: () => number): Junction[] {
@@ -247,7 +244,8 @@ export function loadSettings(): Settings {
     const raw = localStorage.getItem(SETTINGS_KEY)
     if (raw) {
       const p = JSON.parse(raw) as Partial<Settings>
-      return { tier: p.tier === 'AN' || p.tier === 'ALL' ? p.tier : 'A', timer: p.timer !== false, daily: p.daily === true, learnDeck: p.learnDeck === 'junctions' ? 'junctions' : 'roads', sound: p.sound !== false, variant: VARIANTS.includes(p.variant as Variant) ? (p.variant as Variant) : 'normal' }
+      const tier: Tier = p.tier === 'AN' || p.tier === 'N' ? p.tier : (p.tier as string) === 'ALL' ? 'AN' : 'A'
+      return { tier, timer: p.timer !== false, daily: p.daily === true, learnDeck: p.learnDeck === 'junctions' ? 'junctions' : 'roads', sound: p.sound !== false, variant: VARIANTS.includes(p.variant as Variant) ? (p.variant as Variant) : 'normal' }
     }
   } catch {
     /* ignore */
