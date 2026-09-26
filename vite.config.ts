@@ -3,8 +3,8 @@ import path from 'node:path'
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// base is the repo name for GitHub Pages; override with VITE_BASE for a custom domain (use '/').
-const base = process.env.VITE_BASE ?? '/TDHG/'
+// The site lives at the root of wegenkenner.nl. Set VITE_BASE=/TDHG/ to build for a plain GitHub Pages project URL instead.
+const base = process.env.VITE_BASE ?? '/'
 
 /** After the build, list every file the service worker should precache and write it into dist/sw.js. */
 function serviceWorkerAssets(): Plugin {

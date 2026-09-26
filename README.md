@@ -33,6 +33,13 @@ python scripts/build-data.py --refresh
 
 ## Deploy
 
-Pushing to `main` on GitHub runs `.github/workflows/deploy.yml`, which builds the site and publishes it to GitHub Pages. The Vite `base` is `/TDHG/`, matching a repository named `TDHG`. Set `VITE_BASE` to change it.
+The site is served at https://wegenkenner.nl from GitHub Pages. Pushing to `main` runs `.github/workflows/deploy.yml`, which builds the site and publishes it. `public/CNAME` tells GitHub Pages the custom domain; the Vite `base` is `/`.
+
+One-time setup at the registrar and on GitHub:
+
+1. DNS for `wegenkenner.nl`: four `A` records to `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153`, and a `CNAME` record for `www` pointing to `<your-github-user>.github.io`.
+2. GitHub repository, Settings, Pages: source "GitHub Actions", custom domain `wegenkenner.nl`, then tick "Enforce HTTPS" once the certificate is issued (can take up to a day after the DNS change).
+
+To build for a plain project URL instead (no custom domain), set `VITE_BASE=/TDHG/` and remove `public/CNAME`.
 
 Map data (c) OpenStreetMap contributors, available under the Open Database License. Land outline from the CBS Wijk- en Buurtkaart via PDOK (CC BY 4.0).
