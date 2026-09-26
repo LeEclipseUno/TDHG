@@ -550,10 +550,12 @@ button {
   top: 0;
   right: 0;
 }
-.home-lang .seg-btn {
-  padding: 4px 10px;
-  min-height: 30px;
-  font-size: 13px;
+.lang-post {
+  display: block;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.45));
+}
+.lang-post g:hover rect {
+  stroke: #fff;
 }
 .home-logo-wrap {
   position: relative;

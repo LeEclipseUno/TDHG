@@ -38,6 +38,31 @@ function Seg<T extends string>({ value, options, onChange, label, wide = false }
   )
 }
 
+/** Language switch drawn as a hectometerpaal: green post, two plates, the active language lit. */
+function LangPost({ lang, onChange, label }: { lang: Lang; onChange: (l: Lang) => void; label: string }) {
+  const plate = (l: Lang, y: number) => {
+    const on = l === lang
+    return (
+      <g key={l} onClick={() => onChange(l)} style={{ cursor: 'pointer' }}>
+        <rect x="3" y={y} width="30" height="24" rx="2.5" fill={on ? '#fff' : '#155c34'} stroke={on ? '#fff' : '#2aa563'} strokeWidth="1" />
+        <text x="18" y={y + 16.5} textAnchor="middle" fontFamily="'Barlow Condensed', system-ui, sans-serif" fontSize="14" fontWeight="800" fill={on ? '#111' : 'rgba(255,255,255,0.55)'}>
+          {l.toUpperCase()}
+        </text>
+      </g>
+    )
+  }
+  return (
+    <div className="home-lang">
+      <svg className="lang-post" width="36" height="78" viewBox="0 0 36 78" role="group" aria-label={label}>
+        <rect x="11" y="2" width="14" height="76" rx="3" fill="#1f8f4e" />
+        <rect x="11" y="2" width="14" height="4" rx="2" fill="#7fd5a3" />
+        {plate('nl', 8)}
+        {plate('en', 40)}
+      </svg>
+    </div>
+  )
+}
+
 /** The play streak as a row of hectometre posts. */
 export function StreakPosts({ count }: { count: number }) {
   const shown = Math.max(1, Math.min(count, 14))
@@ -75,9 +100,7 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
       </div>
       <div className="home-inner">
         <header className="home-header">
-          <div className="home-lang">
-            <Seg<Lang> label={t('language')} value={lang} onChange={setLang} options={[{ v: 'nl', label: 'NL' }, { v: 'en', label: 'EN' }]} />
-          </div>
+          <LangPost lang={lang} onChange={setLang} label={t('language')} />
           <div className="home-logo-wrap">
             <img src={`${import.meta.env.BASE_URL}logo.png`} alt="The Dutch Highway Guesser" className="home-logo" />
           </div>
