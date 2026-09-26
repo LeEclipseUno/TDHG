@@ -122,6 +122,7 @@ export function buildRoadPages(dist) {
   const dataDir = path.resolve('public/data')
   const load = (n) => JSON.parse(fs.readFileSync(path.join(dataDir, n), 'utf8'))
   const roads = load('roads-core.json').filter((r) => r.kind === 'A' || r.kind === 'N')
+  const notes = JSON.parse(fs.readFileSync(path.resolve('scripts/road-notes.json'), 'utf8'))
   const land = load('land.json')
   const abroad = load('abroad.json')
   const junctions = load('junctions.json')
@@ -305,7 +306,8 @@ ${body}
     const route = from && to && from.n !== to.n ? `van ${from.n} naar ${to.n}` : from ? `bij ${from.n}` : ''
 
     const title = `${r.ref}: ${kindName} ${route} | Wegenkenner`
-    const desc = `De ${r.ref} is ${r.km} km lang en loopt ${route || 'door Nederland'}${provs.length ? `, door ${listNl(provs)}` : ''}. ${myJunctions.length ? `${myJunctions.length} knooppunten, ` : ''}${myExits.length} afritten. Kun jij de ${r.ref} op de kaart aanwijzen?`
+    const first = notes[r.ref] ? notes[r.ref].split(/(?<=\.)\s/)[0] : ''
+    const desc = `${first ? first + ' ' : `De ${r.ref} is ${r.km} km lang en loopt ${route || 'door Nederland'}${provs.length ? `, door ${listNl(provs)}` : ''}. `}${myJunctions.length ? `${myJunctions.length} knooppunten, ` : ''}${myExits.length} afritten, ${r.km} km. Kun jij de ${r.ref} op de kaart aanwijzen?`
 
     // Map: base image plus this road in orange and its interchanges.
     let svg = `<svg class="map" viewBox="0 0 ${W} ${H}" role="img" aria-label="De ${esc(r.ref)} op de kaart van Nederland"><image href="/wegen/kaart.svg" width="${W}" height="${H}"/>`
@@ -359,6 +361,7 @@ ${provs.length ? `<dt>Provincies</dt><dd>${esc(listNl(provs))}</dd>` : ''}
 </div></div>
 <div class="board"><div class="inner">${svg}</div></div>
 <div class="board"><div class="inner"><h2>In het kort</h2>${facts}</div></div>
+${notes[r.ref] ? `<div class="board"><div class="inner"><h2>Over de ${esc(r.ref)}</h2><p>${esc(notes[r.ref])}</p></div></div>` : ''}
 <div class="board"><div class="inner"><h2>Ken jij de ${esc(r.ref)}?</h2>
 <p>In Wegenkenner krijg je alleen het nummer en wijs je de weg aan op een lege kaart. Geen namen, geen hints.</p>
 <div class="cta"><a class="btn alt" href="/#find">Speel Vind de weg</a><a class="btn" href="/#daily">Speel de dagelijkse puzzel</a></div>
