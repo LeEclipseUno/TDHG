@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useLang } from '../i18n'
 import { formatTime, type Grade } from '../game/session'
 import { Matrix, RouteStrip, SpeedSign } from './widgets'
@@ -21,6 +21,13 @@ export interface HUDProps {
 export function HUD({ index, total, grades, score, scoreLabel, remainingMs, limitMs, elapsedMs, prompt, onQuit, countLabel }: HUDProps) {
   const { t } = useLang()
   const [confirm, setConfirm] = useState(false)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setConfirm((c) => !c)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
   return (
     <header className="hud">
       <div className="hud-row">

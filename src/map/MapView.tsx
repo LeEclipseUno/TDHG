@@ -88,7 +88,7 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
 }
 
 export function drawShield(ctx: CanvasRenderingContext2D, ref: string, kind: RoadKind, x: number, y: number, state: ShieldState) {
-  ctx.font = '800 15px "Barlow Condensed", "Arial Narrow", system-ui, sans-serif'
+  ctx.font = '800 13px Overpass, "Barlow Condensed", system-ui, sans-serif'
   const tw = ctx.measureText(ref).width
   const bw = tw + 14
   const bh = 22

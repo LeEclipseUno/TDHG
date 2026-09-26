@@ -89,6 +89,20 @@ export function LearnMode({ data, settings, onExit }: Props) {
     setQStart(Date.now())
   }
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const n = Number(e.key)
+      if (card?.kind === 'rec' && phase === 'ask' && n >= 1 && n <= options.length) {
+        setChosen(options[n - 1].ref)
+        finishCard(options[n - 1].ref === card.ref)
+      }
+      if (e.key === 'Enter' && phase === 'reveal') next()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [card, phase, options])
+
   const onTap = (tap: TapInfo) => {
     if (!card || phase !== 'ask') return
     if (card.kind === 'loc') {

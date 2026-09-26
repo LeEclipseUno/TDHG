@@ -32,6 +32,17 @@ export function QuizMode({ data, session, onFinish, onQuit }: ModeProps) {
     mapRef.current?.flyToBounds({ x0: b[0], y0: b[1], x1: b[2], y1: b[3] }, 50)
   }, [q])
 
+  // Keyboard: 1 to 4 pick an option.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const n = Number(e.key)
+      if (n >= 1 && n <= 4 && phase === 'ask') answer(q.options[n - 1] ?? null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, q])
+
   const answer = (pick: Road | null) => {
     if (phase !== 'ask') return
     const ok = pick?.ref === q.road.ref

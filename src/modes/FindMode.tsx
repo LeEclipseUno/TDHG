@@ -107,8 +107,8 @@ export function FindMode({ data, session, onFinish, onQuit }: ModeProps) {
         }
       />
       <MapView ref={mapRef} data={data} tier={session.tier} highlights={allHighlights} shields={allShields} onTap={onTap}>
-        {feedback && <div className={'feedback ' + (feedback.ok ? 'feedback-ok' : 'feedback-bad')}>{feedback.text}</div>}
-        {toast && <div className="toast">{toast}</div>}
+        {feedback && <div role="status" className={'feedback ' + (feedback.ok ? 'feedback-ok' : 'feedback-bad')}>{feedback.text}</div>}
+        {toast && <div role="status" className="toast">{toast}</div>}
       </MapView>
     </div>
   )

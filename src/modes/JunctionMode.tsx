@@ -107,7 +107,7 @@ export function JunctionMode({ data, session, onFinish, onQuit }: ModeProps) {
         }
       />
       <MapView ref={mapRef} data={data} tier={session.tier} markers={markers} lines={lines} onTap={phase === 'ask' ? onTap : undefined}>
-        {feedback && <div className={`feedback feedback-${feedback.grade === 'good' ? 'ok' : feedback.grade === 'partial' ? 'mid' : 'bad'}`}>{feedback.text}</div>}
+        {feedback && <div role="status" className={`feedback feedback-${feedback.grade === 'good' ? 'ok' : feedback.grade === 'partial' ? 'mid' : 'bad'}`}>{feedback.text}</div>}
       </MapView>
     </div>
   )

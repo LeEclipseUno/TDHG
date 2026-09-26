@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 
 export type Lang = 'nl' | 'en'
 
@@ -77,6 +77,9 @@ const nl = {
   km: 'km',
   reveal: 'Toon antwoorden',
   zoomTip: 'Tip: zoom ver in, elke kilometer telt.',
+  install: 'Installeer als app',
+  installDesc: 'Op je beginscherm, werkt ook offline.',
+  installIos: 'Op iPhone: deel-knop, dan "Zet op beginscherm".',
   learn: 'Leren',
   learnTitle: 'Leer het wegennet',
   learn_desc: 'Oefenen met slimme herhaling. Wat je fout hebt komt sneller terug.',
@@ -176,6 +179,9 @@ const en: Record<Key, string> = {
   km: 'km',
   reveal: 'Show answers',
   zoomTip: 'Tip: zoom in far, every kilometre counts.',
+  install: 'Install as app',
+  installDesc: 'On your home screen, also works offline.',
+  installIos: 'On iPhone: share button, then "Add to Home Screen".',
   learn: 'Learn',
   learnTitle: 'Learn the network',
   learn_desc: 'Practice with spaced repetition. What you miss comes back sooner.',
@@ -230,6 +236,9 @@ function initialLang(): Lang {
 
 export function LangProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>(initialLang)
+  useEffect(() => {
+    document.documentElement.lang = lang
+  }, [lang])
   const setLang = useCallback((l: Lang) => {
     setLangState(l)
     try {
