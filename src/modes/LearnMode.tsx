@@ -189,7 +189,7 @@ export function LearnMode({ data, settings, onExit }: Props) {
               </div>
               <div>
                 <span className="stat-value">{stats.total}</span>
-                <span className="stat-label">{t('cards')}</span>
+                <span className="stat-label">{t('cards', { n: stats.total })}</span>
               </div>
             </div>
             {!more && <p className="learn-note">{t('allDone')}</p>}

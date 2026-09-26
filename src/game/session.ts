@@ -244,13 +244,13 @@ export function rankKey(accuracy: number): 'rank_4' | 'rank_3' | 'rank_2' | 'ran
 
 /** Share line for a finished daily, from the home board. */
 export function dailyShareText(n: number, score: number, lang: Lang, url: string): string {
-  return [`Wegenkenner #${n}`, `${score} ${translate(lang, 'points')}`, `${url}#daily`].join(String.fromCharCode(10))
+  return [`Wegenkenner #${n}`, `${score} ${translate(lang, 'points', { n: score })}`, `${url}#daily`].join(String.fromCharCode(10))
 }
 
 export function shareText(s: Session, lang: Lang, url: string): string {
   const sum = summarize(s)
   const head = s.dailyNumber ? `Wegenkenner #${s.dailyNumber}` : `Wegenkenner · ${translate(lang, `mode_${s.mode}` as const)}`
-  return [head, `${sum.score} ${translate(lang, 'points')}`, url.includes('/functions/') ? url : s.dailyNumber ? `${url}#daily` : `${url}?c=${challengeParam(s)}`].join('\n')
+  return [head, `${sum.score} ${translate(lang, 'points', { n: sum.score })}`, url.includes('/functions/') ? url : s.dailyNumber ? `${url}#daily` : `${url}?c=${challengeParam(s)}`].join('\n')
 }
 
 // ---- persistence ----

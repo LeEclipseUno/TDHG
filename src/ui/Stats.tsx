@@ -139,7 +139,7 @@ export function Stats({ data, account, plus, onSignOut, onPlus, onHome }: { data
           <div className="learn-stats">
             <div>
               <span className="stat-value">{games}</span>
-              <span className="stat-label">{t('games')}</span>
+              <span className="stat-label">{t('games', { n: games })}</span>
             </div>
             <div>
               <span className="stat-value">{questions ? Math.round((good / questions) * 100) : 0}%</span>
@@ -156,7 +156,7 @@ export function Stats({ data, account, plus, onSignOut, onPlus, onHome }: { data
                 <div key={m.mode} className="stats-mode">
                   <span>{t(`mode_${m.mode}`)}</span>
                   <small>
-                    {m.games} {t('games').toLowerCase()}
+                    {m.games} {t('games', { n: m.games }).toLowerCase()}
                   </small>
                   <Matrix value={m.best} label={t('best')} />
                 </div>

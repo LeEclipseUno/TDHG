@@ -307,7 +307,7 @@ ${body}
 
     const title = `${r.ref}: ${kindName} ${route} | Wegenkenner`
     const first = notes[r.ref] ? notes[r.ref].split(/(?<=\.)\s/)[0] : ''
-    const desc = `${first ? first + ' ' : `De ${r.ref} is ${r.km} km lang en loopt ${route || 'door Nederland'}${provs.length ? `, door ${listNl(provs)}` : ''}. `}${myJunctions.length ? `${myJunctions.length} knooppunten, ` : ''}${myExits.length} afritten, ${r.km} km. Kun jij de ${r.ref} op de kaart aanwijzen?`
+    const desc = `${first ? first + ' ' : `De ${r.ref} is ${r.km} km lang en loopt ${route || 'door Nederland'}${provs.length ? `, door ${listNl(provs)}` : ''}. `}${myJunctions.length ? `${myJunctions.length} ${myJunctions.length === 1 ? 'knooppunt' : 'knooppunten'}, ` : ''}${myExits.length} ${myExits.length === 1 ? 'afrit' : 'afritten'}, ${r.km} km. Kun jij de ${r.ref} op de kaart aanwijzen?`
 
     // Map: base image plus this road in orange and its interchanges.
     let svg = `<svg class="map" viewBox="0 0 ${W} ${H}" role="img" aria-label="De ${esc(r.ref)} op de kaart van Nederland"><image href="/wegen/kaart.svg" width="${W}" height="${H}"/>`

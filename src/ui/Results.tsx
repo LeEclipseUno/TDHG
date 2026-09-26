@@ -162,7 +162,7 @@ export function Results({ data, session, newBest, streak, plus, badges, onAgain,
             <MapView data={data} tier={session.tier} highlights={highlights} markers={markers} interactive={false} />
           </div>
           <RouteStrip grades={grades} total={total} />
-          <Matrix big value={shownScore} label={t('points')} />
+          <Matrix big value={shownScore} label={t('points', { n: sum.score })} />
           <div className={'results-after' + (finished ? ' results-after-in' : '')}>
             <div className="rank-post">
               <span>{t(rank)}</span>

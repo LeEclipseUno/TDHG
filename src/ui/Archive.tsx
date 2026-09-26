@@ -36,7 +36,7 @@ export function Archive({ data, onPlay, onHome }: ArchiveProps) {
                     <span className="sign-desc">
                       {t(`mode_${dailyMode(n)}`)}
                       {' · '}
-                      {r ? `${r.score} ${t('points')}, ${r.good}/${r.total}` : t('notPlayedYet')}
+                      {r ? `${r.score} ${t('points', { n: r.score })}, ${r.good}/${r.total}` : t('notPlayedYet')}
                     </span>
                   </span>
                   <IconSignArrow className="sign-arrow" />

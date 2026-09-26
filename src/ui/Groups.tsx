@@ -216,7 +216,7 @@ export function Groups({ data, onHome, joinCode }: { data: GameData; onHome: () 
                     {r.plus && <PlusMark />}
                   </span>
                   <span className="group-detail">
-                    {r.days} {t('days')}
+                    {r.days} {t('days', { n: r.days })}
                   </span>
                   <span className="results-points">{r.total}</span>
                 </li>

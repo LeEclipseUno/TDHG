@@ -76,13 +76,14 @@ const nl = {
   downloaded: 'Plaatje opgeslagen',
   again: 'Nog een keer',
   playAgain: 'Nog een keer spelen',
-  home: 'Menu',
+  home: 'Home',
   rank_4: 'Snelwegkoning',
   rank_3: 'Wegenwachter',
   rank_2: 'Zondagsrijder',
   rank_1: 'Spookrijder',
   attribution: 'Kaartdata (c) OpenStreetMap',
   points: 'punten',
+  points_one: 'punt',
   km: 'km',
   reveal: 'Antwoorden',
   zoomTip: 'Zoom ver in, elke kilometer telt.',
@@ -96,6 +97,7 @@ const nl = {
   newCards: 'nieuw',
   learned: 'geleerd',
   cards: 'kaarten',
+  cards_one: 'kaart',
   cardCount: 'Kaart {n}/{total}',
   nextIn: 'Terug over {ivl}',
   rating_1: 'Opnieuw',
@@ -137,6 +139,7 @@ const nl = {
   stats: 'Profiel',
   statsSection: 'Statistieken',
   games: 'Potjes',
+  games_one: 'Potje',
   hardest: 'Lastigste wegen',
   strongest: 'Sterkste wegen',
   recent: 'Laatste potjes',
@@ -201,6 +204,7 @@ const nl = {
   variantHint_mirror: 'Oost is west. Score x1,25.',
   nemesis: 'Nemesis',
   nemesisHint: 'Versloeg je {n} keer in de laatste 30 dagen.',
+  nemesisHint_one: 'Versloeg je één keer in de laatste 30 dagen.',
   badge_season_kingsday: 'Koningsdag',
   badge_season_kingsday_desc: 'Beide Koningsdagpuzzels gespeeld.',
   badge_season_sinterklaas: 'Pakjesavond',
@@ -309,6 +313,7 @@ const nl = {
   refresh: 'Ververs',
   thisWeek: 'Deze week',
   days: 'dagen',
+  days_one: 'dag',
   notPlayed: 'nog niet gespeeld',
   groupError: 'Dat lukte niet. Probeer het nog eens.',
   groupUnknown: 'Die code ken ik niet.',
@@ -317,6 +322,7 @@ const nl = {
   betterThan: 'Beter dan {p}% van de spelers vandaag',
   onlyYou: 'Jij bent de eerste vandaag',
   players: '{n} spelers',
+  players_one: '{n} speler',
   linkPreview: 'Link met jouw kaart',
 } as const
 
@@ -396,13 +402,14 @@ const en: Record<Key, string> = {
   downloaded: 'Image saved',
   again: 'Play again',
   playAgain: 'Play it again',
-  home: 'Menu',
+  home: 'Home',
   rank_4: 'Highway royalty',
   rank_3: 'Road ranger',
   rank_2: 'Sunday driver',
   rank_1: 'Wrong-way driver',
   attribution: 'Map data (c) OpenStreetMap',
   points: 'points',
+  points_one: 'point',
   km: 'km',
   reveal: 'Answers',
   zoomTip: 'Zoom in far, every kilometre counts.',
@@ -416,6 +423,7 @@ const en: Record<Key, string> = {
   newCards: 'new',
   learned: 'learned',
   cards: 'cards',
+  cards_one: 'card',
   cardCount: 'Card {n}/{total}',
   nextIn: 'Back in {ivl}',
   rating_1: 'Again',
@@ -457,6 +465,7 @@ const en: Record<Key, string> = {
   stats: 'Profile',
   statsSection: 'Statistics',
   games: 'Games',
+  games_one: 'Game',
   hardest: 'Hardest roads',
   strongest: 'Strongest roads',
   recent: 'Recent games',
@@ -521,6 +530,7 @@ const en: Record<Key, string> = {
   variantHint_mirror: 'East is west. Score x1.25.',
   nemesis: 'Nemesis',
   nemesisHint: 'Beat you {n} times in the last 30 days.',
+  nemesisHint_one: 'Beat you once in the last 30 days.',
   badge_season_kingsday: "King's Day",
   badge_season_kingsday_desc: "Played both King's Day puzzles.",
   badge_season_sinterklaas: 'Sinterklaas',
@@ -629,6 +639,7 @@ const en: Record<Key, string> = {
   refresh: 'Refresh',
   thisWeek: 'This week',
   days: 'days',
+  days_one: 'day',
   notPlayed: 'not played yet',
   groupError: 'That did not work. Try again.',
   groupUnknown: 'Unknown code.',
@@ -637,6 +648,7 @@ const en: Record<Key, string> = {
   betterThan: 'Better than {p}% of today\u2019s players',
   onlyYou: 'You are the first today',
   players: '{n} players',
+  players_one: '{n} player',
   linkPreview: 'Link with your card',
 }
 
@@ -646,6 +658,11 @@ export type Vars = Record<string, string | number>
 
 export function translate(lang: Lang, key: Key, vars?: Vars): string {
   let s: string = STRINGS[lang][key]
+  // Singular: a key with the _one suffix wins when the count is exactly one.
+  if (vars && vars.n === 1) {
+    const one = STRINGS[lang][`${key}_one` as Key]
+    if (one) s = one
+  }
   if (vars) for (const [k, v] of Object.entries(vars)) s = s.replace(`{${k}}`, String(v))
   return s
 }
