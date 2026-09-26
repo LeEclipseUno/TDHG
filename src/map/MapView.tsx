@@ -521,15 +521,15 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
         ctx.beginPath()
         trace(st.l)
         if (st.t === 'b') {
-          ctx.strokeStyle = C.casing
-          ctx.lineWidth = widths.A + 8
-          ctx.stroke()
+          // A bridge deck: square ends and a thin edge line on both sides, like a road atlas.
+          ctx.lineCap = 'butt'
           ctx.strokeStyle = C.structure
-          ctx.lineWidth = widths.A + 4
+          ctx.lineWidth = widths.A + 3
           ctx.stroke()
           ctx.strokeStyle = C.A
           ctx.lineWidth = widths.A
           ctx.stroke()
+          ctx.lineCap = 'round'
         } else {
           ctx.setLineDash([10, 7])
           ctx.strokeStyle = C.structure
