@@ -168,7 +168,7 @@ export function DragMode({ data, session, onFinish, onQuit }: ModeProps) {
           </div>
         }
       />
-      <MapView ref={mapRef} data={data} tier={session.tier} highlights={highlights} shields={shields} pulses={pulses} lockZoom={session.variant === 'nozoom'} hideRoads={session.variant === 'blind'} intro>
+      <MapView ref={mapRef} data={data} tier={session.tier} mirror={session.variant === 'mirror'} highlights={highlights} shields={shields} pulses={pulses} lockZoom={session.variant === 'nozoom'} hideRoads={session.variant === 'blind'} intro>
         {toast && <div className="toast">{toast}</div>}
       </MapView>
       {phase === 'play' ? (

@@ -263,3 +263,20 @@ grant insert on errors to authenticated;
 grant all on errors to service_role;
 -- Look at them with:  select created_at, build, message, "where", ua from errors order by created_at desc limit 50;
 -- Clean up old rows now and then:  delete from errors where created_at < now() - interval '60 days';
+
+-- ---------- nemesis: head to head over the last 30 dailies, within one group ----------
+create or replace function group_rivals(p_code text, p_daily int)
+returns table (nickname text, beat_me int, i_beat int)
+language sql security definer set search_path = public as $$
+  select m.nickname,
+         count(*) filter (where s.score > me.score)::int as beat_me,
+         count(*) filter (where me.score > s.score)::int as i_beat
+  from groups g
+  join members m on m.group_id = g.id and m.player_id <> auth.uid()
+  join daily_scores s on s.player_id = m.player_id and s.daily between p_daily - 29 and p_daily
+  join daily_scores me on me.player_id = auth.uid() and me.daily = s.daily
+  where g.code = upper(trim(p_code))
+    and exists (select 1 from members x where x.group_id = g.id and x.player_id = auth.uid())
+  group by m.nickname;
+$$;
+grant execute on function group_rivals(text, int) to authenticated;

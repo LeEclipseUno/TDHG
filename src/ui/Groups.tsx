@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useLang } from '../i18n'
 import { Board } from './widgets'
 import { IconMenu, IconReplay, IconShare, PictGroup, PlusMark } from './icons'
-import { createGroup, getNickname, groupBoard, groupWeek, joinGroup, leaveGroup, myGroups, ONLINE, setNickname, validNickname, type BoardRow, type Group, type WeekRow } from '../game/backend'
+import { createGroup, getNickname, groupBoard, groupRivals, groupWeek, joinGroup, leaveGroup, myGroups, ONLINE, setNickname, validNickname, type BoardRow, type Group, type WeekRow } from '../game/backend'
 import { dailyNumber } from '../game/daily'
 import { formatTime } from '../game/session'
 import type { GameData } from '../data'
@@ -15,6 +15,7 @@ export function Groups({ data, onHome, joinCode }: { data: GameData; onHome: () 
   const [open, setOpen] = useState<string | null>(null)
   const [board, setBoard] = useState<BoardRow[]>([])
   const [week, setWeek] = useState<WeekRow[]>([])
+  const [nemesis, setNemesis] = useState<{ name: string; n: number } | null>(null)
   const [name, setName] = useState('')
   const [code, setCode] = useState(joinCode ?? '')
   const [busy, setBusy] = useState(false)
@@ -35,10 +36,12 @@ export function Groups({ data, onHome, joinCode }: { data: GameData; onHome: () 
   useEffect(() => {
     if (!open) return
     let alive = true
-    Promise.all([groupBoard(open, n), groupWeek(open, n)]).then(([b, w]) => {
+    Promise.all([groupBoard(open, n), groupWeek(open, n), groupRivals(open, n)]).then(([b, w, r]) => {
       if (!alive) return
       setBoard(b)
       setWeek(w)
+      const top = r.filter((x) => x.beat_me >= 2 && x.beat_me > x.i_beat).sort((x, y) => y.beat_me - x.beat_me)[0]
+      setNemesis(top ? { name: top.nickname, n: top.beat_me } : null)
     })
     return () => {
       alive = false
@@ -191,6 +194,11 @@ export function Groups({ data, onHome, joinCode }: { data: GameData; onHome: () 
                   <span className="group-nick">
                     {r.nickname}
                     {r.plus && <PlusMark />}
+                    {nemesis && nemesis.name === r.nickname && !r.is_me && (
+                      <span className="nemesis-tag" title={t('nemesisHint', { n: nemesis.n })}>
+                        {t('nemesis')}
+                      </span>
+                    )}
                     {r.is_me && <small> ({t('you').toLowerCase()})</small>}
                   </span>
                   <span className="group-detail">{r.played ? `${r.good}/${r.total} · ${formatTime(r.ms)}` : t('notPlayed')}</span>

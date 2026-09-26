@@ -5,7 +5,7 @@ import { clearHistory, loadHistory, loadLabelStats } from '../game/history'
 import { formatTime, MODES } from '../game/session'
 import { Board, Matrix } from './widgets'
 import { Shield } from './Shield'
-import { IconLock, IconMenu, PictStats, PictDrag, PictFind, PictJunction, PictQuiz, PictRoute, PictPost } from './icons'
+import { IconLock, IconMenu, SeasonIcon, PictStats, PictDrag, PictFind, PictJunction, PictQuiz, PictRoute, PictPost } from './icons'
 import MapView, { type Highlight } from '../map/MapView'
 import { BADGES, computeBadges, loadBadges, type BadgeId } from '../game/achievements'
 import { Backdrop } from './Backdrop'
@@ -309,6 +309,15 @@ function BadgeArt({ id }: { id: BadgeId }) {
           <PictStats />
           {mark('1000')}
         </>
+      )
+    case 'season_kingsday':
+    case 'season_sinterklaas':
+    case 'season_christmas':
+    case 'season_carnaval':
+      return (
+        <span className="badge-season">
+          <SeasonIcon season={id.slice(7) as 'kingsday' | 'sinterklaas' | 'christmas' | 'carnaval'} />
+        </span>
       )
   }
 }

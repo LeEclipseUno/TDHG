@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { GameData, Tier } from '../data'
 import type { Deck } from '../game/learn'
 import { useLang, type Lang } from '../i18n'
@@ -8,9 +8,11 @@ import { disableReminder, enableReminder, getReminder, pushSupported } from '../
 import { dailyMode, dailyNumber, getDailyResult, getStreak, msUntilNextDaily } from '../game/daily'
 import { season, SEASON_TEXT } from '../game/season'
 import { Board, Matrix } from './widgets'
-import { IconGoogle, IconLock, IconReplay, IconShare, IconSignArrow, PictDistance, PictDrag, PictExit, PictFind, PictGroup, PictJunction, PictLearn, PictQuiz, PictRoute, PictStats, SeasonIcon, IconFreeze } from './icons'
+import { IconGoogle, IconLock, IconReplay, IconShare, IconSignArrow, PictDistance, PictSign, PictDrag, PictExit, PictFind, PictGroup, PictJunction, PictLearn, PictQuiz, PictRoute, PictStats, SeasonIcon, IconFreeze } from './icons'
 import { AdSlot } from './AdSlot'
 import { InitialsShield } from './icons'
+import { Logo } from './Logo'
+import { sfx } from '../game/sound'
 
 /** One or two capitals from the name, or the mail address. */
 export function initials(a: { name?: string; email?: string }): string {
@@ -45,7 +47,7 @@ export interface HomeProps {
   onArchive: () => void
 }
 
-const PICTS: Record<ModeId, typeof PictDrag> = { drag: PictDrag, find: PictFind, junction: PictJunction, quiz: PictQuiz, exit: PictExit, route: PictRoute, distance: PictDistance }
+const PICTS: Record<ModeId, typeof PictDrag> = { drag: PictDrag, find: PictFind, junction: PictJunction, quiz: PictQuiz, exit: PictExit, route: PictRoute, distance: PictDistance, sign: PictSign }
 
 function Seg<T extends string>({ value, options, onChange, label, wide = false }: { value: T; options: { v: T; label: string; title?: string }[]; onChange: (v: T) => void; label: string; wide?: boolean }) {
   return (
@@ -137,6 +139,42 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
       /* cancelled */
     }
   }
+  // Easter egg: type a road number on the home screen, or tap the shield, and the logo shows that road.
+  const [logoCode, setLogoCode] = useState('A')
+  useEffect(() => {
+    let buf = ''
+    let timer = 0
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return
+      const tag = (e.target as HTMLElement | null)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return
+      if (!/^[a-zA-Z0-9]$/.test(e.key)) return
+      buf = (buf + e.key.toUpperCase()).slice(-4)
+      window.clearTimeout(timer)
+      // Wait for the whole number, then take the longest road that matches the end of what was typed.
+      timer = window.setTimeout(() => {
+        for (let len = 4; len >= 2; len--) {
+          const cand = buf.slice(-len)
+          if (/^[AN]\d{1,3}$/.test(cand) && data.byRef.has(cand)) {
+            setLogoCode(cand)
+            break
+          }
+        }
+        buf = ''
+      }, 600)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      window.clearTimeout(timer)
+    }
+  }, [data])
+  const cycleLogo = () => {
+    const pool = data.roads.filter((r) => r.kind === 'A' || r.kind === 'N')
+    const pick = pool[Math.floor(Math.random() * pool.length)]
+    if (pick) setLogoCode(pick.ref)
+    sfx.tap()
+  }
   const [reminder, setReminder] = useState(getReminder)
   const [reminderNote, setReminderNote] = useState('')
   const applyReminder = async (on: boolean, hour: number, minute: number) => {
@@ -174,7 +212,7 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
             <LangPost lang={lang} onChange={setLang} label={t('language')} />
           </div>
           <div className="home-logo-wrap">
-            <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Wegenkenner" className="home-logo" />
+            <Logo code={logoCode} onShieldTap={cycleLogo} />
           </div>
           {s ? (
             <p className="season-strip">
@@ -380,7 +418,7 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
             <span className="setting-label">
               {t('theme')} {!plus && <span className="locked-tag">{t('plusTag')}</span>}
             </span>
-            <Seg<ThemeName> wide label={t('theme')} value={plus ? settings.theme : 'signage'} onChange={(theme) => (plus || theme === 'signage' ? onSettings({ ...settings, theme }) : onPlus())} options={THEME_NAMES.map((v) => ({ v, label: t(`theme_${v}`) }))} />
+            <Seg<ThemeName> wide label={t('theme')} value={plus ? settings.theme : 'signage'} onChange={(theme) => (plus || theme === 'signage' ? onSettings({ ...settings, theme }) : onPlus())} options={THEME_NAMES.map((v) => ({ v, label: t(`theme_${v}` as 'theme_signage') }))} />
           </div>
           {ONLINE && pushSupported() && (
             <div className="setting">

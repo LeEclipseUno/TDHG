@@ -122,7 +122,7 @@ export function JunctionMode({ data, session, onFinish, onQuit }: ModeProps) {
           </div>
         }
       />
-      <MapView ref={mapRef} data={data} tier={session.tier} markers={markers} lines={lines} onTap={phase === 'ask' ? onTap : undefined} labels={false} lockZoom={session.variant === 'nozoom'} hideRoads={session.variant === 'blind'} intro>
+      <MapView ref={mapRef} data={data} tier={session.tier} mirror={session.variant === 'mirror'} markers={markers} lines={lines} onTap={phase === 'ask' ? onTap : undefined} labels={false} lockZoom={session.variant === 'nozoom'} hideRoads={session.variant === 'blind'} intro>
         {feedback && (
           <div role="status" className={`feedback feedback-${feedback.grade === 'good' ? 'ok' : feedback.grade === 'partial' ? 'mid' : 'bad'}`}>
             {feedback.km === null ? t('timeUp') : feedback.km < 0.8 ? t('spotOn') : t('distanceOff', { km: (Math.round(feedback.km * Math.min(1, (now - feedback.at) / 700) * 10) / 10).toFixed(1) })} (+{feedback.points})

@@ -249,6 +249,15 @@ export const PictDistance = (p: P) => (
     </text>
   </svg>
 )
+export const PictSign = (p: P) => (
+  <svg {...pict} {...p}>
+    <rect x="5" y="7" width="38" height="24" rx="3" fill="#0d4a9c" stroke="#fff" strokeWidth="2.2" />
+    <path d="M12 21V13M9 16l3-3 3 3" strokeWidth="2.2" />
+    <path d="M20 16h14M20 22h10" strokeWidth="2.6" />
+    <path d="M15 31v13M33 31v13" strokeWidth="3" />
+    <rect x="30" y="12" width="9" height="6" rx="1" fill="#c8102e" stroke="#fff" strokeWidth="1" />
+  </svg>
+)
 export const PictStats = (p: P) => (
   <svg {...pict} {...p}>
     <path d="M8 40h32" strokeWidth="3" />

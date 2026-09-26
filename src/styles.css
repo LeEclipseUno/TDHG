@@ -2562,3 +2562,60 @@ body,
   width: 100%;
   height: 100%;
 }
+
+/* ---------- sign reading mode ---------- */
+.sign-stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: radial-gradient(900px 520px at 50% 110%, #163a6b 0%, var(--bg) 62%);
+  overflow: hidden;
+}
+.sign-gantry {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(100%, 420px);
+  filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.5));
+}
+.direction-sign {
+  width: 100%;
+  height: auto;
+}
+.sign-poles {
+  display: flex;
+  justify-content: space-between;
+  width: 70%;
+  height: 56px;
+}
+.sign-poles span {
+  width: 10px;
+  background: linear-gradient(90deg, #6d7580, #9aa2ab 50%, #5c636b);
+  border-radius: 0 0 3px 3px;
+}
+.nemesis-tag {
+  margin-left: 6px;
+  font-family: var(--font-sign);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: var(--red, #c8102e);
+  color: #fff;
+  border-radius: 3px;
+  padding: 1px 6px;
+  vertical-align: 1px;
+}
+.badge-season {
+  display: flex;
+  color: #fff;
+}
+.badge-season svg {
+  width: 30px;
+  height: 30px;
+}
+.home-logo {
+  cursor: default;
+}

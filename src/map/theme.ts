@@ -1,7 +1,8 @@
 // Map themes. Signage is the default dark look; paper and night are Plus perks.
 import { createContext } from 'react'
 
-export type ThemeName = 'signage' | 'paper' | 'night'
+export type ThemeName = 'signage' | 'paper' | 'night' | 'kingsday' | 'sinterklaas' | 'snow'
+/** The ones a player can pick; the rest are day-specific. */
 export const THEME_NAMES: ThemeName[] = ['signage', 'paper', 'night']
 
 export interface Palette {
@@ -92,6 +93,69 @@ export const NIGHT: Palette = {
   ripple: 'rgba(255,255,255,0.03)',
 }
 
-export const THEMES: Record<ThemeName, Palette> = { signage: SIGNAGE, paper: PAPER, night: NIGHT }
+/** Koningsdag: the country in orange for one day. */
+export const KINGSDAY: Palette = {
+  ...SIGNAGE,
+  land: '#ff7a1a',
+  landEdge: '#ffb066',
+  abroad: '#2c2118',
+  abroadEdge: '#4a3627',
+  A: '#ffffff',
+  N: '#1b1f3a',
+  P: '#c65a05',
+  active: '#0d4a9c',
+  glow: 'rgba(255,140,40,0.35)',
+  border: 'rgba(255,255,255,0.4)',
+}
+
+/** Pakjesavond: deep red land, gold N-roads. */
+export const SINTERKLAAS: Palette = {
+  ...SIGNAGE,
+  bg: '#120608',
+  land: '#8b1e2d',
+  landEdge: '#c0392b',
+  abroad: '#2a1015',
+  abroadEdge: '#3d1a20',
+  A: '#ffffff',
+  N: '#ffd23f',
+  P: '#c4707a',
+  active: '#ffb000',
+  glow: 'rgba(255,200,120,0.15)',
+  border: 'rgba(255,255,255,0.3)',
+  casing: '#120608',
+}
+
+/** December: snow on the land, winter water, navy roads. */
+export const SNOW: Palette = {
+  bg: '#9cc3e6',
+  land: '#f2f6fb',
+  landEdge: '#c8d8ea',
+  abroad: '#dfe6ee',
+  abroadEdge: '#c5cfda',
+  A: '#0d4a9c',
+  N: '#e39a00',
+  P: '#b8c4d2',
+  correct: '#1f9d55',
+  wrong: '#c1121f',
+  active: '#ef712f',
+  text: '#26313f',
+  glow: 'rgba(255,255,255,0.5)',
+  border: 'rgba(60,70,90,0.3)',
+  structure: '#5b6470',
+  casing: '#f2f6fb',
+  ripple: '',
+}
+
+export const THEMES: Record<ThemeName, Palette> = { signage: SIGNAGE, paper: PAPER, night: NIGHT, kingsday: KINGSDAY, sinterklaas: SINTERKLAAS, snow: SNOW }
+
+/** Day-specific theme, or null. Koningsdag and pakjesavond override everything for their day; snow covers December for players on the default look. */
+export function seasonalTheme(chosen: ThemeName, d = new Date()): ThemeName | null {
+  const m = d.getMonth() + 1
+  const day = d.getDate()
+  if (m === 4 && day === 27) return 'kingsday'
+  if (m === 12 && day === 5) return 'sinterklaas'
+  if (m === 12 && chosen === 'signage') return 'snow'
+  return null
+}
 
 export const ThemeCtx = createContext<ThemeName>('signage')

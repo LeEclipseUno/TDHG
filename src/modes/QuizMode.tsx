@@ -107,7 +107,7 @@ export function QuizMode({ data, session, onFinish, onQuit }: ModeProps) {
   return (
     <div className="game">
       <HUD index={i} total={blitz ? Math.max(10, results.length + 1) : questions.length} grades={results.map((r) => r.grade)} score={score} remainingMs={remaining} limitMs={limitMs} elapsedMs={limitMs ? undefined : now - session.startedAt} onQuit={onQuit} prompt={<span className="prompt-text">{t('quizPrompt')}</span>} />
-      <MapView ref={mapRef} data={data} tier={session.tier} highlights={highlights} shields={shields} lockZoom={session.variant === 'nozoom'} hideRoads={session.variant === 'blind'} />
+      <MapView ref={mapRef} data={data} tier={session.tier} mirror={session.variant === 'mirror'} highlights={highlights} shields={shields} lockZoom={session.variant === 'nozoom'} hideRoads={session.variant === 'blind'} />
       <div className="options">
         {q.options.map((o) => {
           let cls = 'option'

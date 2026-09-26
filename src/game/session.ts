@@ -4,12 +4,12 @@ import { THEME_NAMES, type ThemeName } from '../map/theme'
 import { translate, type Lang } from '../i18n'
 import type { Deck } from './learn'
 
-export type ModeId = 'drag' | 'find' | 'junction' | 'quiz' | 'exit' | 'route' | 'distance'
-export const MODES: ModeId[] = ['drag', 'find', 'junction', 'quiz', 'exit', 'distance', 'route']
-export type Variant = 'normal' | 'nozoom' | 'blind' | 'blitz'
-export const VARIANTS: Variant[] = ['normal', 'nozoom', 'blind', 'blitz']
+export type ModeId = 'drag' | 'find' | 'junction' | 'quiz' | 'exit' | 'route' | 'distance' | 'sign'
+export const MODES: ModeId[] = ['drag', 'find', 'junction', 'quiz', 'exit', 'sign', 'distance', 'route']
+export type Variant = 'normal' | 'nozoom' | 'blind' | 'mirror' | 'blitz'
+export const VARIANTS: Variant[] = ['normal', 'nozoom', 'blind', 'mirror', 'blitz']
 /** Score multiplier for the harder variants. */
-export const VARIANT_MULT: Record<Variant, number> = { normal: 1, nozoom: 1.25, blind: 1.5, blitz: 1 }
+export const VARIANT_MULT: Record<Variant, number> = { normal: 1, nozoom: 1.25, blind: 1.5, mirror: 1.25, blitz: 1 }
 export const BLITZ_MS = 60_000
 export const BLITZ_BONUS_MS = 4_000
 
@@ -59,7 +59,7 @@ export interface Session {
 
 export const QUESTION_COUNT = 10
 /** Seconds. drag is a total budget, the others are per question. */
-export const TIME_LIMITS: Record<ModeId, number> = { find: 20, quiz: 15, junction: 30, drag: 180, exit: 25, route: 0, distance: 25 }
+export const TIME_LIMITS: Record<ModeId, number> = { find: 20, quiz: 15, junction: 30, drag: 180, exit: 25, route: 0, distance: 25, sign: 20 }
 export const HINT_COST = 30
 
 export function mulberry32(seed: number): () => number {

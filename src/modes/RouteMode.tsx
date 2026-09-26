@@ -224,7 +224,7 @@ export function RouteMode({ data, session, onFinish, onQuit }: ModeProps) {
           </button>
         </div>
       )}
-      <MapView ref={mapRef} data={data} tier={session.tier} highlights={highlights} markers={markers} paths={paths} onTap={phase === 'start' || phase === 'end' ? onTap : undefined} intro>
+      <MapView ref={mapRef} data={data} tier={session.tier} mirror={session.variant === 'mirror'} highlights={highlights} markers={markers} paths={paths} onTap={phase === 'start' || phase === 'end' ? onTap : undefined} intro>
         {!graph && <div className="toast">{t('buildingGraph')}</div>}
         {error && (
           <div role="status" className="feedback feedback-bad">

@@ -139,6 +139,7 @@ export function ExitMode({ data, session, onFinish, onQuit }: ModeProps) {
         ref={mapRef}
         data={data}
         tier={session.tier}
+        mirror={session.variant === 'mirror'}
         highlights={highlights}
         markers={markers}
         lines={lines}

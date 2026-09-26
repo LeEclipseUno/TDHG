@@ -21,7 +21,8 @@ import { LearnMode } from './modes/LearnMode'
 import { ExitMode } from './modes/ExitMode'
 import { RouteMode } from './modes/RouteMode'
 import { DistanceMode } from './modes/DistanceMode'
-import { ThemeCtx } from './map/theme'
+import { SignMode } from './modes/SignMode'
+import { seasonalTheme, ThemeCtx } from './map/theme'
 import { recordSession } from './game/history'
 import { setSoundEnabled } from './game/sound'
 import { getAccount, ONLINE, signInWithGoogle, signOut, type Account } from './game/backend'
@@ -33,7 +34,7 @@ interface BeforeInstallPromptEvent extends Event {
 
 type Screen = { kind: 'home' } | { kind: 'learn' } | { kind: 'stats' } | { kind: 'about' } | { kind: 'plus' } | { kind: 'archive' } | { kind: 'groups'; joinCode?: string } | { kind: 'game'; session: Session } | { kind: 'results'; session: Session; newBest: boolean; streak: number; badges: BadgeId[] }
 
-const MODE_COMPONENTS = { drag: DragMode, find: FindMode, junction: JunctionMode, quiz: QuizMode, exit: ExitMode, route: RouteMode, distance: DistanceMode } as const
+const MODE_COMPONENTS = { drag: DragMode, find: FindMode, junction: JunctionMode, quiz: QuizMode, exit: ExitMode, route: RouteMode, distance: DistanceMode, sign: SignMode } as const
 
 /** Deep links: #daily, #find, #quiz, #junction, #drag, #exit, #route, #learn, #stats, #about, #groups, #join-CODE */
 function readHash(): string {
@@ -205,7 +206,7 @@ function Shell() {
   }, [data])
 
   const wrap = (key: string, node: ReactNode) => (
-    <ThemeCtx.Provider value={plus ? settings.theme : 'signage'} key={key}>
+    <ThemeCtx.Provider value={seasonalTheme(plus ? settings.theme : 'signage') ?? (plus ? settings.theme : 'signage')} key={key}>
     <div className="screen">
       {!online && (
         <div role="status" className="offline-bar">

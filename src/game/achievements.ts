@@ -3,10 +3,14 @@ import type { GameData } from '../data'
 import { allDailyResults, getStreak } from './daily'
 import { loadHistory, loadLabelStats } from './history'
 import { MODES } from './session'
+import { season, type Season } from './season'
+import { dailyDate, dailyNumber } from './daily'
 
-export type BadgeId = 'firstRide' | 'perfectDaily' | 'streak7' | 'streak30' | 'streak100' | 'dailies10' | 'dailies100' | 'allA' | 'allN' | 'junctions50' | 'allModes' | 'nightRider' | 'thousand'
+export type BadgeId = 'firstRide' | 'perfectDaily' | 'streak7' | 'streak30' | 'streak100' | 'dailies10' | 'dailies100' | 'allA' | 'allN' | 'junctions50' | 'allModes' | 'nightRider' | 'thousand' | 'season_kingsday' | 'season_sinterklaas' | 'season_christmas' | 'season_carnaval'
 
-export const BADGES: BadgeId[] = ['firstRide', 'perfectDaily', 'streak7', 'streak30', 'streak100', 'dailies10', 'dailies100', 'allA', 'allN', 'junctions50', 'allModes', 'nightRider', 'thousand']
+export const BADGES: BadgeId[] = ['firstRide', 'perfectDaily', 'streak7', 'streak30', 'streak100', 'dailies10', 'dailies100', 'allA', 'allN', 'junctions50', 'allModes', 'nightRider', 'thousand', 'season_kingsday', 'season_sinterklaas', 'season_christmas', 'season_carnaval']
+
+export const SEASON_BADGES: Record<Exclude<Season, null>, BadgeId> = { kingsday: 'season_kingsday', sinterklaas: 'season_sinterklaas', christmas: 'season_christmas', carnaval: 'season_carnaval' }
 
 const KEY = 'tdhg:v1:badges'
 
@@ -43,6 +47,27 @@ export function computeBadges(data: GameData): Set<BadgeId> {
   if (MODES.every((m) => played.has(m))) out.add('allModes')
   if (hist.some((g) => new Date(g.at).getHours() < 5)) out.add('nightRider')
   if (hist.some((g) => g.score >= 1000)) out.add('thousand')
+  // Season passes: every daily of a season window played, once the window is over.
+  const playedDays = new Set(Object.keys(allDailyResults()).map(Number))
+  const today = dailyNumber()
+  const windows = new Map<string, { s: Exclude<Season, null>; days: number[]; ended: boolean }>()
+  for (let n = 1; n <= today; n++) {
+    const d = dailyDate(n)
+    const s = season(d)
+    if (!s) continue
+    // Christmas runs into January: key it by the December year.
+    const y = s === 'christmas' && d.getMonth() === 0 ? d.getFullYear() - 1 : d.getFullYear()
+    const key = `${s}:${y}`
+    const w = windows.get(key) ?? { s, days: [], ended: false }
+    w.days.push(n)
+    windows.set(key, w)
+  }
+  for (const w of windows.values()) {
+    const last = w.days[w.days.length - 1]
+    const nextDay = dailyDate(last + 1)
+    w.ended = last < today || season(nextDay) !== w.s
+    if (w.ended && w.days.every((n) => playedDays.has(n))) out.add(SEASON_BADGES[w.s])
+  }
   return out
 }
 

@@ -161,7 +161,7 @@ export function DistanceMode({ data, session, onFinish, onQuit }: ModeProps) {
           </div>
         }
       />
-      <MapView ref={mapRef} data={data} tier={session.tier} markers={markers} paths={phase === 'reveal' && q ? [q.path] : []} labels={false} showJunctions lockZoom={session.variant === 'nozoom'} hideRoads={session.variant === 'blind'} intro>
+      <MapView ref={mapRef} data={data} tier={session.tier} mirror={session.variant === 'mirror'} markers={markers} paths={phase === 'reveal' && q ? [q.path] : []} labels={false} showJunctions lockZoom={session.variant === 'nozoom'} hideRoads={session.variant === 'blind'} intro>
         {!questions && <div className="toast">{t('buildingGraph')}</div>}
         {questions && phase === 'ask' && (
           <div className="distance-panel">

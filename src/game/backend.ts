@@ -123,6 +123,15 @@ export async function myGroups(): Promise<Group[]> {
 export async function groupBoard(code: string, daily: number): Promise<BoardRow[]> {
   return (await rpc<BoardRow[]>('group_board', { p_code: code, p_daily: daily })) ?? []
 }
+export interface RivalRow {
+  nickname: string
+  beat_me: number
+  i_beat: number
+}
+/** Head to head counts over the last 30 dailies, for the nemesis tag. */
+export async function groupRivals(code: string, daily: number): Promise<RivalRow[]> {
+  return (await rpc<RivalRow[]>('group_rivals', { p_code: code, p_daily: daily })) ?? []
+}
 export async function groupWeek(code: string, daily: number): Promise<WeekRow[]> {
   return (await rpc<WeekRow[]>('group_week', { p_code: code, p_daily: daily })) ?? []
 }

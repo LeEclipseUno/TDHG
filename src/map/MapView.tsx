@@ -82,6 +82,8 @@ export interface MapViewProps {
   lockZoom?: boolean
   /** Draw land only, no roads except highlighted ones (blind mode). */
   hideRoads?: boolean
+  /** Flip the map east-west (mirror variant). Every coordinate goes through the same flip, so taps still land. */
+  mirror?: boolean
   /** Extra polylines drawn in the accent colour, for example a computed route. */
   paths?: number[][]
   className?: string
@@ -282,7 +284,8 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
   const screenToWorld = useCallback((sx: number, sy: number) => {
     const { cx, cy, scale } = viewRef.current
     const { w, h } = sizeRef.current
-    return { x: cx + (sx - w / 2) / scale, y: cy + (sy - h / 2) / scale }
+    const sxe = propsRef.current.mirror ? w - sx : sx
+    return { x: cx + (sxe - w / 2) / scale, y: cy + (sy - h / 2) / scale }
   }, [])
 
   const draw = useCallback(() => {
@@ -318,7 +321,8 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
     const { cx, cy, scale } = viewRef.current
     const tx = w / 2 - cx * scale
     const ty = h / 2 - cy * scale
-    const X = (x: number) => x * scale + tx
+    const mirror = !!propsRef.current.mirror
+    const X = (x: number) => (mirror ? w - (x * scale + tx) : x * scale + tx)
     const Y = (y: number) => y * scale + ty
 
     ctx.fillStyle = C.bg
@@ -730,8 +734,9 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
     (sx: number, sy: number, factor: number, ms = 0) => {
       const { w, h } = sizeRef.current
       const wp = screenToWorld(sx, sy)
+      const sxe = propsRef.current.mirror ? w - sx : sx
       const scale = Math.min(MAX_SCALE, Math.max(minScaleRef.current, viewRef.current.scale * factor))
-      const target = { cx: wp.x - (sx - w / 2) / scale, cy: wp.y - (sy - h / 2) / scale, scale }
+      const target = { cx: wp.x - (sxe - w / 2) / scale, cy: wp.y - (sy - h / 2) / scale, scale }
       if (ms > 0) animate(target, ms)
       else setView(target)
     },
@@ -818,7 +823,7 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
   // Redraw when overlays or the theme change
   useEffect(() => {
     requestRedraw()
-  }, [theme, props.highlights, props.shields, props.markers, props.lines, props.pulses, props.paths, props.showJunctions, props.hideRoads, props.tier, requestRedraw])
+  }, [theme, props.mirror, props.highlights, props.shields, props.markers, props.lines, props.pulses, props.paths, props.showJunctions, props.hideRoads, props.tier, requestRedraw])
 
   useEffect(
     () => () => {
@@ -872,13 +877,14 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
       const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
       const pr = pinchRef.current
       const scale = Math.min(MAX_SCALE, Math.max(minScaleRef.current, (pr.view0.scale * d) / pr.d0))
-      setView({ cx: pr.wx - (mid.x - w / 2) / scale, cy: pr.wy - (mid.y - h / 2) / scale, scale })
+      const midx = propsRef.current.mirror ? w - mid.x : mid.x
+      setView({ cx: pr.wx - (midx - w / 2) / scale, cy: pr.wy - (mid.y - h / 2) / scale, scale })
     } else if (panRef.current && pointers.current.size === 1) {
       const dx = p.x - panRef.current.x
       const dy = p.y - panRef.current.y
       if (tapRef.current && Math.hypot(dx, dy) > 10) tapRef.current.moved = true
       const v = panRef.current.view
-      setView({ cx: v.cx - dx / v.scale, cy: v.cy - dy / v.scale, scale: v.scale })
+      setView({ cx: v.cx - (propsRef.current.mirror ? -dx : dx) / v.scale, cy: v.cy - dy / v.scale, scale: v.scale })
     }
   }
 

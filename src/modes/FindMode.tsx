@@ -129,7 +129,7 @@ export function FindMode({ data, session, onFinish, onQuit }: ModeProps) {
           </div>
         }
       />
-      <MapView ref={mapRef} data={data} tier={session.tier} highlights={allHighlights} shields={allShields} pulses={pulses} onTap={onTap} lockZoom={session.variant === 'nozoom'} hideRoads={session.variant === 'blind'} intro>
+      <MapView ref={mapRef} data={data} tier={session.tier} mirror={session.variant === 'mirror'} highlights={allHighlights} shields={allShields} pulses={pulses} onTap={onTap} lockZoom={session.variant === 'nozoom'} hideRoads={session.variant === 'blind'} intro>
         {feedback && <div role="status" className={'feedback ' + (feedback.ok ? 'feedback-ok' : 'feedback-bad')}>{feedback.text}</div>}
         {toast && <div role="status" className="toast">{toast}</div>}
       </MapView>
