@@ -220,3 +220,23 @@ export async function saveRemoteState(state: Record<string, string>): Promise<bo
   const { error } = await c.from('player_state').upsert({ player_id: u.user.id, state, updated_at: new Date().toISOString() })
   return !error
 }
+
+// ---------- referral and gift codes (edge functions) ----------
+
+/** The player's personal 50% code for friends. Needs Plus and a signed-in account. */
+export async function getReferralCode(): Promise<{ code?: string; error?: string }> {
+  const c = await sb()
+  if (!c) return { error: 'offline' }
+  const { data, error } = await c.functions.invoke<{ code?: string; error?: string }>('referral', { body: {} })
+  if (error) return { error: (data && data.error) || error.message }
+  return data ?? { error: 'empty' }
+}
+
+/** Turns a gift license key into a year of Plus on this account. */
+export async function redeemGift(key: string): Promise<{ until?: string; error?: string }> {
+  const c = await sb()
+  if (!c) return { error: 'offline' }
+  const { data, error } = await c.functions.invoke<{ until?: string; error?: string }>('redeem', { body: { key } })
+  if (error) return { error: (data && data.error) || error.message }
+  return data ?? { error: 'empty' }
+}

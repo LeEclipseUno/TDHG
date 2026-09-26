@@ -4,7 +4,8 @@ import { LangProvider, useLang } from './i18n'
 import { dailySeedOn, dateKey, loadSettings, MODES, newSession, parseChallenge, saveSettings, submitBest, summarize, type Challenge, type ModeId, type Session, type Settings } from './game/session'
 import { dailyDate, dailyMode, dailyNumber, getDailyResult, marksOf, saveDailyResult, updateBadge } from './game/daily'
 import { loadArchive, picksFor } from './game/archive'
-import { hasPlus, isPlusMode, rememberPlus } from './game/premium'
+import { hasPlus, isPlusMode, rememberPlus, rememberReferral } from './game/premium'
+import { updateBadges, type BadgeId } from './game/achievements'
 import { Plus } from './ui/Plus'
 import { Archive } from './ui/Archive'
 import { Home } from './ui/Home'
@@ -30,7 +31,7 @@ interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>
 }
 
-type Screen = { kind: 'home' } | { kind: 'learn' } | { kind: 'stats' } | { kind: 'about' } | { kind: 'plus' } | { kind: 'archive' } | { kind: 'groups'; joinCode?: string } | { kind: 'game'; session: Session } | { kind: 'results'; session: Session; newBest: boolean; streak: number }
+type Screen = { kind: 'home' } | { kind: 'learn' } | { kind: 'stats' } | { kind: 'about' } | { kind: 'plus' } | { kind: 'archive' } | { kind: 'groups'; joinCode?: string } | { kind: 'game'; session: Session } | { kind: 'results'; session: Session; newBest: boolean; streak: number; badges: BadgeId[] }
 
 const MODE_COMPONENTS = { drag: DragMode, find: FindMode, junction: JunctionMode, quiz: QuizMode, exit: ExitMode, route: RouteMode, distance: DistanceMode } as const
 
@@ -164,7 +165,7 @@ function Shell() {
   }
   const finish = (session: Session) => {
     if (session.practice) {
-      setScreen({ kind: 'results', session, newBest: false, streak: 0 })
+      setScreen({ kind: 'results', session, newBest: false, streak: 0, badges: [] })
       return
     }
     recordSession(session)
@@ -175,7 +176,8 @@ function Shell() {
       if (session.dailyNumber === dailyNumber()) streak = st.count
       updateBadge()
     }
-    setScreen({ kind: 'results', session, newBest: submitBest(session), streak })
+    const newBest = submitBest(session)
+    setScreen({ kind: 'results', session, newBest, streak, badges: data ? updateBadges(data) : [] })
     if (account.signedIn) pushSoon()
   }
 
@@ -187,6 +189,10 @@ function Shell() {
     else if (h === 'archive') go(plus ? 'archive' : 'plus')
     else if (h === 'learn') go(plus ? 'learn' : 'plus')
     else if (h.startsWith('join-')) setScreen({ kind: 'groups', joinCode: h.slice(5).toUpperCase() })
+    else if (h.startsWith('plus-')) {
+      rememberReferral(h.slice(5).toUpperCase())
+      go('plus')
+    }
     else if (h === '') setScreen({ kind: 'home' })
   }
   useEffect(() => {
@@ -233,12 +239,12 @@ function Shell() {
   if (screen.kind === 'learn') return wrap('learn', <LearnMode data={data} settings={settings} onExit={() => go('home')} />)
   if (screen.kind === 'stats') return wrap('stats', <Stats data={data} account={account} plus={plus} onSignOut={doSignOut} onPlus={() => go('plus')} onHome={() => go('home')} />)
   if (screen.kind === 'about') return wrap('about', <About data={data} onHome={() => go('home')} />)
-  if (screen.kind === 'plus') return wrap('plus', <Plus data={data} account={account} onSignIn={signIn} onRefresh={refreshAccount} onHome={() => go('home')} />)
+  if (screen.kind === 'plus') return wrap('plus', <Plus data={data} account={account} onSignIn={signIn} onRefresh={refreshAccount} onNotice={(m) => { setNotice(m); setTimeout(() => setNotice(null), 2500) }} onHome={() => go('home')} />)
   if (screen.kind === 'archive') return wrap('archive', <Archive data={data} onPlay={(n) => void playDaily(n)} onHome={() => go('home')} />)
   if (screen.kind === 'groups') return wrap('groups', <Groups data={data} onHome={() => go('home')} joinCode={screen.joinCode} />)
   if (screen.kind === 'results') {
     const again = () => (screen.session.dailyNumber ? void playDaily(screen.session.dailyNumber) : play(screen.session.mode))
-    return wrap('results', <Results data={data} session={screen.session} newBest={screen.newBest} streak={screen.streak} plus={plus} onAgain={again} onHome={() => go('home')} />)
+    return wrap('results', <Results data={data} session={screen.session} newBest={screen.newBest} streak={screen.streak} badges={screen.badges} plus={plus} onAgain={again} onHome={() => go('home')} />)
   }
   return wrap(
     'home',

@@ -15,6 +15,7 @@ import { createShare, ONLINE, submitDaily, type Percentile } from '../game/backe
 import { challengeParam } from '../game/session'
 import { dailyNumber } from '../game/daily'
 import { AdSlot } from './AdSlot'
+import type { BadgeId } from '../game/achievements'
 
 export interface ResultsProps {
   data: GameData
@@ -22,6 +23,7 @@ export interface ResultsProps {
   newBest: boolean
   streak: number
   plus: boolean
+  badges: BadgeId[]
   onAgain: () => void
   onHome: () => void
 }
@@ -31,7 +33,7 @@ const STEP_MS = 160
 const COUNT_MS = 1100
 const RANK_HAPTIC: Record<string, number[]> = { rank_4: [30, 60, 30, 60, 90], rank_3: [30, 60, 30], rank_2: [40], rank_1: [90] }
 
-export function Results({ data, session, newBest, streak, plus, onAgain, onHome }: ResultsProps) {
+export function Results({ data, session, newBest, streak, plus, badges, onAgain, onHome }: ResultsProps) {
   const { t, lang } = useLang()
   const sum = summarize(session)
   const [copied, setCopied] = useState(false)
@@ -166,6 +168,11 @@ export function Results({ data, session, newBest, streak, plus, onAgain, onHome 
               <span>{t(rank)}</span>
             </div>
             {newBest && <div className="newbest">{t('newBest')}</div>}
+            {badges.map((b) => (
+              <div key={b} className="newbest newbadge">
+                {t('newBadge')}: {t(`badge_${b}`)}
+              </div>
+            ))}
             {session.challenge !== undefined && (
               <div className="versus">
                 <span>

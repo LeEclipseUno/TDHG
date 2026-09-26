@@ -224,3 +224,15 @@ grant all on push_subs to service_role;
 --     headers := '{"Content-Type":"application/json","Authorization":"Bearer <anon key>","x-cron-secret":"<CRON_SECRET>"}'::jsonb,
 --     body := '{}'::jsonb)
 -- $$);
+
+-- ---------- referral codes (one personal Lemon Squeezy discount per Plus player, made by the referral function) ----------
+create table if not exists referrals (
+  player_id uuid primary key,
+  code text not null unique,
+  created_at timestamptz not null default now()
+);
+alter table referrals enable row level security;
+drop policy if exists "own referral" on referrals;
+create policy "own referral" on referrals for select to authenticated using (player_id = auth.uid());
+grant select on referrals to authenticated;
+grant all on referrals to service_role;

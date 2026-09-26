@@ -70,6 +70,12 @@ export function merge(local: State, remote: State): State {
       const m = { ...b }
       for (const [label, v] of Object.entries(a)) m[label] = m[label] ? { r: Math.max(m[label].r, v.r), w: Math.max(m[label].w, v.w) } : v
       out[k] = JSON.stringify(m)
+    } else if (k === PREFIX + 'badges') {
+      const a = json<Record<string, number>>(l, {})
+      const b = json<Record<string, number>>(r, {})
+      const m = { ...b }
+      for (const [id, at] of Object.entries(a)) m[id] = m[id] ? Math.min(m[id], at) : at
+      out[k] = JSON.stringify(m)
     } else if (k === PREFIX + 'fsrs') {
       const a = json<Record<string, { last: number }>>(l, {})
       const b = json<Record<string, { last: number }>>(r, {})

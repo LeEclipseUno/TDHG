@@ -18,3 +18,7 @@ Ideas and planned modes for The Dutch Highway Guesser. Items at the top are next
 - Streak tracking for the daily challenge.
 - Optional satellite or tile basemap toggle as an easier assist mode.
 - Sound effects and haptics on correct or wrong answers.
+
+## Parked on purpose (2026-09-26)
+- "N speelden vandaag" counter on the daily board: only once the daily has enough players that the number inspires confidence. The data is already there in daily_scores.
+- Knooppunt silhouette mode, hectometre mode, province mode, provincial N-road tier, head to head, weekly challenge, group reactions, weekly winner card, English landing pages, Belgium pack.
