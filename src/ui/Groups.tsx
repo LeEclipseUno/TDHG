@@ -5,8 +5,10 @@ import { IconMenu, IconReplay, IconShare } from './icons'
 import { createGroup, getNickname, groupBoard, groupWeek, joinGroup, leaveGroup, myGroups, ONLINE, setNickname, validNickname, type BoardRow, type Group, type WeekRow } from '../game/backend'
 import { dailyNumber } from '../game/daily'
 import { formatTime } from '../game/session'
+import type { GameData } from '../data'
+import { Backdrop } from './Backdrop'
 
-export function Groups({ onHome, joinCode }: { onHome: () => void; joinCode?: string }) {
+export function Groups({ data, onHome, joinCode }: { data: GameData; onHome: () => void; joinCode?: string }) {
   const { t } = useLang()
   const [nick, setNick] = useState(getNickname())
   const [groups, setGroups] = useState<Group[] | null>(null)
@@ -102,6 +104,7 @@ export function Groups({ onHome, joinCode }: { onHome: () => void; joinCode?: st
 
   return (
     <div className="results">
+      <Backdrop data={data} />
       <div className="results-inner">
         <Board className="results-board">
           <div className="board-title">{t('groups')}</div>

@@ -1902,3 +1902,29 @@ body,
 .results {
   overflow-x: hidden;
 }
+
+.results {
+  position: relative;
+}
+.results-inner {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---------- locked section ---------- */
+.board-locked {
+  opacity: 0.55;
+  filter: saturate(0.6);
+}
+.board-locked .sign-row {
+  cursor: not-allowed;
+}
+.locked-tag {
+  float: right;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  background: var(--white);
+  color: var(--sign-blue);
+  border-radius: 3px;
+  padding: 1px 7px;
+}

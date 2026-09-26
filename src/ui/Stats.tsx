@@ -6,6 +6,7 @@ import { formatTime, MODES } from '../game/session'
 import { Board, Matrix } from './widgets'
 import { Shield } from './Shield'
 import { IconMenu } from './icons'
+import { Backdrop } from './Backdrop'
 
 export function Stats({ data, onHome }: { data: GameData; onHome: () => void }) {
   const { t } = useLang()
@@ -27,6 +28,7 @@ export function Stats({ data, onHome }: { data: GameData; onHome: () => void }) 
 
   return (
     <div className="results">
+      <Backdrop data={data} />
       <div className="results-inner">
         <Board className="results-board">
           <div className="board-title">{t('stats')}</div>

@@ -1,12 +1,11 @@
-import { useMemo } from 'react'
 import type { GameData, Tier } from '../data'
-import { buildDeck, deckStats, loadStates, type Deck } from '../game/learn'
+import type { Deck } from '../game/learn'
 import { useLang, type Lang } from '../i18n'
 import { MODES, VARIANTS, getBest, type Challenge, type ModeId, type Settings, type Variant } from '../game/session'
 import { dailyMode, dailyNumber, getDailyResult, getStreak, msUntilNextDaily } from '../game/daily'
 import { season, SEASON_TEXT } from '../game/season'
 import { Board, Matrix } from './widgets'
-import { IconSignArrow, PictDrag, PictExit, PictFind, PictGroup, PictJunction, PictLearn, PictQuiz, PictRoute, PictStats, SeasonIcon } from './icons'
+import { IconLock, IconSignArrow, PictDrag, PictExit, PictFind, PictGroup, PictJunction, PictLearn, PictQuiz, PictRoute, PictStats, SeasonIcon } from './icons'
 import { ONLINE } from '../game/backend'
 import MapView from '../map/MapView'
 import { useNow } from '../game/hooks'
@@ -17,7 +16,8 @@ export interface HomeProps {
   onSettings: (s: Settings) => void
   onPlay: (mode: ModeId) => void
   onDaily: () => void
-  onLearn: () => void
+  /** Learn is locked for now; kept for when it opens. */
+  onLearn?: () => void
   onStats: () => void
   onAbout: () => void
   onGroups: () => void
@@ -90,10 +90,9 @@ export function StreakPosts({ count }: { count: number }) {
 const isIosSafari = /iphone|ipad|ipod/i.test(navigator.userAgent) && !('standalone' in navigator && (navigator as { standalone?: boolean }).standalone)
 const isStandalone = window.matchMedia('(display-mode: standalone)').matches
 
-export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onStats, onAbout, onGroups, challenge, onChallenge, onInstall }: HomeProps) {
+export function Home({ data, settings, onSettings, onPlay, onDaily, onStats, onAbout, onGroups, challenge, onChallenge, onInstall }: HomeProps) {
   const { t, lang, setLang } = useLang()
   const tiers: Tier[] = ['A', 'AN', 'ALL']
-  const learnStats = useMemo(() => deckStats(buildDeck(data, settings.tier, settings.learnDeck), loadStates()), [data, settings.tier, settings.learnDeck])
   const n = dailyNumber()
   const daily = getDailyResult(n)
   const streak = getStreak()
@@ -227,20 +226,19 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
           </Board>
         )}
 
-        <Board className="learn-board">
-          <div className="board-title">{t('learn')}</div>
-          <button type="button" className="sign-row" onClick={onLearn}>
+        <Board className="learn-board board-locked">
+          <div className="board-title">
+            {t('learn')} <span className="locked-tag">{t('comingSoon')}</span>
+          </div>
+          <button type="button" className="sign-row" disabled aria-disabled="true">
             <span className="sign-pict">
               <PictLearn />
             </span>
             <span className="sign-text">
               <span className="sign-name">{t('learnTitle')}</span>
               <span className="sign-desc">{t('learn_desc')}</span>
-              <span className="sign-best">
-                {learnStats.due} {t('due')} {'·'} {learnStats.total - learnStats.seen} {t('newCards')} {'·'} {learnStats.mature} {t('learned')}
-              </span>
             </span>
-            <IconSignArrow className="sign-arrow" />
+            <IconLock className="sign-arrow" />
           </button>
         </Board>
 

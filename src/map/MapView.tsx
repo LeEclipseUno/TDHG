@@ -70,6 +70,8 @@ export interface MapViewProps {
   intro?: boolean
   /** Slowly wander over the country (home screen backdrop). */
   drift?: boolean
+  /** Start centred on this point, zoomed in by this factor relative to the country fit. */
+  focus?: { x: number; y: number; zoom: number }
   /** false: no gestures, buttons or scale bar (results mini map). */
   interactive?: boolean
   palette?: 'dark' | 'light'
@@ -750,7 +752,10 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
         initRef.current = true
         const fit = fitView()
         viewRef.current = fit
-        if (pendingRef.current) {
+        const focus = propsRef.current.focus
+        if (focus) {
+          viewRef.current = clampView({ cx: focus.x, cy: focus.y, scale: fit.scale * focus.zoom })
+        } else if (pendingRef.current) {
           const target = pendingRef.current
           pendingRef.current = null
           viewRef.current = { ...fit, scale: fit.scale * 1.4 }

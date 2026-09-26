@@ -125,6 +125,13 @@ export const SeasonIcon = ({ season }: { season: 'kingsday' | 'sinterklaas' | 'c
   )
 }
 
+export const IconLock = (p: P) => (
+  <svg {...line} {...p}>
+    <rect x="5" y="10.5" width="14" height="10" rx="2" />
+    <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
+  </svg>
+)
+
 /** The filled arrow used on Dutch direction signs. */
 export const IconSignArrow = (p: P) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden {...p}>
