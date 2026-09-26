@@ -1,9 +1,12 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { loadData, type GameData } from './data'
 import { LangProvider, useLang } from './i18n'
-import { loadSettings, newSession, parseChallenge, saveSettings, submitBest, type Challenge, type ModeId, type Session, type Settings } from './game/session'
+import { loadSettings, MODES, newSession, parseChallenge, saveSettings, submitBest, summarize, type Challenge, type ModeId, type Session, type Settings } from './game/session'
+import { dailyMode, dailyNumber, marksOf, saveDailyResult, updateBadge } from './game/daily'
 import { Home } from './ui/Home'
 import { Results } from './ui/Results'
+import { Stats } from './ui/Stats'
+import { About } from './ui/About'
 import { DragMode } from './modes/DragMode'
 import { FindMode } from './modes/FindMode'
 import { JunctionMode } from './modes/JunctionMode'
@@ -11,7 +14,6 @@ import { QuizMode } from './modes/QuizMode'
 import { LearnMode } from './modes/LearnMode'
 import { ExitMode } from './modes/ExitMode'
 import { RouteMode } from './modes/RouteMode'
-import { Stats } from './ui/Stats'
 import { recordSession } from './game/history'
 import { setSoundEnabled } from './game/sound'
 
@@ -19,9 +21,18 @@ interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>
 }
 
-type Screen = { kind: 'home' } | { kind: 'learn' } | { kind: 'stats' } | { kind: 'game'; session: Session } | { kind: 'results'; session: Session; newBest: boolean }
+type Screen = { kind: 'home' } | { kind: 'learn' } | { kind: 'stats' } | { kind: 'about' } | { kind: 'game'; session: Session } | { kind: 'results'; session: Session; newBest: boolean; streak: number }
 
 const MODE_COMPONENTS = { drag: DragMode, find: FindMode, junction: JunctionMode, quiz: QuizMode, exit: ExitMode, route: RouteMode } as const
+
+/** Deep links: #daily, #find, #quiz, #junction, #drag, #exit, #route, #learn, #stats, #about */
+function readHash(): string {
+  return location.hash.replace('#', '').toLowerCase()
+}
+function setHash(h: string) {
+  const url = location.pathname + location.search + (h ? '#' + h : '')
+  if (location.hash !== (h ? '#' + h : '')) history.replaceState(null, '', url)
+}
 
 function Shell() {
   const { t } = useLang()
@@ -32,9 +43,14 @@ function Shell() {
   const [installEvt, setInstallEvt] = useState<BeforeInstallPromptEvent | null>(null)
   const [challenge, setChallenge] = useState<Challenge | null>(() => {
     const c = parseChallenge(location.search)
-    if (c) history.replaceState(null, '', location.pathname)
+    if (c) history.replaceState(null, '', location.pathname + location.hash)
     return c
   })
+
+  useEffect(() => {
+    loadData().then(setData).catch((e: unknown) => setError(String(e)))
+    updateBadge()
+  }, [])
 
   useEffect(() => {
     const onPrompt = (e: Event) => {
@@ -44,10 +60,6 @@ function Shell() {
     window.addEventListener('beforeinstallprompt', onPrompt)
     window.addEventListener('appinstalled', () => setInstallEvt(null))
     return () => window.removeEventListener('beforeinstallprompt', onPrompt)
-  }, [])
-
-  useEffect(() => {
-    loadData().then(setData).catch((e: unknown) => setError(String(e)))
   }, [])
 
   const setSettings = (s: Settings) => {
@@ -61,18 +73,47 @@ function Shell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const play = (mode: ModeId) => setScreen({ kind: 'game', session: newSession(mode, settings) })
+  const play = (mode: ModeId) => {
+    setHash(mode)
+    setScreen({ kind: 'game', session: newSession(mode, settings) })
+  }
+  const playDaily = () => {
+    const n = dailyNumber()
+    setHash('daily')
+    setScreen({ kind: 'game', session: newSession(dailyMode(n), settings, undefined, n) })
+  }
   const playChallenge = () => {
     if (!challenge) return
+    setHash('')
     setScreen({ kind: 'game', session: newSession(challenge.mode, settings, challenge) })
     setChallenge(null)
   }
+  const go = (kind: 'home' | 'learn' | 'stats' | 'about') => {
+    setHash(kind === 'home' ? '' : kind)
+    setScreen({ kind })
+  }
   const finish = (session: Session) => {
     recordSession(session)
-    setScreen({ kind: 'results', session, newBest: submitBest(session) })
+    let streak = 0
+    if (session.dailyNumber) {
+      const sum = summarize(session)
+      streak = saveDailyResult(session.dailyNumber, { score: sum.score, good: sum.good, total: sum.total, ms: sum.ms, marks: marksOf(session) }).count
+      updateBadge()
+    }
+    setScreen({ kind: 'results', session, newBest: submitBest(session), streak })
   }
 
-  // Each screen slides in like a sign coming up along the road.
+  // Deep link on first load, once the data is there.
+  useEffect(() => {
+    if (!data) return
+    const h = readHash()
+    if (!h) return
+    if (h === 'daily') playDaily()
+    else if (MODES.includes(h as ModeId)) play(h as ModeId)
+    else if (h === 'learn' || h === 'stats' || h === 'about') go(h)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data])
+
   const wrap = (key: string, node: ReactNode) => (
     <div className="screen" key={key}>
       {node}
@@ -91,15 +132,14 @@ function Shell() {
 
   if (screen.kind === 'game') {
     const Mode = MODE_COMPONENTS[screen.session.mode]
-    return wrap(
-      'game' + screen.session.seed,
-      <Mode data={data} session={screen.session} onQuit={() => setScreen({ kind: 'home' })} onFinish={finish} />,
-    )
+    return wrap('game' + screen.session.seed, <Mode data={data} session={screen.session} onQuit={() => go('home')} onFinish={finish} />)
   }
-  if (screen.kind === 'learn') return wrap('learn', <LearnMode data={data} settings={settings} onExit={() => setScreen({ kind: 'home' })} />)
-  if (screen.kind === 'stats') return wrap('stats', <Stats data={data} onHome={() => setScreen({ kind: 'home' })} />)
+  if (screen.kind === 'learn') return wrap('learn', <LearnMode data={data} settings={settings} onExit={() => go('home')} />)
+  if (screen.kind === 'stats') return wrap('stats', <Stats data={data} onHome={() => go('home')} />)
+  if (screen.kind === 'about') return wrap('about', <About onHome={() => go('home')} />)
   if (screen.kind === 'results') {
-    return wrap('results', <Results data={data} session={screen.session} newBest={screen.newBest} onAgain={() => play(screen.session.mode)} onHome={() => setScreen({ kind: 'home' })} />)
+    const again = () => (screen.session.dailyNumber ? playDaily() : play(screen.session.mode))
+    return wrap('results', <Results data={data} session={screen.session} newBest={screen.newBest} streak={screen.streak} onAgain={again} onHome={() => go('home')} />)
   }
   return wrap(
     'home',
@@ -108,8 +148,10 @@ function Shell() {
       settings={settings}
       onSettings={setSettings}
       onPlay={play}
-      onLearn={() => setScreen({ kind: 'learn' })}
-      onStats={() => setScreen({ kind: 'stats' })}
+      onDaily={playDaily}
+      onLearn={() => go('learn')}
+      onStats={() => go('stats')}
+      onAbout={() => go('about')}
       challenge={challenge}
       onChallenge={playChallenge}
       onInstall={installEvt ? () => installEvt.prompt().then(() => setInstallEvt(null)) : undefined}

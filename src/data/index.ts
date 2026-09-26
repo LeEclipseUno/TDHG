@@ -28,6 +28,13 @@ export interface Link {
   l: number[]
 }
 
+/** Bridge (b) or tunnel (t) segment of a main road. */
+export interface Structure {
+  t: 'b' | 't'
+  b: [number, number, number, number]
+  l: number[]
+}
+
 export interface LandPoly {
   name: string
   rings: number[][]
@@ -145,6 +152,7 @@ export class SpatialIndex {
 export interface GameData {
   roads: Road[]
   links: Link[]
+  structures: Structure[]
   land: LandPoly[]
   abroad: LandPoly[]
   exits: Exit[]
@@ -153,6 +161,11 @@ export interface GameData {
   byRef: Map<string, Road>
   world: Bounds
   index: SpatialIndex
+  /** Resolves once the provincial roads, ramps and structures are in. */
+  ready: Promise<void>
+  loaded: boolean
+  /** Fires when the background data has been merged in, so maps can repaint. */
+  listeners: Set<() => void>
 }
 
 /** Polylines are stored delta encoded: [x0, y0, dx1, dy1, ...]. */
@@ -174,9 +187,9 @@ export async function loadData(): Promise<GameData> {
     if (!res.ok) throw new Error(`Failed to load ${name}: ${res.status}`)
     return (await res.json()) as T
   }
-  const [roads, links, land, abroad, junctions, exits, places] = await Promise.all([
-    get<Road[]>('roads.json'),
-    get<Link[]>('links.json'),
+  // The core set paints the map; provincial roads, ramps and bridges follow right after.
+  const [roads, land, abroad, junctions, exits, places] = await Promise.all([
+    get<Road[]>('roads-core.json'),
     get<LandPoly[]>('land.json'),
     get<LandPoly[]>('abroad.json'),
     get<Junction[]>('junctions.json'),
@@ -184,7 +197,8 @@ export async function loadData(): Promise<GameData> {
     get<Place[]>('places.json'),
   ])
   for (const r of roads) r.lines = r.lines.map(decode)
-  for (const lk of links) lk.l = decode(lk.l)
+  const links: Link[] = []
+  const structures: Structure[] = []
   const world: Bounds = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity }
   for (const poly of land) {
     for (const ring of poly.rings) {
@@ -204,7 +218,37 @@ export async function loadData(): Promise<GameData> {
     seen.add(p.n)
     return true
   })
-  return { roads, links, land, abroad, exits, places: mainland, junctions, byRef: new Map(roads.map((r) => [r.ref, r])), world, index: new SpatialIndex(roads) }
+  const data: GameData = {
+    roads,
+    links,
+    structures,
+    land,
+    abroad,
+    exits,
+    places: mainland,
+    junctions,
+    byRef: new Map(roads.map((r) => [r.ref, r])),
+    world,
+    index: new SpatialIndex(roads),
+    loaded: false,
+    listeners: new Set(),
+    ready: Promise.resolve(),
+  }
+  data.ready = Promise.all([get<Road[]>('roads-extra.json'), get<Link[]>('links.json'), get<Structure[]>('structures.json')]).then(([extra, lk, st]) => {
+    for (const r of extra) {
+      r.lines = r.lines.map(decode)
+      data.roads.push(r)
+      data.byRef.set(r.ref, r)
+    }
+    for (const l of lk) l.l = decode(l.l)
+    for (const s of st) s.l = decode(s.l)
+    data.links.push(...lk)
+    data.structures.push(...st)
+    data.index = new SpatialIndex(data.roads)
+    data.loaded = true
+    for (const fn of data.listeners) fn()
+  })
+  return data
 }
 
 export function roadsForTier(data: GameData, tier: Tier): Road[] {

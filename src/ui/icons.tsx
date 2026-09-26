@@ -85,6 +85,46 @@ export const IconFlag = (p: P) => (
     <path d="M5 21V4h11l-2 4 2 4H5" />
   </svg>
 )
+export const IconImage = (p: P) => (
+  <svg {...line} {...p}>
+    <rect x="3.5" y="5" width="17" height="14" rx="2" />
+    <path d="M7 15l3.5-4 3 3 2-2 2.5 3" />
+    <circle cx="9" cy="9" r="1.2" fill="currentColor" stroke="none" />
+  </svg>
+)
+/** Seasonal marks: crown, mitre, snowflake, confetti. */
+export const SeasonIcon = ({ season }: { season: 'kingsday' | 'sinterklaas' | 'christmas' | 'carnaval' }) => {
+  const base = { width: 22, height: 22, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true } as const
+  if (season === 'kingsday')
+    return (
+      <svg {...base}>
+        <path d="M4 18h16l1-10-5 4-4-6-4 6-5-4z" fill="#ef712f" stroke="#ef712f" />
+      </svg>
+    )
+  if (season === 'sinterklaas')
+    return (
+      <svg {...base}>
+        <path d="M7 20V9l5-6 5 6v11z" fill="#c90002" stroke="#c90002" />
+        <path d="M12 8v9" stroke="#fff" />
+      </svg>
+    )
+  if (season === 'christmas')
+    return (
+      <svg {...base}>
+        <path d="M12 3v18M4 7.5l16 9M4 16.5l16-9M12 3l-2 2M12 3l2 2M12 21l-2-2M12 21l2-2" />
+      </svg>
+    )
+  return (
+    <svg {...base}>
+      <circle cx="6" cy="7" r="2" fill="#ef712f" stroke="none" />
+      <circle cx="17" cy="5" r="2" fill="#ffd23f" stroke="none" />
+      <circle cx="19" cy="15" r="2" fill="#34d17c" stroke="none" />
+      <circle cx="9" cy="17" r="2" fill="#c90002" stroke="none" />
+      <path d="M12 11l1 2" />
+    </svg>
+  )
+}
+
 /** The filled arrow used on Dutch direction signs. */
 export const IconSignArrow = (p: P) => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden {...p}>

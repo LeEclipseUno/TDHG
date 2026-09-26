@@ -91,7 +91,7 @@ export function DragMode({ data, session, onFinish, onQuit }: ModeProps) {
     if (hit.road.ref === ref) {
       const at = Date.now()
       setPlaced((p) => ({ ...p, [ref]: { x: hit.px, y: hit.py, at } }))
-      setPulses((p) => [...p.slice(-4), { x: hit.px, y: hit.py, t0: at }])
+      setPulses((p) => [...p.slice(-6), { x: hit.px, y: hit.py, t0: at }, { x: hit.px, y: hit.py, t0: at, kind: 'puff' }])
       sfx.place()
       haptic([15, 30, 25])
     } else {

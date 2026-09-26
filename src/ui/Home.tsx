@@ -3,17 +3,22 @@ import type { GameData, Tier } from '../data'
 import { buildDeck, deckStats, loadStates, type Deck } from '../game/learn'
 import { useLang, type Lang } from '../i18n'
 import { MODES, VARIANTS, getBest, type Challenge, type ModeId, type Settings, type Variant } from '../game/session'
-import { Board } from './widgets'
-import { IconSignArrow, PictDrag, PictExit, PictFind, PictJunction, PictLearn, PictQuiz, PictRoute, PictStats } from './icons'
+import { dailyMode, dailyNumber, getDailyResult, getStreak, msUntilNextDaily } from '../game/daily'
+import { season, SEASON_TEXT } from '../game/season'
+import { Board, Matrix } from './widgets'
+import { IconSignArrow, PictDrag, PictExit, PictFind, PictJunction, PictLearn, PictQuiz, PictRoute, PictStats, SeasonIcon } from './icons'
 import MapView from '../map/MapView'
+import { useNow } from '../game/hooks'
 
 export interface HomeProps {
   data: GameData
   settings: Settings
   onSettings: (s: Settings) => void
   onPlay: (mode: ModeId) => void
+  onDaily: () => void
   onLearn: () => void
   onStats: () => void
+  onAbout: () => void
   challenge: Challenge | null
   onChallenge: () => void
   onInstall?: () => void
@@ -33,15 +38,38 @@ function Seg<T extends string>({ value, options, onChange, label, wide = false }
   )
 }
 
+/** The play streak as a row of hectometre posts. */
+export function StreakPosts({ count }: { count: number }) {
+  const shown = Math.max(1, Math.min(count, 14))
+  return (
+    <span className="streak" title={String(count)}>
+      {Array.from({ length: shown }, (_, i) => (
+        <span key={i} className={'streak-post' + (i < count ? ' streak-post-on' : '')} />
+      ))}
+      <span className="streak-count">{count}</span>
+    </span>
+  )
+}
+
 const isIosSafari = /iphone|ipad|ipod/i.test(navigator.userAgent) && !('standalone' in navigator && (navigator as { standalone?: boolean }).standalone)
 const isStandalone = window.matchMedia('(display-mode: standalone)').matches
 
-export function Home({ data, settings, onSettings, onPlay, onLearn, onStats, challenge, onChallenge, onInstall }: HomeProps) {
+export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onStats, onAbout, challenge, onChallenge, onInstall }: HomeProps) {
   const { t, lang, setLang } = useLang()
   const tiers: Tier[] = ['A', 'AN', 'ALL']
   const learnStats = useMemo(() => deckStats(buildDeck(data, settings.tier, settings.learnDeck), loadStates()), [data, settings.tier, settings.learnDeck])
+  const n = dailyNumber()
+  const daily = getDailyResult(n)
+  const streak = getStreak()
+  const now = useNow(!!daily, 1000)
+  const left = msUntilNextDaily(new Date(now))
+  const hh = Math.floor(left / 3_600_000)
+  const mm = Math.floor((left % 3_600_000) / 60_000)
+  const s = season()
+  const DailyPict = PICTS[dailyMode(n)]
+
   return (
-    <div className="home">
+    <div className={'home' + (s ? ` season-${s}` : '')}>
       <div className="home-backdrop" aria-hidden>
         <MapView data={data} tier="A" interactive={false} drift />
       </div>
@@ -53,8 +81,54 @@ export function Home({ data, settings, onSettings, onPlay, onLearn, onStats, cha
           <div className="home-logo-wrap">
             <img src={`${import.meta.env.BASE_URL}logo.png`} alt="The Dutch Highway Guesser" className="home-logo" />
           </div>
-          <p className="home-tagline">{t('tagline')}</p>
+          {s ? (
+            <p className="season-strip">
+              <SeasonIcon season={s} /> {SEASON_TEXT[s][lang]}
+            </p>
+          ) : (
+            <p className="home-tagline">{t('tagline')}</p>
+          )}
         </header>
+
+        <Board className="daily-board">
+          <div className="board-title daily-title">
+            <span>Wegenkenner #{n}</span>
+            <span className="daily-mode">{t(`mode_${dailyMode(n)}`)}</span>
+          </div>
+          <div className="daily-body">
+            <span className="sign-pict">
+              <DailyPict />
+            </span>
+            <div className="daily-text">
+              {daily ? (
+                <>
+                  <span className="daily-line">{t('dailyDone', { score: daily.score, good: daily.good, total: daily.total })}</span>
+                  <span className="daily-sub">{t('nextDaily', { t: `${hh}:${String(mm).padStart(2, '0')}` })}</span>
+                </>
+              ) : (
+                <>
+                  <span className="daily-line">{t('dailyPitch')}</span>
+                  <span className="daily-sub">{t('dailyHint')}</span>
+                </>
+              )}
+              <span className="daily-streak">
+                {t('streak')} <StreakPosts count={streak.count} />
+                {streak.best > 1 && (
+                  <small>
+                    {t('best')} {streak.best}
+                  </small>
+                )}
+              </span>
+            </div>
+            {daily ? <Matrix value={daily.score} label={t('score')} /> : null}
+          </div>
+          <button type="button" className="sign-row daily-play" onClick={onDaily}>
+            <span className="sign-text">
+              <span className="sign-name">{daily ? t('playAgain') : t('playDaily')}</span>
+            </span>
+            <IconSignArrow className="sign-arrow" />
+          </button>
+        </Board>
 
         {challenge && (
           <Board tone="orange" className="challenge-board">
@@ -65,8 +139,8 @@ export function Home({ data, settings, onSettings, onPlay, onLearn, onStats, cha
               </span>
               <span className="sign-text">
                 <span className="sign-name">
-                  {t(`mode_${challenge.mode}`)} {'\u00b7'} {t(`tier_${challenge.tier}_short`)}
-                  {challenge.variant !== 'normal' && ` \u00b7 ${t(`variant_${challenge.variant}`)}`}
+                  {t(`mode_${challenge.mode}`)} {'·'} {t(`tier_${challenge.tier}_short`)}
+                  {challenge.variant !== 'normal' && ` · ${t(`variant_${challenge.variant}`)}`}
                 </span>
                 <span className="sign-desc">{t('challengeText')}</span>
                 <span className="sign-best">
@@ -113,7 +187,7 @@ export function Home({ data, settings, onSettings, onPlay, onLearn, onStats, cha
               <span className="sign-name">{t('learnTitle')}</span>
               <span className="sign-desc">{t('learn_desc')}</span>
               <span className="sign-best">
-                {learnStats.due} {t('due')} {'\u00b7'} {learnStats.total - learnStats.seen} {t('newCards')} {'\u00b7'} {learnStats.mature} {t('learned')}
+                {learnStats.due} {t('due')} {'·'} {learnStats.total - learnStats.seen} {t('newCards')} {'·'} {learnStats.mature} {t('learned')}
               </span>
             </span>
             <IconSignArrow className="sign-arrow" />
@@ -135,12 +209,7 @@ export function Home({ data, settings, onSettings, onPlay, onLearn, onStats, cha
               <span className="setting-label">{t('sound')}</span>
               <Seg<'on' | 'off'> label={t('sound')} value={settings.sound ? 'on' : 'off'} onChange={(v) => onSettings({ ...settings, sound: v === 'on' })} options={[{ v: 'on', label: t('timerOn') }, { v: 'off', label: t('timerOff') }]} />
             </div>
-            <div className="setting">
-              <span className="setting-label">{t('daily')}</span>
-              <Seg<'on' | 'off'> label={t('daily')} value={settings.daily ? 'on' : 'off'} onChange={(v) => onSettings({ ...settings, daily: v === 'on' })} options={[{ v: 'on', label: t('timerOn') }, { v: 'off', label: t('timerOff') }]} />
-            </div>
           </div>
-          {settings.daily && <span className="setting-hint">{t('dailyHint')}</span>}
           <div className="setting">
             <span className="setting-label">{t('variant')}</span>
             <Seg<Variant> wide label={t('variant')} value={settings.variant} onChange={(variant) => onSettings({ ...settings, variant })} options={VARIANTS.map((v) => ({ v, label: t(`variant_${v}`) }))} />
@@ -174,7 +243,12 @@ export function Home({ data, settings, onSettings, onPlay, onLearn, onStats, cha
             </span>
           </button>
         )}
-        <footer className="home-footer">{t('attribution')}</footer>
+        <footer className="home-footer">
+          {t('attribution')} {'·'}{' '}
+          <button type="button" className="link-btn" onClick={onAbout}>
+            {t('about')}
+          </button>
+        </footer>
       </div>
     </div>
   )

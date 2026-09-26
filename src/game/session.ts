@@ -40,6 +40,8 @@ export interface Session {
   variant: Variant
   /** Score of the player who sent a challenge link, when playing one. */
   challenge?: number
+  /** Set when this is today's daily challenge. */
+  dailyNumber?: number
   startedAt: number
   finishedAt: number
   results: QuestionResult[]
@@ -89,7 +91,10 @@ export function shuffle<T>(arr: readonly T[], rng: () => number): T[] {
   return a
 }
 
-export function newSession(mode: ModeId, s: Settings, challenge?: Challenge): Session {
+export function newSession(mode: ModeId, s: Settings, challenge?: Challenge, daily?: number): Session {
+  if (daily) {
+    return { mode, tier: 'A', timer: true, daily: true, seed: dailySeed(mode, 'A'), variant: 'normal', dailyNumber: daily, startedAt: Date.now(), finishedAt: 0, results: [] }
+  }
   if (challenge) {
     return { mode: challenge.mode, tier: challenge.tier, timer: challenge.timer, daily: false, seed: challenge.seed, variant: challenge.variant, challenge: challenge.score, startedAt: Date.now(), finishedAt: 0, results: [] }
   }
@@ -214,7 +219,7 @@ export function rankKey(accuracy: number): 'rank_4' | 'rank_3' | 'rank_2' | 'ran
   return 'rank_1'
 }
 
-export function shareText(s: Session, lang: Lang, url: string): string {
+export function shareText(s: Session, lang: Lang, url: string, streak = 0): string {
   const sum = summarize(s)
   const dot = ' · '
   const modeName = translate(lang, `mode_${s.mode}` as const)
@@ -223,12 +228,13 @@ export function shareText(s: Session, lang: Lang, url: string): string {
   const timer = s.timer ? '' : dot + translate(lang, 'timer') + ' ' + translate(lang, 'timerOff').toLowerCase()
   const variant = s.variant !== 'normal' ? dot + translate(lang, `variant_${s.variant}` as const) : ''
   const vs = s.challenge !== undefined ? dot + `${translate(lang, 'challenger')} ${s.challenge}` : ''
+  const head = s.dailyNumber ? `Wegenkenner #${s.dailyNumber}` + dot + modeName : 'Wegenkenner' + dot + modeName + dot + tierName + daily + timer + variant
+  const streakLine = s.dailyNumber && streak > 1 ? dot + `${translate(lang, 'streak').toLowerCase()} ${streak}` : ''
   return [
-    'TDHG' + dot + modeName + dot + tierName + daily + timer + variant,
-    `${sum.score} ${translate(lang, 'points')}` + dot + `${sum.good}${sum.partial ? `+${sum.partial}` : ''}/${sum.total}` + dot + formatTime(sum.ms) + vs,
+    head,
+    `${sum.score} ${translate(lang, 'points')}` + dot + `${sum.good}${sum.partial ? `+${sum.partial}` : ''}/${sum.total}` + dot + formatTime(sum.ms) + vs + streakLine,
     marksLine(s),
-    translate(lang, 'beatMe'),
-    `${url}?c=${challengeParam(s)}`,
+    s.dailyNumber ? `${url}#daily` : `${url}?c=${challengeParam(s)}`,
   ].join('\n')
 }
 

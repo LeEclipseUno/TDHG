@@ -33,6 +33,8 @@ export interface Pulse {
   y: number
   t0: number
   color?: string
+  /** puff: a small burst of dust particles instead of a ring. */
+  kind?: 'ring' | 'puff'
 }
 export interface MapLine {
   x0: number
@@ -151,9 +153,10 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.closePath()
 }
 
-export function drawShield(ctx: CanvasRenderingContext2D, ref: string, kind: RoadKind, x: number, y: number, state: ShieldState, scale = 1) {
+export function drawShield(ctx: CanvasRenderingContext2D, ref: string, kind: RoadKind, x: number, y: number, state: ShieldState, scale = 1, rotation = 0) {
   ctx.save()
   ctx.translate(x, y)
+  ctx.rotate(rotation)
   ctx.scale(scale, scale)
   ctx.font = '800 13px Overpass, "Barlow Condensed", system-ui, sans-serif'
   const tw = ctx.measureText(ref).width
@@ -174,6 +177,11 @@ export function drawShield(ctx: CanvasRenderingContext2D, ref: string, kind: Roa
     roundRect(ctx, bx + 2, by + 2, bw - 4, bh - 4, 3)
     ctx.strokeStyle = '#fff'
     ctx.lineWidth = 1.2
+    ctx.stroke()
+  } else {
+    roundRect(ctx, bx + 1, by + 1, bw - 2, bh - 2, 3)
+    ctx.strokeStyle = '#111'
+    ctx.lineWidth = 1
     ctx.stroke()
   }
   if (state !== 'neutral') {
@@ -259,6 +267,7 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
   const pinchRef = useRef<{ d0: number; view0: View; wx: number; wy: number } | null>(null)
   const tapRef = useRef<{ id: number; x: number; y: number; t: number; moved: boolean } | null>(null)
   const interactive = props.interactive !== false
+  const patternRef = useRef<CanvasPattern | null>(null)
 
   const clampView = useCallback((v: View): View => {
     const w = propsRef.current.data.world
@@ -315,9 +324,32 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
 
     ctx.fillStyle = C.bg
     ctx.fillRect(0, 0, w, h)
+    if (!patternRef.current) {
+      // Faint wave texture for the water, built once.
+      const pc = document.createElement('canvas')
+      pc.width = 48
+      pc.height = 48
+      const pctx = pc.getContext('2d')
+      if (pctx) {
+        pctx.strokeStyle = 'rgba(255,255,255,0.045)'
+        pctx.lineWidth = 1.2
+        for (const oy of [10, 34]) {
+          pctx.beginPath()
+          pctx.moveTo(0, oy)
+          pctx.quadraticCurveTo(12, oy - 5, 24, oy)
+          pctx.quadraticCurveTo(36, oy + 5, 48, oy)
+          pctx.stroke()
+        }
+        patternRef.current = ctx.createPattern(pc, 'repeat')
+      }
+    }
+    if (patternRef.current && propsRef.current.palette !== 'light') {
+      ctx.fillStyle = patternRef.current
+      ctx.fillRect(0, 0, w, h)
+    }
 
     // Land polygons. Screen-space decimation skips vertices within a pixel of the previous one.
-    const fillLand = (polys: typeof data.land, fill: string, edge: string) => {
+    const fillLand = (polys: typeof data.land, fill: string, edge: string, glow?: { color: string; width: number }) => {
       ctx.beginPath()
       for (const poly of polys) {
         for (const ring of poly.rings) {
@@ -335,6 +367,12 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
           ctx.closePath()
         }
       }
+      if (glow) {
+        ctx.strokeStyle = glow.color
+        ctx.lineWidth = glow.width
+        ctx.lineJoin = 'round'
+        ctx.stroke()
+      }
       ctx.fillStyle = fill
       ctx.fill('evenodd')
       ctx.strokeStyle = edge
@@ -342,7 +380,8 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
       ctx.stroke()
     }
     fillLand(data.abroad, C.abroad, C.abroadEdge) // neighbours, muted, so the country does not float in the void
-    fillLand(data.land, C.land, C.landEdge)
+    // Shallow water glow along the coast, then the land itself.
+    fillLand(data.land, C.land, C.landEdge, { color: 'rgba(90,150,230,0.28)', width: Math.min(16, 5 + Math.log2(scale / minScaleRef.current) * 1.6) })
 
     const z = Math.log2(scale / minScaleRef.current)
     // Line widths: a zoom-dependent minimum in px, or the real road width once zoomed in far enough.
@@ -422,6 +461,62 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
       ctx.globalAlpha = 1
       ctx.lineWidth = widths[r.kind] + 1.5
       ctx.stroke()
+    }
+
+    // Bridges get rails, tunnels a dashed casing, once the roads are wide enough to show it.
+    if (detailed && !hideRoads) {
+      for (const st of data.structures) {
+        if (!inView(st.b)) continue
+        ctx.beginPath()
+        trace(st.l)
+        if (st.t === 'b') {
+          ctx.strokeStyle = '#05101f'
+          ctx.lineWidth = widths.A + 8
+          ctx.stroke()
+          ctx.strokeStyle = '#cfd8e6'
+          ctx.lineWidth = widths.A + 4
+          ctx.stroke()
+          ctx.strokeStyle = C.A
+          ctx.lineWidth = widths.A
+          ctx.stroke()
+        } else {
+          ctx.setLineDash([10, 7])
+          ctx.strokeStyle = '#cfd8e6'
+          ctx.lineWidth = widths.A + 4
+          ctx.stroke()
+          ctx.setLineDash([])
+          ctx.strokeStyle = C.bg
+          ctx.lineWidth = widths.A + 1
+          ctx.globalAlpha = 0.55
+          ctx.stroke()
+          ctx.globalAlpha = 1
+        }
+      }
+    }
+
+    // Cities from mid zoom, towns closer in.
+    if (z > 1.3) {
+      ctx.font = '600 11px Barlow, system-ui, sans-serif'
+      ctx.textAlign = 'left'
+      ctx.textBaseline = 'middle'
+      for (const pl of data.places) {
+        if (pl.c === 0 && z < 2.6) continue
+        const sx = X(pl.x)
+        const sy = Y(pl.y)
+        if (sx < -60 || sx > w + 60 || sy < -20 || sy > h + 20) continue
+        ctx.beginPath()
+        ctx.arc(sx, sy, pl.c ? 3.5 : 2.5, 0, Math.PI * 2)
+        ctx.fillStyle = '#fff'
+        ctx.fill()
+        ctx.strokeStyle = C.bg
+        ctx.lineWidth = 1.5
+        ctx.stroke()
+        ctx.lineWidth = 3
+        ctx.strokeStyle = C.bg
+        ctx.strokeText(pl.n, sx + 7, sy)
+        ctx.fillStyle = pl.c ? '#fff' : 'rgba(255,255,255,0.8)'
+        ctx.fillText(pl.n, sx + 7, sy)
+      }
     }
 
     for (const path of paths) {
@@ -544,6 +639,20 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
       const p = (wall - pu.t0) / PULSE_MS
       if (p < 0 || p >= 1) continue
       live = true
+      if (pu.kind === 'puff') {
+        // Eight dust specks flying out and fading.
+        ctx.fillStyle = '#dfe7f3'
+        for (let i = 0; i < 8; i++) {
+          const a = (i / 8) * Math.PI * 2 + Math.sin(pu.t0 + i) * 0.4
+          const d = 8 + 34 * easeOutCubic(p)
+          ctx.globalAlpha = (1 - p) * 0.9
+          ctx.beginPath()
+          ctx.arc(X(pu.x) + Math.cos(a) * d, Y(pu.y) + Math.sin(a) * d * 0.6 - 10 * p, 3.2 * (1 - p) + 0.6, 0, Math.PI * 2)
+          ctx.fill()
+        }
+        ctx.globalAlpha = 1
+        continue
+      }
       ctx.beginPath()
       ctx.arc(X(pu.x), Y(pu.y), 6 + 40 * easeOutCubic(p), 0, Math.PI * 2)
       ctx.strokeStyle = pu.color ?? COLORS.correct
@@ -553,15 +662,19 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
       ctx.globalAlpha = 1
     }
     for (const m of markers) drawMarker(ctx, X(m.x), Y(m.y), m)
+    const shieldZoom = Math.min(1.35, 1 + Math.max(0, z) * 0.05)
     for (const s of shields) {
       const road = data.byRef.get(s.ref)
       let pop = 1
+      let rot = 0
       if (s.born) {
         const p = Math.min(1, (wall - s.born) / POP_MS)
-        if (p < 1) live = true
+        const q = Math.min(1, (wall - s.born) / (POP_MS * 1.6))
+        if (q < 1) live = true
         pop = 0.4 + 0.6 * easeOutBack(p)
+        rot = Math.sin(q * Math.PI * 3) * 0.14 * (1 - q)
       }
-      drawShield(ctx, s.ref, road?.kind ?? 'N', X(s.x), Y(s.y), s.state, pop)
+      drawShield(ctx, s.ref, road?.kind ?? 'N', X(s.x), Y(s.y), s.state, pop * shieldZoom, rot)
     }
     if (propsRef.current.interactive !== false) drawScaleBar(ctx, h, scale)
     if (live && !rafRef.current) rafRef.current = requestAnimationFrame(draw)
@@ -690,6 +803,15 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
     },
     [],
   )
+
+  // Repaint when the background data (provincial roads, ramps, bridges) arrives.
+  useEffect(() => {
+    const set = props.data.listeners
+    set.add(requestRedraw)
+    return () => {
+      set.delete(requestRedraw)
+    }
+  }, [props.data, requestRedraw])
 
   const local = (e: ReactPointerEvent) => {
     const r = canvasRef.current!.getBoundingClientRect()

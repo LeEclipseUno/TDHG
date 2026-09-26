@@ -3,7 +3,8 @@
 Usage:  python scripts/build-data.py            (uses cached downloads in data-raw/ when present)
         python scripts/build-data.py --refresh  (re-downloads everything)
 
-Outputs public/data/roads.json, links.json, land.json, abroad.json, junctions.json, exits.json and places.json.
+Outputs public/data/roads-core.json (A and national N), roads-extra.json (provincial), links.json, structures.json (bridges, tunnels),
+land.json, abroad.json, junctions.json, exits.json and places.json.
 Polylines are delta encoded: [x0, y0, dx1, dy1, dx2, dy2, ...] in whole metres.
 Coordinates are projected to a local metre grid (x east, y south) so the app never needs a projection library.
 Data (c) OpenStreetMap contributors, ODbL. Land outline: CBS Wijk- en Buurtkaart via PDOK (CC BY 4.0).
@@ -43,6 +44,7 @@ def download_all():
     for name, rx in batches.items():
         overpass(f"geom_{name}.json", f'[out:json][timeout:300];{area}relation["type"="route"]["route"="road"]["ref"~"{rx}"]["network"~"^NL:[AN]$"](area.a);out geom;')
     overpass("links.json", f'[out:json][timeout:300];{area}way["highway"~"^(motorway_link|trunk_link)$"](area.a);out geom;')
+    overpass("structures.json", f'[out:json][timeout:300];{area}(way["highway"~"^(motorway|trunk|motorway_link|trunk_link)$"]["bridge"](area.a);way["highway"~"^(motorway|trunk|motorway_link|trunk_link)$"]["tunnel"](area.a););out geom;')
     overpass("abroad.json", '[out:json][timeout:300];(relation(52411);relation(62761);relation(62771););out geom;')  # Belgium, NRW, Lower Saxony
     overpass("exits_places.json", f'[out:json][timeout:300];{area}(node["highway"="motorway_junction"]["ref"](area.a);node["place"~"^(city|town)$"](area.a););out;')
     ne = os.path.join(RAW, "ne_land.geojson")
@@ -153,7 +155,11 @@ def build_roads():
                     "lines": [[c for p in l for c in p] for l in lines]})
     out.sort(key=lambda r: (r["kind"], r["num"]))
     packed = [dict(r, lines=[encode(l) for l in r["lines"]]) for r in out]
-    json.dump(packed, open(os.path.join(OUT, "roads.json"), "w"), separators=(",", ":"))
+    # Core (A and national N) paints first; the provincial roads follow in the background.
+    json.dump([r for r in packed if r["kind"] != "P"], open(os.path.join(OUT, "roads-core.json"), "w"), separators=(",", ":"))
+    json.dump([r for r in packed if r["kind"] == "P"], open(os.path.join(OUT, "roads-extra.json"), "w"), separators=(",", ":"))
+    old = os.path.join(OUT, "roads.json")
+    if os.path.exists(old): os.remove(old)
     print("roads:", len(out), "points:", total, dict(collections.Counter(r["kind"] for r in out)))
     return out
 
@@ -174,6 +180,23 @@ def build_links():
             out.append({"k": k, "b": [min(xs), min(ys), max(xs), max(ys)], "l": encode([c for p in line for c in p])})
     json.dump(out, open(os.path.join(OUT, "links.json"), "w"), separators=(",", ":"))
     print("links:", len(out), "points:", pts)
+
+def build_structures():
+    """Bridge and tunnel segments of the main roads, drawn with rails or a dashed casing at deep zoom."""
+    d = json.load(open(os.path.join(RAW, "structures.json"), encoding="utf-8"))["elements"]
+    out = []; pts = 0
+    for e in d:
+        if "geometry" not in e or len(e["geometry"]) < 2: continue
+        t = e["tags"]
+        kind = "t" if t.get("tunnel") and t.get("tunnel") != "no" else "b"
+        if kind == "b" and t.get("bridge") == "no": continue
+        line = [(round(x), round(y)) for x, y in dp([proj(p["lon"], p["lat"]) for p in e["geometry"]], 1)]
+        length = sum(math.hypot(line[i + 1][0] - line[i][0], line[i + 1][1] - line[i][1]) for i in range(len(line) - 1))
+        if length < 25: continue   # tiny culvert crossings are noise
+        xs = [p[0] for p in line]; ys = [p[1] for p in line]; pts += len(line)
+        out.append({"t": kind, "b": [min(xs), min(ys), max(xs), max(ys)], "l": encode([c for p in line for c in p])})
+    json.dump(out, open(os.path.join(OUT, "structures.json"), "w"), separators=(",", ":"))
+    print("structures:", len(out), "points:", pts, dict(collections.Counter(o["t"] for o in out)))
 
 def build_land():
     """Dissolve the CBS land-only municipality polygons into one detailed land shape (rivers and lakes stay open)."""
@@ -308,4 +331,4 @@ def build_junctions(roads):
 
 if __name__ == "__main__":
     download_all()
-    roads = build_roads(); build_links(); build_land(); build_abroad(); build_junctions(roads); build_exits_places(roads)
+    roads = build_roads(); build_links(); build_structures(); build_land(); build_abroad(); build_junctions(roads); build_exits_places(roads)

@@ -43,7 +43,7 @@ def decode(line):
     return out
 land = json.load(open(os.path.join(DATA, "land.json"), encoding="utf-8"))
 abroad = json.load(open(os.path.join(DATA, "abroad.json"), encoding="utf-8")) if os.path.exists(os.path.join(DATA, "abroad.json")) else []
-roads = json.load(open(os.path.join(DATA, "roads.json"), encoding="utf-8"))
+roads = json.load(open(os.path.join(DATA, "roads-core.json"), encoding="utf-8"))
 xs = [c for p in land for r in p["rings"] for c in r[0::2]]; ys = [c for p in land for r in p["rings"] for c in r[1::2]]
 x0, x1, y0, y1 = min(xs), max(xs), min(ys), max(ys)
 mx, my, mw, mh = 560, 20, 620, 590

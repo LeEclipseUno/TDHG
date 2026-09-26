@@ -40,8 +40,12 @@ export function RouteMode({ data, session, onFinish, onQuit }: ModeProps) {
 
   // The graph takes a moment to build; do it after the first paint.
   useEffect(() => {
-    const id = window.setTimeout(() => setGraph(buildGraph(data)), 50)
-    return () => window.clearTimeout(id)
+    let alive = true
+    const id = window.setTimeout(() => data.ready.then(() => alive && setGraph(buildGraph(data))), 50)
+    return () => {
+      alive = false
+      window.clearTimeout(id)
+    }
   }, [data])
 
   const nearestPlace = (x: number, y: number): string => {
