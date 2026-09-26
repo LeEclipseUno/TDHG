@@ -189,6 +189,7 @@ alter table premium enable row level security;
 drop policy if exists "own premium" on premium;
 create policy "own premium" on premium for select to authenticated using (player_id = auth.uid());
 grant select on premium to authenticated;
+grant all on premium to service_role;
 -- Give someone Plus by hand (for testing, or a gift):
 --   insert into premium (player_id, until, source) values ('<player uuid>', now() + interval '1 year', 'manual')
 --   on conflict (player_id) do update set until = excluded.until, source = excluded.source, updated_at = now();
@@ -212,6 +213,7 @@ drop policy if exists "own push subs" on push_subs;
 create policy "own push subs" on push_subs for all to authenticated
   using (player_id = auth.uid()) with check (player_id = auth.uid());
 grant select, insert, update, delete on push_subs to authenticated;
+grant all on push_subs to service_role;
 
 -- Trigger for the remind function, every five minutes. Enable the pg_cron and pg_net extensions first
 -- (Database, Extensions), then run this once with your project ref, anon key and CRON_SECRET filled in:
