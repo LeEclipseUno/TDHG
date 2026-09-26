@@ -2619,3 +2619,17 @@ body,
 .home-logo {
   cursor: default;
 }
+
+/* HUD on wide screens: keep the bar and prompt at phone-like proportions in the centre. */
+.hud-row,
+.hud-prompt {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+}
+.hud-mid .strip {
+  max-width: 300px;
+}
+.hud-mid .post {
+  max-width: 26px;
+}
