@@ -546,9 +546,8 @@ button {
   gap: 4px;
 }
 .home-lang {
-  position: absolute;
-  top: 0;
-  right: 0;
+  align-self: flex-end;
+  margin-bottom: -18px;
 }
 .lang-post {
   display: block;
@@ -571,7 +570,7 @@ button {
 }
 .home-logo-wrap {
   position: relative;
-  margin-top: 22px;
+  margin-top: 4px;
   display: flex;
   justify-content: center;
 }

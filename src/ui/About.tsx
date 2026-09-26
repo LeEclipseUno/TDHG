@@ -3,13 +3,8 @@ import { Board } from './widgets'
 import { IconMenu } from './icons'
 
 export const REPO_URL = 'https://github.com/LeEclipseUno/TDHG'
-export const CHANGELOG: { date: string; nl: string; en: string }[] = [
-  { date: '2026-09-26', nl: 'Dagelijkse uitdaging met reeks, deelbare resultaatkaart, afritten, routeplanner, statistieken, uitdagingslinks, varianten.', en: 'Daily challenge with streak, shareable result card, exits, route planner, statistics, challenge links, variants.' },
-  { date: '2026-09-25', nl: 'Eerste versie: sleep de borden, vind de weg, knooppunten, welke weg is dit, leren met slimme herhaling.', en: 'First release: drag the signs, find the road, interchanges, which road is this, learn with spaced repetition.' },
-]
-
 export function About({ onHome }: { onHome: () => void }) {
-  const { t, lang } = useLang()
+  const { t } = useLang()
   return (
     <div className="results">
       <div className="results-inner about">
@@ -27,17 +22,6 @@ export function About({ onHome }: { onHome: () => void }) {
               .
             </p>
           </div>
-        </Board>
-        <Board tone="dark">
-          <div className="stats-title">{t('changelog')}</div>
-          <ul className="about-log">
-            {CHANGELOG.map((c) => (
-              <li key={c.date}>
-                <span className="about-date">{c.date}</span>
-                <span>{c[lang]}</span>
-              </li>
-            ))}
-          </ul>
         </Board>
         <p className="home-footer">
           {t('attribution')} {'·'} CBS {'·'} Natural Earth
