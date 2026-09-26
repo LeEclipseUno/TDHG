@@ -212,7 +212,7 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
             <LangPost lang={lang} onChange={setLang} label={t('language')} />
           </div>
           <div className="home-logo-wrap">
-            <Logo code={logoCode} onShieldTap={cycleLogo} />
+            <Logo code={logoCode} plus={plus} onShieldTap={cycleLogo} />
           </div>
           {s ? (
             <p className="season-strip">
