@@ -428,6 +428,24 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
       ctx.lineWidth = width
       ctx.stroke()
     }
+    // Local roads as context: secondary from mid zoom, tertiary closer in. Thin, dim, never interactive.
+    if (!hideRoads && z > 2.8) {
+      const minorW = Math.max(Math.min(2.2, 0.5 + z * 0.25), 5.5 * scale)
+      for (const cls of ['t', 's'] as const) {
+        if (cls === 't' && z < 4.2) continue
+        ctx.beginPath()
+        for (const mn of data.minor) {
+          if (mn.c !== cls || !inView(mn.b)) continue
+          trace(mn.l)
+        }
+        ctx.globalAlpha = cls === 's' ? 0.5 : 0.32
+        ctx.strokeStyle = C.P
+        ctx.lineWidth = cls === 's' ? minorW : minorW * 0.8
+        ctx.stroke()
+      }
+      ctx.globalAlpha = 1
+    }
+
     const later: Road[] = []
     const drawKind = (order: RoadKind) => {
       for (const r of data.roads) {

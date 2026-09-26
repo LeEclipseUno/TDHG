@@ -35,6 +35,13 @@ export interface Structure {
   l: number[]
 }
 
+/** Local road for context only (s = secondary, t = tertiary). Never named or playable. */
+export interface Minor {
+  c: 's' | 't'
+  b: [number, number, number, number]
+  l: number[]
+}
+
 export interface LandPoly {
   name: string
   rings: number[][]
@@ -153,6 +160,7 @@ export interface GameData {
   roads: Road[]
   links: Link[]
   structures: Structure[]
+  minor: Minor[]
   land: LandPoly[]
   abroad: LandPoly[]
   exits: Exit[]
@@ -199,6 +207,7 @@ export async function loadData(): Promise<GameData> {
   for (const r of roads) r.lines = r.lines.map(decode)
   const links: Link[] = []
   const structures: Structure[] = []
+  const minor: Minor[] = []
   const world: Bounds = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity }
   for (const poly of land) {
     for (const ring of poly.rings) {
@@ -222,6 +231,7 @@ export async function loadData(): Promise<GameData> {
     roads,
     links,
     structures,
+    minor,
     land,
     abroad,
     exits,
@@ -247,6 +257,14 @@ export async function loadData(): Promise<GameData> {
     data.index = new SpatialIndex(data.roads)
     data.loaded = true
     for (const fn of data.listeners) fn()
+    // Local roads come last; they are the biggest file and only decoration.
+    get<Minor[]>('minor.json')
+      .then((mn) => {
+        for (const m of mn) m.l = decode(m.l)
+        data.minor.push(...mn)
+        for (const fn of data.listeners) fn()
+      })
+      .catch(() => {})
   })
   return data
 }
