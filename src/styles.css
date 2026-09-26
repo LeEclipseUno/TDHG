@@ -1928,3 +1928,9 @@ body,
   border-radius: 3px;
   padding: 1px 7px;
 }
+
+.drift-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

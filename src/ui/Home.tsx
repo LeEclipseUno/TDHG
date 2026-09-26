@@ -7,7 +7,7 @@ import { season, SEASON_TEXT } from '../game/season'
 import { Board, Matrix } from './widgets'
 import { IconLock, IconSignArrow, PictDrag, PictExit, PictFind, PictGroup, PictJunction, PictLearn, PictQuiz, PictRoute, PictStats, SeasonIcon } from './icons'
 import { ONLINE } from '../game/backend'
-import MapView from '../map/MapView'
+import DriftMap from '../map/DriftMap'
 import { useNow } from '../game/hooks'
 
 export interface HomeProps {
@@ -106,7 +106,7 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onStats, onA
   return (
     <div className={'home' + (s ? ` season-${s}` : '')}>
       <div className="home-backdrop" aria-hidden>
-        <MapView data={data} tier="A" interactive={false} drift />
+        <DriftMap data={data} />
       </div>
       <div className="home-inner">
         <header className="home-header">
