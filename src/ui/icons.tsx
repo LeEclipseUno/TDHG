@@ -160,20 +160,27 @@ const pict = { width: 48, height: 48, viewBox: '0 0 48 48', fill: 'none', stroke
 
 export const PictDrag = (p: P) => (
   <svg {...pict} {...p}>
-    <rect x="11" y="5" width="26" height="14" rx="2.5" fill="#c8102e" stroke="#fff" strokeWidth="2" />
-    <rect x="14" y="8" width="20" height="8" rx="1.5" stroke="#fff" strokeWidth="1.2" />
-    <path d="M24 22v9M20 27.5l4 4 4-4" />
-    <path d="M5 43c7-8 31-8 38 0" strokeWidth="3.2" />
-    <path d="M13 40.5h4M22 38.5h4M31 40.5h4" strokeWidth="1.8" strokeDasharray="0" />
+    <path d="M4 44c8-9 32-9 40 0" strokeWidth="3.4" />
+    <rect x="15" y="26" width="18" height="11" rx="1.8" strokeWidth="1.8" strokeDasharray="3 2.2" />
+    <path d="M24 17.5v5.5" strokeWidth="2.2" />
+    <path d="M20.5 20l3.5 3.5 3.5-3.5" strokeWidth="2.2" />
+    <g transform="rotate(-6 24 10)">
+      <rect x="14" y="4" width="20" height="12" rx="2" fill="#c8102e" stroke="#fff" strokeWidth="1.8" />
+      <text x="24" y="13.6" textAnchor="middle" fontFamily="'Barlow Condensed', system-ui, sans-serif" fontSize="10" fontWeight="800" fill="#fff" stroke="none">
+        A2
+      </text>
+    </g>
   </svg>
 )
 export const PictFind = (p: P) => (
   <svg {...pict} {...p}>
-    <path d="M17 44L22 4M31 44L26 4" strokeWidth="3" />
-    <path d="M24 8v4M24 36v4" strokeWidth="2" />
-    <circle cx="24" cy="24" r="8" strokeWidth="2.8" />
-    <circle cx="24" cy="24" r="2.4" fill="#fff" stroke="none" />
-    <path d="M24 13v4M24 31v4M13 24h4M31 24h4" strokeWidth="2.2" />
+    <circle cx="18" cy="19" r="11.5" strokeWidth="3" />
+    <path d="M7.5 21c4 1.5 5.5-6.5 10.5-6.5s5 6.5 10 3" strokeWidth="3.2" />
+    <path d="M27 28l13 13" strokeWidth="4.5" />
+    <rect x="31" y="4" width="14" height="10" rx="2" fill="#c8102e" stroke="#fff" strokeWidth="1.8" />
+    <text x="38" y="11.8" textAnchor="middle" fontFamily="'Barlow Condensed', system-ui, sans-serif" fontSize="8.5" fontWeight="800" fill="#fff" stroke="none">
+      A2
+    </text>
   </svg>
 )
 export const PictJunction = (p: P) => (
@@ -236,10 +243,18 @@ export const PictStats = (p: P) => (
 
 export const PictGroup = (p: P) => (
   <svg {...pict} {...p}>
-    <circle cx="16" cy="16" r="6" />
-    <circle cx="32" cy="16" r="6" />
-    <path d="M5 40c0-8 5-12 11-12s11 4 11 12M21 40c0-8 5-12 11-12s11 4 11 12" />
-    <rect x="18" y="4" width="12" height="7" rx="1.5" fill="#c8102e" stroke="#fff" strokeWidth="1.2" />
+    <circle cx="10" cy="22" r="4" strokeWidth="2.4" />
+    <path d="M4 34c0-4.5 2.7-7 6-7s6 2.5 6 7" strokeWidth="2.4" />
+    <circle cx="24" cy="14.5" r="4.5" strokeWidth="2.4" />
+    <path d="M17 28c0-5 3-7.5 7-7.5s7 2.5 7 7.5" strokeWidth="2.4" />
+    <circle cx="38" cy="24" r="4" strokeWidth="2.4" />
+    <path d="M32 36c0-4.5 2.7-7 6-7s6 2.5 6 7" strokeWidth="2.4" />
+    <rect x="4" y="36" width="12" height="8" rx="1" fill="#fff" stroke="none" />
+    <rect x="18" y="30" width="12" height="14" rx="1" fill="#fff" stroke="none" />
+    <rect x="32" y="38" width="12" height="6" rx="1" fill="#fff" stroke="none" />
+    <text x="24" y="41.5" textAnchor="middle" fontFamily="'Barlow Condensed', system-ui, sans-serif" fontSize="11" fontWeight="800" fill="#0d4a9c" stroke="none">
+      1
+    </text>
   </svg>
 )
 
