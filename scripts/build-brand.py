@@ -32,7 +32,18 @@ sq.alpha_composite(glow)
 sq.paste(mark, ((side - mark.size[0]) // 2, (side - mark.size[1]) // 2), mark)
 for s in (512, 192, 64, 32):
     sq.resize((s, s), Image.LANCZOS).save(os.path.join(PUB, f"icon-{s}.png"))
-sq.resize((64, 64), Image.LANCZOS).save(os.path.join(PUB, "favicon.ico"), sizes=[(16, 16), (32, 32), (48, 48), (64, 64)])
+# Static favicon fallback: a red A-shield (the app draws a random one at runtime).
+from PIL import ImageFont
+fav = Image.new("RGBA", (128, 128), (0, 0, 0, 0))
+fd = ImageDraw.Draw(fav)
+fd.rounded_rectangle((2, 28, 126, 100), radius=12, fill=(201, 0, 2))
+fd.rounded_rectangle((10, 36, 118, 92), radius=8, outline=(255, 255, 255), width=5)
+try:
+    font = ImageFont.truetype("C:/Windows/Fonts/arialbd.ttf", 48)
+except OSError:
+    font = ImageFont.load_default()
+fd.text((64, 64), "A1", fill=(255, 255, 255), font=font, anchor="mm")
+fav.save(os.path.join(PUB, "favicon.ico"), sizes=[(16, 16), (32, 32), (48, 48), (64, 64)])
 
 # Share card: logo on the left, the road network on the right, light theme.
 W, H = 1200, 630

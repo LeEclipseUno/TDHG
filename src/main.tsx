@@ -3,6 +3,9 @@ import { createRoot } from 'react-dom/client'
 import './fonts.css'
 import './styles.css'
 import App from './App'
+import { setRandomFavicon } from './game/favicon'
+
+setRandomFavicon()
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {

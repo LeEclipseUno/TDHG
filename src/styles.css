@@ -554,8 +554,20 @@ button {
   display: block;
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.45));
 }
-.lang-post g:hover rect {
-  stroke: #fff;
+.lang-plate {
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.lang-plate:hover,
+.lang-plate:focus-visible {
+  opacity: 1 !important;
+  outline: none;
+}
+.home-lang {
+  z-index: 3;
+}
+.home-logo-wrap::before {
+  pointer-events: none;
 }
 .home-logo-wrap {
   position: relative;
@@ -1873,4 +1885,21 @@ button {
   font-weight: 400;
   font-size: 12px;
   color: rgba(255, 255, 255, 0.7);
+}
+
+/* ---------- fixes: stats icon tile, no sideways scroll ---------- */
+.install-icon {
+  background: var(--sign-blue);
+  color: var(--white);
+}
+html,
+body,
+#root {
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+}
+.screen,
+.home,
+.results {
+  overflow-x: hidden;
 }

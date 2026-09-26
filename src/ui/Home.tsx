@@ -40,14 +40,23 @@ function Seg<T extends string>({ value, options, onChange, label, wide = false }
   )
 }
 
-/** Language switch drawn as a hectometerpaal: green post, two plates, the active language lit. */
+/** Language switch drawn as a real hectometerpaal: grey pole, green plates with a white border,
+    the small red A-shield with the side letter on top, and the big number field showing the language. */
 function LangPost({ lang, onChange, label }: { lang: Lang; onChange: (l: Lang) => void; label: string }) {
-  const plate = (l: Lang, y: number) => {
+  const plate = (l: Lang, y: number, side: string) => {
     const on = l === lang
     return (
-      <g key={l} onClick={() => onChange(l)} style={{ cursor: 'pointer' }}>
-        <rect x="3" y={y} width="30" height="24" rx="2.5" fill={on ? '#fff' : '#155c34'} stroke={on ? '#fff' : '#2aa563'} strokeWidth="1" />
-        <text x="18" y={y + 16.5} textAnchor="middle" fontFamily="'Barlow Condensed', system-ui, sans-serif" fontSize="14" fontWeight="800" fill={on ? '#111' : 'rgba(255,255,255,0.55)'}>
+      <g key={l} className="lang-plate" role="button" tabIndex={0} aria-pressed={on} aria-label={l.toUpperCase()} onClick={() => onChange(l)} onKeyDown={(e) => e.key === 'Enter' && onChange(l)} opacity={on ? 1 : 0.45}>
+        <rect x="1" y={y} width="62" height="44" rx="4" fill="#1a8f5c" stroke="#0b0f14" strokeWidth="1" />
+        <rect x="4" y={y + 3} width="56" height="38" rx="2.5" fill="none" stroke="#fff" strokeWidth="1.6" />
+        <rect x="8" y={y + 7} width="22" height="11" rx="1.5" fill="#c90002" stroke="#fff" strokeWidth="1" />
+        <text x="19" y={y + 15.5} textAnchor="middle" fontFamily="Overpass, 'Barlow Condensed', system-ui, sans-serif" fontSize="8.5" fontWeight="800" fill="#fff">
+          A1
+        </text>
+        <text x="46" y={y + 16} textAnchor="middle" fontFamily="'Barlow Condensed', system-ui, sans-serif" fontSize="10" fontWeight="700" fill="#fff">
+          {side}
+        </text>
+        <text x="32" y={y + 36} textAnchor="middle" fontFamily="'Barlow Condensed', system-ui, sans-serif" fontSize="19" fontWeight="800" fill="#fff" letterSpacing="0.5">
           {l.toUpperCase()}
         </text>
       </g>
@@ -55,11 +64,11 @@ function LangPost({ lang, onChange, label }: { lang: Lang; onChange: (l: Lang) =
   }
   return (
     <div className="home-lang">
-      <svg className="lang-post" width="36" height="78" viewBox="0 0 36 78" role="group" aria-label={label}>
-        <rect x="11" y="2" width="14" height="76" rx="3" fill="#1f8f4e" />
-        <rect x="11" y="2" width="14" height="4" rx="2" fill="#7fd5a3" />
-        {plate('nl', 8)}
-        {plate('en', 40)}
+      <svg className="lang-post" width="64" height="122" viewBox="0 0 64 122" role="group" aria-label={label}>
+        <rect x="27" y="40" width="10" height="82" rx="1.5" fill="#8d949c" />
+        <rect x="27" y="40" width="3" height="82" fill="#b9bec4" />
+        {plate('nl', 0, 'Li')}
+        {plate('en', 50, 'Re')}
       </svg>
     </div>
   )
