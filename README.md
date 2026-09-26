@@ -31,6 +31,15 @@ The map data lives in `public/data/` (core roads first, provincial roads, ramps 
 python scripts/build-data.py --refresh
 ```
 
+### Refresh routine (once a quarter)
+
+Roads open, exits get renumbered, interchanges get names. Refreshing is safe as long as the frozen dailies keep their questions, which is what the check script guards.
+
+1. `npm run data` fetches fresh OpenStreetMap and CBS data, rebuilds `public/data/`, runs `scripts/check-data.mjs` and regenerates the share image.
+2. Read the check output. It fails when a frozen daily lost a pick (a road or interchange disappeared or was renamed) or a playable road has no paragraph in `scripts/road-notes.json`. Fix the note, or for a renamed interchange edit the name in `public/data/daily.json` so the past puzzle stays the same.
+3. Never rerun `scripts/build-daily.mjs` after launch: it would reshuffle every past daily. Only extend it if the 1500 frozen days ever run out.
+4. `npm run build`, open a few road pages and one interchange page in `dist/`, then commit `public/data` together with the code.
+
 ## Online features (optional)
 
 Friend groups, the daily percentile and personal link previews run on a free Supabase project. Without one the game is fully playable offline.

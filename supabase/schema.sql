@@ -236,3 +236,26 @@ drop policy if exists "own referral" on referrals;
 create policy "own referral" on referrals for select to authenticated using (player_id = auth.uid());
 grant select on referrals to authenticated;
 grant all on referrals to service_role;
+
+-- ---------- crash log (written by the app, read only in the dashboard) ----------
+create table if not exists errors (
+  id bigint generated always as identity primary key,
+  player_id uuid default auth.uid(),
+  message text not null,
+  stack text,
+  "where" text,
+  url text,
+  ua text,
+  build text,
+  lang text,
+  screen text,
+  created_at timestamptz not null default now()
+);
+create index if not exists errors_created on errors(created_at desc);
+alter table errors enable row level security;
+drop policy if exists "write errors" on errors;
+create policy "write errors" on errors for insert to authenticated with check (true);
+grant insert on errors to authenticated;
+grant all on errors to service_role;
+-- Look at them with:  select created_at, build, message, "where", ua from errors order by created_at desc limit 50;
+-- Clean up old rows now and then:  delete from errors where created_at < now() - interval '60 days';

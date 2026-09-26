@@ -4,6 +4,9 @@ import './fonts.css'
 import './styles.css'
 import App from './App'
 import { setRandomFavicon } from './game/favicon'
+import { installErrorLog } from './game/errors'
+
+installErrorLog()
 
 setRandomFavicon()
 

@@ -34,4 +34,5 @@ export default defineConfig(({ command, mode }) => ({
   plugins: [react(), serviceWorkerAssets(loadEnv(mode, process.cwd(), 'VITE_').VITE_ADSENSE_CLIENT ?? '')],
   base: command === 'build' ? base : '/',
   build: { chunkSizeWarningLimit: 4000 },
+  define: { __BUILD__: JSON.stringify(new Date().toISOString().slice(0, 16)) },
 }))
