@@ -2,8 +2,6 @@
 // No third party, nothing personal beyond the anonymous player id, at most a handful per session.
 import { ensureSession, ONLINE, sb } from './backend'
 
-declare const __BUILD__: string
-
 const MAX_PER_SESSION = 5
 const seen = new Set<string>()
 let sent = 0

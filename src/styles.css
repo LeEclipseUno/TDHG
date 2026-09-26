@@ -2633,3 +2633,112 @@ body,
 .hud-mid .post {
   max-width: 26px;
 }
+
+/* ---------- skeleton while the map loads ---------- */
+.skeleton {
+  justify-content: flex-start;
+  padding: calc(16px + var(--safe-top)) 16px 24px;
+  gap: 0;
+}
+.skeleton-inner {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.skeleton-lang {
+  align-self: flex-end;
+  width: 140px;
+  height: 54px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+}
+.skeleton .loading-logo {
+  width: min(84vw, 420px);
+  opacity: 0.9;
+}
+.skeleton-line {
+  width: 60%;
+  height: 16px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+}
+.skeleton-row,
+.skeleton-board {
+  width: 100%;
+  border-radius: 8px;
+  background: linear-gradient(100deg, rgba(255, 255, 255, 0.06) 30%, rgba(255, 255, 255, 0.12) 50%, rgba(255, 255, 255, 0.06) 70%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+.skeleton-board {
+  height: 150px;
+}
+.skeleton-board.tall {
+  height: 190px;
+}
+.skeleton-row {
+  height: 76px;
+}
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* ---------- profile tools ---------- */
+.profile-tools {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px 14px;
+}
+.link-btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.link-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.link-danger {
+  color: #ff8a95;
+}
+
+/* ---------- colour-blind palette: blue for right, orange for wrong ---------- */
+.cb {
+  --good: #4d9dff;
+  --bad: #f5a623;
+}
+.cb .post-good,
+.cb .option-correct,
+.cb .mark-good,
+.cb .legend-ok {
+  background: #2f80ed;
+}
+.cb .post-bad,
+.cb .option-wrong,
+.cb .mark-bad,
+.cb .legend-bad {
+  background: #f5a623;
+}
+.cb .feedback-ok {
+  text-shadow: 0 0 8px rgba(77, 157, 255, 0.5);
+}
+.cb .feedback-bad {
+  text-shadow: 0 0 8px rgba(245, 166, 35, 0.5);
+}
+.cb .streak-post-on {
+  background: #2f80ed;
+}

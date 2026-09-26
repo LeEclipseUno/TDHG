@@ -34,6 +34,8 @@ export interface Settings {
   province: string
   /** Map look; paper and night need Plus. */
   theme: ThemeName
+  /** Blue and orange instead of green and red for right and wrong. */
+  colorblind: boolean
 }
 
 export interface Session {
@@ -263,12 +265,12 @@ export function loadSettings(): Settings {
     if (raw) {
       const p = JSON.parse(raw) as Partial<Settings>
       const tier: Tier = p.tier === 'AN' || p.tier === 'N' ? p.tier : (p.tier as string) === 'ALL' ? 'AN' : 'A'
-      return { tier, timer: p.timer !== false, daily: p.daily === true, learnDeck: p.learnDeck === 'junctions' ? 'junctions' : 'roads', sound: p.sound !== false, variant: VARIANTS.includes(p.variant as Variant) ? (p.variant as Variant) : 'normal', province: typeof p.province === 'string' && /^[A-Z]{2}$/.test(p.province) ? p.province : '', theme: THEME_NAMES.includes(p.theme as ThemeName) ? (p.theme as ThemeName) : 'signage' }
+      return { tier, timer: p.timer !== false, daily: p.daily === true, learnDeck: p.learnDeck === 'junctions' ? 'junctions' : 'roads', sound: p.sound !== false, variant: VARIANTS.includes(p.variant as Variant) ? (p.variant as Variant) : 'normal', province: typeof p.province === 'string' && /^[A-Z]{2}$/.test(p.province) ? p.province : '', theme: THEME_NAMES.includes(p.theme as ThemeName) ? (p.theme as ThemeName) : 'signage', colorblind: p.colorblind === true }
     }
   } catch {
     /* ignore */
   }
-  return { tier: 'A', timer: true, daily: false, learnDeck: 'roads', sound: true, variant: 'normal', province: '', theme: 'signage' }
+  return { tier: 'A', timer: true, daily: false, learnDeck: 'roads', sound: true, variant: 'normal', province: '', theme: 'signage', colorblind: false }
 }
 
 export function saveSettings(s: Settings) {

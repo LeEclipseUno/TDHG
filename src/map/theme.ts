@@ -159,3 +159,9 @@ export function seasonalTheme(chosen: ThemeName, d = new Date()): ThemeName | nu
 }
 
 export const ThemeCtx = createContext<ThemeName>('signage')
+/** Colour-blind friendly right/wrong colours. */
+export const AccessCtx = createContext<boolean>(false)
+export const CB_CORRECT = '#2f80ed'
+export const CB_WRONG = '#f5a623'
+/** The question road, so it never looks like a wrong answer. */
+export const CB_ACTIVE = '#d94fd9'

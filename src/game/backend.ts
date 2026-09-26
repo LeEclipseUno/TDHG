@@ -251,3 +251,23 @@ export async function redeemGift(key: string): Promise<{ until?: string; error?:
   if (error) return { error: (data && data.error) || error.message }
   return data ?? { error: 'empty' }
 }
+
+// ---------- account self-service (edge function account) ----------
+
+export async function exportAccount(): Promise<Record<string, unknown> | null> {
+  const c = await sb()
+  if (!c) return null
+  const { data, error } = await c.functions.invoke<Record<string, unknown>>('account', { body: { action: 'export' } })
+  return error ? null : (data ?? null)
+}
+
+/** Deletes the server-side account and everything tied to it. The caller clears local storage afterwards. */
+export async function deleteAccount(): Promise<boolean> {
+  const c = await sb()
+  if (!c) return false
+  const { data, error } = await c.functions.invoke<{ deleted?: boolean }>('account', { body: { action: 'delete' } })
+  if (error || !data?.deleted) return false
+  await c.auth.signOut().catch(() => {})
+  session = null
+  return true
+}

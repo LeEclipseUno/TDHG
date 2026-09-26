@@ -420,6 +420,11 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
             </span>
             <Seg<ThemeName> wide label={t('theme')} value={plus ? settings.theme : 'signage'} onChange={(theme) => (plus || theme === 'signage' ? onSettings({ ...settings, theme }) : onPlus())} options={THEME_NAMES.map((v) => ({ v, label: t(`theme_${v}` as 'theme_signage') }))} />
           </div>
+          <div className="setting">
+            <span className="setting-label">{t('colors')}</span>
+            <Seg<'normal' | 'cb'> wide label={t('colors')} value={settings.colorblind ? 'cb' : 'normal'} onChange={(v) => onSettings({ ...settings, colorblind: v === 'cb' })} options={[{ v: 'normal', label: t('colors_normal') }, { v: 'cb', label: t('colors_cb') }]} />
+            <span className="setting-hint">{t('colorsHint')}</span>
+          </div>
           {ONLINE && pushSupported() && (
             <div className="setting">
               <span className="setting-label">{t('reminder')}</span>

@@ -9,12 +9,40 @@ import { IconLock, IconMenu, SeasonIcon, PictStats, PictDrag, PictFind, PictJunc
 import MapView, { type Highlight } from '../map/MapView'
 import { BADGES, computeBadges, loadBadges, type BadgeId } from '../game/achievements'
 import { Backdrop } from './Backdrop'
-import { ONLINE, type Account } from '../game/backend'
+import { deleteAccount, exportAccount, ONLINE, type Account } from '../game/backend'
 import { plusUntil } from '../game/premium'
 import { initials } from './Home'
 import { InitialsShield } from './icons'
 
-export function Stats({ data, account, plus, onSignOut, onPlus, onHome }: { data: GameData; account: Account; plus: boolean; onSignOut: () => void; onPlus: () => void; onHome: () => void }) {
+export function Stats({ data, account, plus, onSignOut, onPlus, onDeleted, onNotice, onHome }: { data: GameData; account: Account; plus: boolean; onSignOut: () => void; onPlus: () => void; onDeleted: () => void; onNotice: (m: string) => void; onHome: () => void }) {
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const doExport = async () => {
+    setBusy(true)
+    const remote = await exportAccount()
+    setBusy(false)
+    if (!remote) return onNotice(t('signInError'))
+    const local: Record<string, string> = {}
+    try {
+      for (const k of Object.keys(localStorage)) if (k.startsWith('tdhg:')) local[k] = localStorage.getItem(k) ?? ''
+    } catch {
+      /* ignore */
+    }
+    const blob = new Blob([JSON.stringify({ ...remote, this_device: local }, null, 2)], { type: 'application/json' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = `wegenkenner-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(a.href)
+  }
+  const doDelete = async () => {
+    setBusy(true)
+    const ok = await deleteAccount()
+    setBusy(false)
+    setConfirmDelete(false)
+    if (ok) onDeleted()
+    else onNotice(t('signInError'))
+  }
   const { t, lang } = useLang()
   const untilMs = plusUntil(account)
   const until = untilMs ? new Date(untilMs).toLocaleDateString(lang === 'nl' ? 'nl-NL' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : ''
@@ -72,7 +100,30 @@ export function Stats({ data, account, plus, onSignOut, onPlus, onHome }: { data
                 {t('signOut')}
               </button>
             </div>
+            <div className="profile-tools">
+              <button type="button" className="link-btn" onClick={doExport} disabled={busy}>
+                {t('exportData')}
+              </button>
+              <button type="button" className="link-btn link-danger" onClick={() => setConfirmDelete(true)} disabled={busy}>
+                {t('deleteAccount')}
+              </button>
+            </div>
           </Board>
+        )}
+        {confirmDelete && (
+          <div className="modal-backdrop" onClick={() => setConfirmDelete(false)}>
+            <div className="modal" onClick={(e) => e.stopPropagation()}>
+              <p>{t('deleteConfirm')}</p>
+              <div className="modal-actions">
+                <button type="button" className="btn btn-ghost" onClick={() => setConfirmDelete(false)}>
+                  {t('cancel')}
+                </button>
+                <button type="button" className="btn btn-danger" onClick={doDelete} disabled={busy}>
+                  {t('deleteAccount')}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
         <Board className="results-board">
           <div className="board-title">{t('badges')}</div>

@@ -32,6 +32,9 @@ export function About({ data, onHome }: { data: GameData; onHome: () => void }) 
         <p className="home-footer">
           {t('attribution')} {'·'} CBS {'·'} Natural Earth
         </p>
+        <p className="home-footer">
+          {t('version')} {typeof __BUILD__ === 'string' ? __BUILD__.replace('T', ' ') : ''}
+        </p>
         <div className="results-actions">
           <button type="button" className="btn btn-ghost" onClick={onHome}>
             <IconMenu /> {t('home')}

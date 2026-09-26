@@ -22,7 +22,7 @@ import { ExitMode } from './modes/ExitMode'
 import { RouteMode } from './modes/RouteMode'
 import { DistanceMode } from './modes/DistanceMode'
 import { SignMode } from './modes/SignMode'
-import { seasonalTheme, ThemeCtx } from './map/theme'
+import { AccessCtx, seasonalTheme, ThemeCtx } from './map/theme'
 import { recordSession } from './game/history'
 import { setSoundEnabled } from './game/sound'
 import { getAccount, ONLINE, signInWithGoogle, signOut, type Account } from './game/backend'
@@ -207,7 +207,8 @@ function Shell() {
 
   const wrap = (key: string, node: ReactNode) => (
     <ThemeCtx.Provider value={seasonalTheme(plus ? settings.theme : 'signage') ?? (plus ? settings.theme : 'signage')} key={key}>
-    <div className="screen">
+    <AccessCtx.Provider value={settings.colorblind}>
+    <div className={'screen' + (settings.colorblind ? ' cb' : '')}>
       {!online && (
         <div role="status" className="offline-bar">
           {t('offline')}
@@ -220,16 +221,23 @@ function Shell() {
       )}
       {node}
     </div>
+    </AccessCtx.Provider>
     </ThemeCtx.Provider>
   )
 
   if (error) return <div className="loading">{t('loadError')}</div>
   if (!data)
     return (
-      <div className="loading">
-        <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" className="loading-logo" />
-        <div className="road-loader" />
-        <span>{t('loading')}</span>
+      <div className="loading skeleton" aria-busy="true" aria-label={t('loading')}>
+        <div className="skeleton-inner">
+          <div className="skeleton-lang" />
+          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" className="loading-logo" />
+          <div className="skeleton-line" />
+          <div className="skeleton-board tall" />
+          <div className="skeleton-row" />
+          <div className="skeleton-board" />
+          <div className="skeleton-board" />
+        </div>
       </div>
     )
 
@@ -238,7 +246,22 @@ function Shell() {
     return wrap('game' + screen.session.seed, <Mode data={data} session={screen.session} onQuit={() => go('home')} onFinish={finish} />)
   }
   if (screen.kind === 'learn') return wrap('learn', <LearnMode data={data} settings={settings} onExit={() => go('home')} />)
-  if (screen.kind === 'stats') return wrap('stats', <Stats data={data} account={account} plus={plus} onSignOut={doSignOut} onPlus={() => go('plus')} onHome={() => go('home')} />)
+  const wipeLocal = () => {
+    try {
+      for (const k of Object.keys(localStorage)) if (k.startsWith('tdhg:')) localStorage.removeItem(k)
+    } catch {
+      /* ignore */
+    }
+  }
+  const afterDelete = () => {
+    wipeLocal()
+    setAccount({ signedIn: false })
+    rememberPlus(undefined)
+    setNotice(t('deleted'))
+    setTimeout(() => setNotice(null), 3000)
+    go('home')
+  }
+  if (screen.kind === 'stats') return wrap('stats', <Stats data={data} account={account} plus={plus} onSignOut={doSignOut} onPlus={() => go('plus')} onDeleted={afterDelete} onNotice={(m) => { setNotice(m); setTimeout(() => setNotice(null), 3000) }} onHome={() => go('home')} />)
   if (screen.kind === 'about') return wrap('about', <About data={data} onHome={() => go('home')} />)
   if (screen.kind === 'plus') return wrap('plus', <Plus data={data} account={account} onSignIn={signIn} onRefresh={refreshAccount} onNotice={(m) => { setNotice(m); setTimeout(() => setNotice(null), 2500) }} onHome={() => go('home')} />)
   if (screen.kind === 'archive') return wrap('archive', <Archive data={data} onPlay={(n) => void playDaily(n)} onHome={() => go('home')} />)

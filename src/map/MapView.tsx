@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useContext, useEffect, useImperativeHandle, useRef, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
-import { SIGNAGE, THEMES, ThemeCtx, type Palette } from './theme'
+import { AccessCtx, CB_ACTIVE, CB_CORRECT, CB_WRONG, SIGNAGE, THEMES, ThemeCtx, type Palette } from './theme'
 import { tierIncludes, type Bounds, type GameData, type Road, type RoadKind, type Tier } from '../data'
 import { IconFit, IconMinus, IconPlus } from '../ui/icons'
 
@@ -254,6 +254,9 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
   const theme = useContext(ThemeCtx)
   const themeRef = useRef(theme)
   themeRef.current = theme
+  const cb = useContext(AccessCtx)
+  const cbRef = useRef(cb)
+  cbRef.current = cb
   const sizeRef = useRef({ w: 1, h: 1 })
   const viewRef = useRef<View>({ cx: 0, cy: 0, scale: 1 })
   const minScaleRef = useRef(0.001)
@@ -314,7 +317,8 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
     }
     const { data, tier, highlights = {}, shields = [], markers = [], lines = [], pulses = [], paths = [], showJunctions, hideRoads } = propsRef.current
     const labels = propsRef.current.labels !== false
-    const C = propsRef.current.palette === 'light' ? LIGHT : THEMES[themeRef.current]
+    const base = propsRef.current.palette === 'light' ? LIGHT : THEMES[themeRef.current]
+    const C: Palette = cbRef.current ? { ...base, correct: CB_CORRECT, wrong: CB_WRONG, active: CB_ACTIVE } : base
     const { w, h } = sizeRef.current
     const dpr = window.devicePixelRatio || 1
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
@@ -506,7 +510,7 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
     drawKind('A')
     ctx.globalAlpha = 1
     for (const r of later) {
-      const color = COLORS[highlights[r.ref]]
+      const color = C[highlights[r.ref]]
       ctx.beginPath()
       for (const line of r.lines) trace(line)
       ctx.strokeStyle = color
@@ -680,7 +684,7 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
       }
       ctx.beginPath()
       ctx.arc(X(pu.x), Y(pu.y), 6 + 40 * easeOutCubic(p), 0, Math.PI * 2)
-      ctx.strokeStyle = pu.color ?? COLORS.correct
+      ctx.strokeStyle = pu.color ?? C.correct
       ctx.globalAlpha = 1 - p
       ctx.lineWidth = 3
       ctx.stroke()
@@ -823,7 +827,7 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
   // Redraw when overlays or the theme change
   useEffect(() => {
     requestRedraw()
-  }, [theme, props.mirror, props.highlights, props.shields, props.markers, props.lines, props.pulses, props.paths, props.showJunctions, props.hideRoads, props.tier, requestRedraw])
+  }, [theme, cb, props.mirror, props.highlights, props.shields, props.markers, props.lines, props.pulses, props.paths, props.showJunctions, props.hideRoads, props.tier, requestRedraw])
 
   useEffect(
     () => () => {
