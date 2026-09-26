@@ -83,6 +83,32 @@ function chainLines(lines) {
   return chain
 }
 
+/** Sutherland-Hodgman clip of a flat ring against a rectangle. */
+function clipRect(ring, x0, y0, x1, y1) {
+  let out = []
+  for (let i = 0; i < ring.length; i += 2) out.push([ring[i], ring[i + 1]])
+  const edges = [
+    [(p) => p[0] >= x0, (a, b) => { const t = (x0 - a[0]) / (b[0] - a[0]); return [x0, a[1] + t * (b[1] - a[1])] }],
+    [(p) => p[0] <= x1, (a, b) => { const t = (x1 - a[0]) / (b[0] - a[0]); return [x1, a[1] + t * (b[1] - a[1])] }],
+    [(p) => p[1] >= y0, (a, b) => { const t = (y0 - a[1]) / (b[1] - a[1]); return [a[0] + t * (b[0] - a[0]), y0] }],
+    [(p) => p[1] <= y1, (a, b) => { const t = (y1 - a[1]) / (b[1] - a[1]); return [a[0] + t * (b[0] - a[0]), y1] }],
+  ]
+  for (const [inside, cross] of edges) {
+    const inp = out
+    out = []
+    if (!inp.length) break
+    let prev = inp[inp.length - 1]
+    for (const cur of inp) {
+      if (inside(cur)) {
+        if (!inside(prev)) out.push(cross(prev, cur))
+        out.push(cur)
+      } else if (inside(prev)) out.push(cross(prev, cur))
+      prev = cur
+    }
+  }
+  return out.flat()
+}
+
 function esc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
@@ -101,7 +127,11 @@ export function buildRoadPages(dist) {
   const junctions = load('junctions.json')
   const exits = load('exits.json')
   const places = load('places.json')
+  const extra = load('roads-extra.json')
+  const links = load('links.json')
   for (const r of roads) r.lines = r.lines.map(decode)
+  for (const r of extra) r.lines = r.lines.map(decode)
+  for (const l of links) l.l = decode(l.l)
 
   // Projection: fit the land bbox into W px wide.
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity
@@ -154,6 +184,8 @@ export function buildRoadPages(dist) {
 
   const shieldHtml = (r, cls = '') => `<span class="shield shield-${r.kind} ${cls}">${esc(r.ref)}</span>`
   const roadLink = (r) => `<a class="shield-link" href="/${r.ref}/">${shieldHtml(r)}</a>`
+  const slug = (name) => name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+  const junctionUrl = (j) => `/knooppunt/${slug(j.name)}/`
 
   const css = `
 :root{--bg:#0a1628;--blue:#0d4a9c;--ink:#f7f8fa;--dim:rgba(255,255,255,.72);--orange:#ef712f}
@@ -167,6 +199,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:'Barlow',system-
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
 .top img{height:48px;width:auto}
 .top a{color:var(--dim);text-decoration:none;font-size:14px}
+.top span{color:var(--dim);font-size:14px}
 .board{background:var(--blue);border-radius:8px;padding:5px;box-shadow:0 12px 32px rgba(0,0,0,.4);margin-bottom:14px}
 .inner{border:3px solid #fff;border-radius:5px;padding:16px 16px 18px}
 .title{font-family:'Barlow Condensed',sans-serif;font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.7);margin:0 0 8px}
@@ -219,7 +252,7 @@ ${extraHead}
 </head>
 <body>
 <div class="wrap">
-<div class="top"><a href="/"><img src="/logo.png" alt="Wegenkenner, The Dutch Highway Guesser"></a><a href="/wegen/">Alle wegen</a></div>
+<div class="top"><a href="/"><img src="/logo.png" alt="Wegenkenner, The Dutch Highway Guesser"></a><span><a href="/wegen/">Alle wegen</a> &middot; <a href="/knooppunten/">Knooppunten</a></span></div>
 ${body}
 <p class="foot"><a href="/">Wegenkenner</a> is een gratis spel over het Nederlandse wegennet. Kaartgegevens: OpenStreetMap, CBS.</p>
 </div>
@@ -297,7 +330,7 @@ ${provs.length ? `<dt>Provincies</dt><dd>${esc(listNl(provs))}</dd>` : ''}
       ? `<div class="board"><div class="inner"><h2>Knooppunten op de ${esc(r.ref)}</h2><ul>${myJunctions
           .map((j) => {
             const others = j.roads.filter((x) => x !== r.ref).map((x) => (byRef.has(x) ? `<a href="/${x}/">${esc(x)}</a>` : esc(x)))
-            return `<li>${esc(j.name)}${others.length ? ` <span class="n">${others.join(', ')}</span>` : ''}</li>`
+            return `<li><a href="${junctionUrl(j)}">${esc(j.name)}</a>${others.length ? ` <span class="n">${others.join(', ')}</span>` : ''}</li>`
           })
           .join('')}</ul></div></div>`
       : ''
@@ -340,6 +373,107 @@ ${neighbourList}
     urls.push(`${SITE}/${r.ref}/`)
   }
 
+  // ---- one page per interchange, with a zoomed map of the ramps ----
+  const HALF = 4500 // metres from the junction to the edge of its map
+  const ZW = 420, ZH = 300
+  const zscale = ZW / (2 * HALF)
+  const hits = (b, wx0, wy0, wx1, wy1) => b[0] <= wx1 && b[2] >= wx0 && b[1] <= wy1 && b[3] >= wy0
+  const bboxOf = (l) => { let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity; for (let i = 0; i < l.length; i += 2) { a = Math.min(a, l[i]); c = Math.max(c, l[i]); b = Math.min(b, l[i + 1]); d = Math.max(d, l[i + 1]) } return [a, b, c, d] }
+  const landRings = land.flatMap((p) => p.rings.map((ring) => ({ ring, b: bboxOf(ring) })))
+  for (const r of roads) r.lb = r.lines.map(bboxOf)
+  for (const r of extra) r.lb = r.lines.map(bboxOf)
+
+  const junctionIndex = []
+  for (const j of junctions) {
+    const wx0 = j.x - HALF, wy0 = j.y - HALF * (ZH / ZW), wx1 = j.x + HALF, wy1 = j.y + HALF * (ZH / ZW)
+    const zx = (x) => ((x - wx0) * zscale).toFixed(1)
+    const zy = (y) => ((y - wy0) * zscale).toFixed(1)
+    const zpath = (pts, tol, close = false) => {
+      const sp = simplify(pts, tol)
+      if (sp.length < 4) return ''
+      let d = `M${zx(sp[0])} ${zy(sp[1])}`
+      for (let i = 2; i < sp.length; i += 2) d += `L${zx(sp[i])} ${zy(sp[i + 1])}`
+      return close ? d + 'Z' : d
+    }
+    let svg = `<svg class="map" viewBox="0 0 ${ZW} ${ZH}" role="img" aria-label="Knooppunt ${esc(j.name)} op de kaart"><rect width="${ZW}" height="${ZH}" fill="#0a1628"/>`
+    svg += '<g fill="#1b4a8d">'
+    for (const { ring, b } of landRings) if (hits(b, wx0, wy0, wx1, wy1)) svg += `<path d="${zpath(clipRect(ring, wx0 - 500, wy0 - 500, wx1 + 500, wy1 + 500), 40, true)}"/>`
+    svg += '</g><g fill="none" stroke="#8aa4c8" stroke-width="1.4" stroke-opacity="0.7" stroke-linejoin="round" stroke-linecap="round">'
+    for (const r of extra) r.lines.forEach((l, i) => { if (hits(r.lb[i], wx0, wy0, wx1, wy1)) svg += `<path d="${zpath(l, 30)}"/>` })
+    svg += '</g><g fill="none" stroke="#fff" stroke-width="1.2" stroke-opacity="0.8" stroke-linejoin="round" stroke-linecap="round">'
+    for (const l of links) if (hits(l.b, wx0, wy0, wx1, wy1)) svg += `<path d="${zpath(l.l, 15)}"/>`
+    svg += '</g>'
+    const yellow = [], white = []
+    for (const r of roads) r.lines.forEach((l, i) => { if (hits(r.lb[i], wx0, wy0, wx1, wy1)) (r.kind === 'A' ? white : yellow).push(zpath(l, 20)) })
+    svg += `<g fill="none" stroke="#ffd23f" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round">${yellow.map((d) => `<path d="${d}"/>`).join('')}</g>`
+    svg += `<g fill="none" stroke="#fff" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">${white.map((d) => `<path d="${d}"/>`).join('')}</g>`
+    for (const o of junctions) if (o !== j && o.x > wx0 && o.x < wx1 && o.y > wy0 && o.y < wy1) svg += `<circle cx="${zx(o.x)}" cy="${zy(o.y)}" r="3" fill="#fff" stroke="#0a1628" stroke-width="1.2"/><text x="${zx(o.x)}" y="${(Number(zy(o.y)) - 6).toFixed(1)}" text-anchor="middle" font-family="Barlow,system-ui,sans-serif" font-size="9" fill="#fff">${esc(o.name)}</text>`
+    svg += `<circle cx="${zx(j.x)}" cy="${zy(j.y)}" r="11" fill="none" stroke="#ef712f" stroke-width="3"/><circle cx="${zx(j.x)}" cy="${zy(j.y)}" r="3.5" fill="#ef712f"/>`
+    for (const p of places) if (p.x > wx0 && p.x < wx1 && p.y > wy0 && p.y < wy1 && Math.hypot(p.x - j.x, p.y - j.y) > 900) svg += `<text x="${zx(p.x)}" y="${zy(p.y)}" text-anchor="middle" font-family="Barlow,system-ui,sans-serif" font-size="${p.c ? 11 : 9}" font-weight="${p.c ? 700 : 400}" fill="#dbe6f5" fill-opacity="0.85">${esc(p.n)}</text>`
+    svg += '</svg>'
+
+    const jr = j.roads.map((ref) => byRef.get(ref)).filter(Boolean)
+    const extraRefs = j.roads.filter((ref) => !byRef.has(ref))
+    const roadNames = listNl(j.roads)
+    const place = nearestPlace(j.x, j.y)
+    const placeKm = place ? Math.round(Math.hypot(place.x - j.x, place.y - j.y) / 1000) : 0
+    const provs = (j.p ?? []).map((c) => PROV[c]).filter(Boolean)
+    const near = junctions.filter((o) => o !== j).map((o) => ({ o, d: Math.hypot(o.x - j.x, o.y - j.y) })).sort((a, b) => a.d - b.d).slice(0, 4)
+    const where = place ? (placeKm < 2 ? `in ${place.n}` : `bij ${place.n}`) : ''
+    const title = `Knooppunt ${j.name}: ${roadNames} ${where} | Wegenkenner`
+    const desc = `Knooppunt ${j.name} verbindt de ${roadNames}${where ? `, ${where}` : ''}${provs.length ? ` in ${listNl(provs)}` : ''}. Bekijk de kaart met de verbindingswegen en test of je het knooppunt kunt aanwijzen.`
+
+    const body = `
+<div class="board"><div class="inner">
+<p class="title">Knooppunt</p>
+<h1><span>${esc(j.name)}</span></h1>
+<p class="sub">${esc(roadNames)}${where ? `, ${esc(where)}` : ''}</p>
+</div></div>
+<div class="board"><div class="inner">${svg}</div></div>
+<div class="board"><div class="inner"><h2>In het kort</h2><dl>
+<dt>Wegen</dt><dd><span class="shields">${jr.map(roadLink).join('')}${extraRefs.map((ref) => `<span class="shield shield-N shield-sm">${esc(ref)}</span>`).join('')}</span></dd>
+${place ? `<dt>Ligging</dt><dd>${placeKm < 2 ? `In ${esc(place.n)}` : `${placeKm} km van ${esc(place.n)}`}</dd>` : ''}
+${provs.length ? `<dt>Provincie</dt><dd>${esc(listNl(provs))}</dd>` : ''}
+<dt>In de buurt</dt><dd>${near.map(({ o, d }) => `<a href="${junctionUrl(o)}">${esc(o.name)}</a> (${Math.round(d / 1000)} km)`).join(', ')}</dd>
+</dl></div></div>
+<div class="board"><div class="inner"><h2>Weet jij waar ${esc(j.name)} ligt?</h2>
+<p>In Wegenkenner krijg je de naam van een knooppunt en tik je de plek aan op een kaart zonder namen. Hoe dichterbij, hoe meer punten.</p>
+<div class="cta"><a class="btn alt" href="/#junction">Speel Knooppunten</a><a class="btn" href="/#daily">Speel de dagelijkse puzzel</a></div>
+</div></div>
+${jr.length ? `<div class="board"><div class="inner"><h2>De wegen van dit knooppunt</h2><ul>${jr.map((r) => `<li><a href="/${r.ref}/">${esc(r.ref)}</a> <span class="n">${r.km} km</span></li>`).join('')}</ul></div></div>` : ''}
+`
+    const jsonld = {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Wegenkenner', item: `${SITE}/` },
+        { '@type': 'ListItem', position: 2, name: 'Knooppunten', item: `${SITE}/knooppunten/` },
+        { '@type': 'ListItem', position: 3, name: `Knooppunt ${j.name}`, item: `${SITE}${junctionUrl(j)}` },
+      ],
+    }
+    const dir = path.join(dist, 'knooppunt', slug(j.name))
+    fs.mkdirSync(dir, { recursive: true })
+    fs.writeFileSync(path.join(dir, 'index.html'), shell(title, desc, `${SITE}${junctionUrl(j)}`, body, `<script type="application/ld+json">${JSON.stringify(jsonld)}</script>`))
+    urls.push(`${SITE}${junctionUrl(j)}`)
+    junctionIndex.push(j)
+  }
+  junctionIndex.sort((a, b) => a.name.localeCompare(b.name, 'nl'))
+  const jIndexBody = `
+<div class="board"><div class="inner">
+<p class="title">Wegwijzer</p>
+<h1>Alle knooppunten</h1>
+<p class="sub">${junctionIndex.length} knooppunten waar snelwegen en N-wegen elkaar kruisen. Per knooppunt de kaart, de wegen en de buren.</p>
+</div></div>
+<div class="board"><div class="inner"><ul>${junctionIndex.map((j) => `<li><a href="${junctionUrl(j)}">${esc(j.name)}</a> <span class="n">${esc(j.roads.join(', '))}</span></li>`).join('')}</ul></div></div>
+<div class="board"><div class="inner"><h2>Ken jij ze allemaal?</h2>
+<p>In de modus Knooppunten krijg je alleen de naam en tik je de plek aan. Hoe dichterbij, hoe meer punten.</p>
+<div class="cta"><a class="btn alt" href="/#junction">Speel Knooppunten</a><a class="btn" href="/">Naar het spel</a></div>
+</div></div>
+`
+  fs.mkdirSync(path.join(dist, 'knooppunten'), { recursive: true })
+  fs.writeFileSync(path.join(dist, 'knooppunten', 'index.html'), shell('Alle knooppunten van Nederland op de kaart | Wegenkenner', `Overzicht van alle ${junctionIndex.length} knooppunten in het Nederlandse wegennet, met per knooppunt een kaart van de verbindingswegen en de wegen die er samenkomen.`, `${SITE}/knooppunten/`, jIndexBody))
+  urls.splice(2, 0, `${SITE}/knooppunten/`)
+
   // Index of every road.
   const A = roads.filter((r) => r.kind === 'A').sort((a, b) => a.num - b.num)
   const N = roads.filter((r) => r.kind === 'N').sort((a, b) => a.num - b.num)
@@ -352,6 +486,7 @@ ${neighbourList}
 </div></div>
 <div class="board"><div class="inner"><h2>Snelwegen</h2><div class="shields">${A.map(roadLink).join('')}</div></div></div>
 <div class="board"><div class="inner"><h2>N-wegen</h2><div class="shields">${N.map(roadLink).join('')}</div></div></div>
+<div class="board"><div class="inner"><h2>Knooppunten</h2><p>Alle ${junctionIndex.length} knooppunten staan op een <a href="/knooppunten/">eigen overzicht</a>.</p></div></div>
 <div class="board"><div class="inner"><h2>Hoe goed ken jij ze?</h2>
 <p>Wegenkenner is een gratis spel: sleep de borden naar de juiste weg, vind de weg op een lege kaart of wijs het knooppunt aan. Elke dag een nieuwe puzzel.</p>
 <div class="cta"><a class="btn alt" href="/#daily">Speel de puzzel van vandaag</a><a class="btn" href="/">Naar het spel</a></div>
@@ -367,7 +502,7 @@ ${neighbourList}
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `<url><loc>${u}</loc><lastmod>${today}</lastmod></url>`).join('\n')}\n</urlset>\n`,
   )
   fs.writeFileSync(path.join(dist, 'robots.txt'), `User-agent: *\nAllow: /\nSitemap: ${SITE}/sitemap.xml\n`)
-  return roads.length
+  return roads.length + junctionIndex.length
 }
 
 if (process.argv[1] && process.argv[1].endsWith('road-pages.mjs')) {
