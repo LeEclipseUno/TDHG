@@ -11,6 +11,8 @@ import { BADGES, computeBadges, loadBadges, type BadgeId } from '../game/achieve
 import { Backdrop } from './Backdrop'
 import { ONLINE, type Account } from '../game/backend'
 import { plusUntil } from '../game/premium'
+import { initials } from './Home'
+import { InitialsShield } from './icons'
 
 export function Stats({ data, account, plus, onSignOut, onPlus, onHome }: { data: GameData; account: Account; plus: boolean; onSignOut: () => void; onPlus: () => void; onHome: () => void }) {
   const { t, lang } = useLang()
@@ -60,7 +62,7 @@ export function Stats({ data, account, plus, onSignOut, onPlus, onHome }: { data
           <Board className="results-board profile-board">
             <div className="board-title">{t('stats')}</div>
             <div className="profile-body">
-              {account.avatar ? <img className={'avatar-img profile-avatar' + (plus ? ' avatar-plus' : '')} src={account.avatar} alt="" referrerPolicy="no-referrer" /> : <span className={'avatar-img avatar-fallback profile-avatar' + (plus ? ' avatar-plus' : '')}>{(account.name ?? account.email ?? '?').slice(0, 1).toUpperCase()}</span>}
+              {account.avatar ? <img className={'avatar-img profile-avatar' + (plus ? ' avatar-plus' : '')} src={account.avatar} alt="" referrerPolicy="no-referrer" /> : plus ? <span className="avatar-img profile-avatar avatar-shield avatar-plus"><InitialsShield text={initials(account)} size={52} /></span> : <span className="avatar-img avatar-fallback profile-avatar">{initials(account).slice(0, 1)}</span>}
               <div className="profile-text">
                 <span className="profile-name">{account.name ?? account.email?.split('@')[0]}</span>
                 <span className="profile-email">{account.email}</span>

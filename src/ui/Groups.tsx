@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLang } from '../i18n'
 import { Board } from './widgets'
-import { IconMenu, IconReplay, IconShare, PictGroup } from './icons'
+import { IconMenu, IconReplay, IconShare, PictGroup, PlusMark } from './icons'
 import { createGroup, getNickname, groupBoard, groupWeek, joinGroup, leaveGroup, myGroups, ONLINE, setNickname, validNickname, type BoardRow, type Group, type WeekRow } from '../game/backend'
 import { dailyNumber } from '../game/daily'
 import { formatTime } from '../game/session'
@@ -190,6 +190,7 @@ export function Groups({ data, onHome, joinCode }: { data: GameData; onHome: () 
                   <span className="group-rank">{r.played ? i + 1 : '-'}</span>
                   <span className="group-nick">
                     {r.nickname}
+                    {r.plus && <PlusMark />}
                     {r.is_me && <small> ({t('you').toLowerCase()})</small>}
                   </span>
                   <span className="group-detail">{r.played ? `${r.good}/${r.total} · ${formatTime(r.ms)}` : t('notPlayed')}</span>
@@ -202,7 +203,10 @@ export function Groups({ data, onHome, joinCode }: { data: GameData; onHome: () 
               {week.map((r, i) => (
                 <li key={i} className={r.is_me ? 'is-me' : ''}>
                   <span className="group-rank">{i + 1}</span>
-                  <span className="group-nick">{r.nickname}</span>
+                  <span className="group-nick">
+                    {r.nickname}
+                    {r.plus && <PlusMark />}
+                  </span>
                   <span className="group-detail">
                     {r.days} {t('days')}
                   </span>

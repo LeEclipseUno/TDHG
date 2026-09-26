@@ -10,6 +10,15 @@ import { season, SEASON_TEXT } from '../game/season'
 import { Board, Matrix } from './widgets'
 import { IconGoogle, IconLock, IconReplay, IconShare, IconSignArrow, PictDistance, PictDrag, PictExit, PictFind, PictGroup, PictJunction, PictLearn, PictQuiz, PictRoute, PictStats, SeasonIcon, IconFreeze } from './icons'
 import { AdSlot } from './AdSlot'
+import { InitialsShield } from './icons'
+
+/** One or two capitals from the name, or the mail address. */
+export function initials(a: { name?: string; email?: string }): string {
+  const src = (a.name ?? a.email?.split('@')[0] ?? '?').trim()
+  const parts = src.split(/[\s.\-_]+/).filter(Boolean)
+  return (parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : src.slice(0, 2)).toUpperCase()
+}
+
 import { THEME_NAMES, type ThemeName } from '../map/theme'
 import { ONLINE, type Account } from '../game/backend'
 import DriftMap from '../map/DriftMap'
@@ -86,10 +95,10 @@ function LangPost({ lang, onChange, label }: { lang: Lang; onChange: (l: Lang) =
 }
 
 /** The play streak as a row of hectometre posts. */
-export function StreakPosts({ count }: { count: number }) {
+export function StreakPosts({ count, gold = false }: { count: number; gold?: boolean }) {
   const shown = Math.max(1, Math.min(count, 14))
   return (
-    <span className="streak" title={String(count)}>
+    <span className={'streak' + (gold ? ' streak-gold' : '')} title={String(count)}>
       {Array.from({ length: shown }, (_, i) => (
         <span key={i} className={'streak-post' + (i < count ? ' streak-post-on' : '')} />
       ))}
@@ -153,7 +162,7 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
           <div className="home-topbar">
             {ONLINE && account.signedIn ? (
               <button type="button" className={'avatar-btn' + (plus ? ' avatar-plus' : '')} onClick={onStats} aria-label={t('stats')}>
-                {account.avatar ? <img className="avatar-img" src={account.avatar} alt="" referrerPolicy="no-referrer" /> : <span className="avatar-img avatar-fallback">{(account.name ?? account.email ?? '?').slice(0, 1).toUpperCase()}</span>}
+                {account.avatar ? <img className="avatar-img" src={account.avatar} alt="" referrerPolicy="no-referrer" /> : plus ? <span className="avatar-img avatar-shield"><InitialsShield text={initials(account)} /></span> : <span className="avatar-img avatar-fallback">{initials(account).slice(0, 1)}</span>}
                 <span className="avatar-text">
                   <span className="avatar-name">{account.name ?? account.email?.split('@')[0]}</span>
                   <span className="avatar-sub">{t('stats')}</span>
@@ -198,7 +207,7 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
                 </>
               )}
               <span className="daily-streak">
-                {t('streak')} <StreakPosts count={streak.count} />
+                {t('streak')} <StreakPosts count={streak.count} gold={plus} />
                 {plus && streak.freeze === new Date().toISOString().slice(0, 7) && (
                   <small className="frozen-tag" title={t('freezeUsed')}>
                     <IconFreeze /> {t('frozen')}

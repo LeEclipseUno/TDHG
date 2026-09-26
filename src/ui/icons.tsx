@@ -282,3 +282,23 @@ export const PictPost = (p: P) => (
     <rect x="4.5" y="3" width="7" height="6" rx="0.8" fill="#fff" />
   </svg>
 )
+
+/** Small gold shield with a plus, shown next to Plus members. */
+export const PlusMark = (p: P) => (
+  <svg width="18" height="14" viewBox="0 0 18 14" className="plus-mark" aria-label="Plus" {...p}>
+    <rect x="0.5" y="0.5" width="17" height="13" rx="2.5" fill="#ffb000" stroke="#0a1628" strokeWidth="1" />
+    <rect x="2.5" y="2.5" width="13" height="9" rx="1.5" fill="none" stroke="#0a1628" strokeWidth="1" />
+    <path d="M9 4v6M6 7h6" stroke="#0a1628" strokeWidth="1.8" strokeLinecap="round" />
+  </svg>
+)
+
+/** Red road shield with initials: the avatar of a Plus player without a picture. */
+export const InitialsShield = ({ text, size = 38 }: { text: string; size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden>
+    <rect x="3" y="9" width="42" height="30" rx="5" fill="#c8102e" />
+    <rect x="7" y="13" width="34" height="22" rx="3" fill="none" stroke="#fff" strokeWidth="2.2" />
+    <text x="24" y="31" textAnchor="middle" fontFamily="Overpass, 'Barlow Condensed', system-ui, sans-serif" fontSize={text.length > 1 ? 15 : 18} fontWeight="800" fill="#fff">
+      {text}
+    </text>
+  </svg>
+)

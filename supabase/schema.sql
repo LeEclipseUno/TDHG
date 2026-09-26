@@ -132,10 +132,12 @@ returns table (better_than numeric, players int) language sql security definer s
 $$;
 
 -- Today's board of one group. Only members can read it.
+drop function if exists group_board(text, int);
 create or replace function group_board(p_code text, p_daily int)
-returns table (nickname text, score int, good int, total int, ms int, played boolean, is_me boolean)
+returns table (nickname text, score int, good int, total int, ms int, played boolean, is_me boolean, plus boolean)
 language sql security definer set search_path = public as $$
-  select m.nickname, coalesce(s.score, 0), coalesce(s.good, 0), coalesce(s.total, 0), coalesce(s.ms, 0), s.player_id is not null, m.player_id = auth.uid()
+  select m.nickname, coalesce(s.score, 0), coalesce(s.good, 0), coalesce(s.total, 0), coalesce(s.ms, 0), s.player_id is not null, m.player_id = auth.uid(),
+         exists (select 1 from premium p where p.player_id = m.player_id and p.until > now())
   from groups g
   join members m on m.group_id = g.id
   left join daily_scores s on s.player_id = m.player_id and s.daily = p_daily
@@ -145,10 +147,12 @@ language sql security definer set search_path = public as $$
 $$;
 
 -- Weekly totals of one group (the last 7 dailies including today).
+drop function if exists group_week(text, int);
 create or replace function group_week(p_code text, p_daily int)
-returns table (nickname text, total int, days int, is_me boolean)
+returns table (nickname text, total int, days int, is_me boolean, plus boolean)
 language sql security definer set search_path = public as $$
-  select m.nickname, coalesce(sum(s.score), 0)::int, count(s.daily)::int, m.player_id = auth.uid()
+  select m.nickname, coalesce(sum(s.score), 0)::int, count(s.daily)::int, m.player_id = auth.uid(),
+         exists (select 1 from premium p where p.player_id = m.player_id and p.until > now())
   from groups g
   join members m on m.group_id = g.id
   left join daily_scores s on s.player_id = m.player_id and s.daily between p_daily - 6 and p_daily

@@ -200,7 +200,7 @@ export function Results({ data, session, newBest, streak, plus, badges, onAgain,
             </div>
             {session.dailyNumber && streak > 0 && (
               <div className="results-streak">
-                {t('streak')} <StreakPosts count={streak} />
+                {t('streak')} <StreakPosts count={streak} gold={plus} />
               </div>
             )}
             {pct && (

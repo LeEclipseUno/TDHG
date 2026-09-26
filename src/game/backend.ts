@@ -73,12 +73,14 @@ export interface BoardRow {
   ms: number
   played: boolean
   is_me: boolean
+  plus?: boolean
 }
 export interface WeekRow {
   nickname: string
   total: number
   days: number
   is_me: boolean
+  plus?: boolean
 }
 
 async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T | null> {
