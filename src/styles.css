@@ -547,7 +547,7 @@ button {
 }
 .home-lang {
   align-self: flex-end;
-  margin-bottom: -18px;
+  margin-bottom: 2px;
 }
 .lang-post {
   display: block;

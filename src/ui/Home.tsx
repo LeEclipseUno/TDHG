@@ -64,9 +64,9 @@ function LangPost({ lang, onChange, label }: { lang: Lang; onChange: (l: Lang) =
   }
   return (
     <div className="home-lang">
-      <svg className="lang-post" width="64" height="122" viewBox="0 0 64 122" role="group" aria-label={label}>
-        <rect x="27" y="40" width="10" height="82" rx="1.5" fill="#8d949c" />
-        <rect x="27" y="40" width="3" height="82" fill="#b9bec4" />
+      <svg className="lang-post" width="64" height="106" viewBox="0 0 64 106" role="group" aria-label={label}>
+        <rect x="27" y="40" width="10" height="66" rx="1.5" fill="#8d949c" />
+        <rect x="27" y="40" width="3" height="66" fill="#b9bec4" />
         {plate('nl', 0, 'Li')}
         {plate('en', 50, 'Re')}
       </svg>
