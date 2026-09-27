@@ -250,11 +250,34 @@ export async function redeemGift(key: string): Promise<{ until?: string; error?:
 
 // ---------- account self-service (edge function account) ----------
 
-export async function exportAccount(): Promise<Record<string, unknown> | null> {
+/**
+ * Export everything the server holds about the player.
+ * On failure returns a short code for the notice: E1 offline build, E2 no session, E3 network,
+ * E<status> the function answered with that HTTP status (plus its message), E4 empty answer.
+ */
+export async function exportAccount(): Promise<{ ok: true; data: Record<string, unknown> } | { ok: false; code: string }> {
   const c = await sb()
-  if (!c) return null
-  const { data, error } = await c.functions.invoke<Record<string, unknown>>('account', { body: { action: 'export' } })
-  return error ? null : (data ?? null)
+  if (!c) return { ok: false, code: 'E1' }
+  const { data: s } = await c.auth.getSession()
+  if (!s.session) return { ok: false, code: 'E2' }
+  try {
+    const { data, error } = await c.functions.invoke<Record<string, unknown>>('account', { body: { action: 'export' } })
+    if (error) {
+      const res = (error as { context?: Response }).context
+      if (!res || typeof res.status !== 'number') return { ok: false, code: 'E3' }
+      let msg = ''
+      try {
+        msg = String(((await res.clone().json()) as { error?: string }).error ?? '')
+      } catch {
+        /* no json body */
+      }
+      return { ok: false, code: `E${res.status}${msg ? ' ' + msg : ''}` }
+    }
+    if (!data || typeof data !== 'object') return { ok: false, code: 'E4' }
+    return { ok: true, data }
+  } catch {
+    return { ok: false, code: 'E3' }
+  }
 }
 
 /** Deletes the server-side account and everything tied to it. The caller clears local storage afterwards. */

@@ -54,19 +54,36 @@ export function Stats({ data, account, plus, settings, onSettings, onSignOut, on
     setBusy(true)
     const remote = await exportAccount()
     setBusy(false)
-    if (!remote) return onNotice(t('exportFail'))
+    if (!remote.ok) return onNotice(t('exportFail', { code: remote.code }))
     const local: Record<string, string> = {}
     try {
       for (const k of Object.keys(localStorage)) if (k.startsWith('tdhg:')) local[k] = localStorage.getItem(k) ?? ''
     } catch {
       /* ignore */
     }
-    const blob = new Blob([JSON.stringify({ ...remote, this_device: local }, null, 2)], { type: 'application/json' })
+    const name = `wegenkenner-${new Date().toISOString().slice(0, 10)}.json`
+    const text = JSON.stringify({ ...remote.data, this_device: local }, null, 2)
+    // Installed on a phone, the share sheet is the reliable way to save a file; otherwise a plain download.
+    try {
+      const file = new File([text], name, { type: 'application/json' })
+      if (isStandalone && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: name })
+        return
+      }
+    } catch {
+      /* fall through to the download */
+    }
+    const blob = new Blob([text], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = `wegenkenner-${new Date().toISOString().slice(0, 10)}.json`
+    a.href = url
+    a.download = name
+    a.rel = 'noopener'
+    document.body.appendChild(a)
     a.click()
-    URL.revokeObjectURL(a.href)
+    a.remove()
+    window.setTimeout(() => URL.revokeObjectURL(url), 10000)
+    onNotice(t('exportDone'))
   }
   const doDelete = async () => {
     setBusy(true)

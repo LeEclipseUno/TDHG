@@ -299,7 +299,7 @@ function Shell() {
     setTimeout(() => setNotice(null), 3000)
     go('home')
   }
-  if (screen.kind === 'stats') return wrap('stats', <Stats data={data} account={account} plus={plus} settings={settings} onSettings={setSettings} onSignOut={doSignOut} onPlus={() => go('plus')} onDeleted={afterDelete} onNotice={(m) => { setNotice(m); setTimeout(() => setNotice(null), 3000) }} onHome={() => go('home')} />)
+  if (screen.kind === 'stats') return wrap('stats', <Stats data={data} account={account} plus={plus} settings={settings} onSettings={setSettings} onSignOut={doSignOut} onPlus={() => go('plus')} onDeleted={afterDelete} onNotice={(m) => { setNotice(m); setTimeout(() => setNotice(null), 6000) }} onHome={() => go('home')} />)
   if (screen.kind === 'about') return wrap('about', <About data={data} onHome={() => go('home')} />)
   if (screen.kind === 'plus') return wrap('plus', <Plus data={data} account={account} onSignIn={signIn} onRefresh={refreshAccount} onNotice={(m) => { setNotice(m); setTimeout(() => setNotice(null), 2500) }} onHome={() => go('home')} />)
   if (screen.kind === 'archive') return wrap('archive', <Archive data={data} onPlay={(n) => void playDaily(n)} onHome={() => go('home')} />)
