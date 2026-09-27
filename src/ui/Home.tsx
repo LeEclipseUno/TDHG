@@ -163,7 +163,8 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
     }
   }, [data])
   const cycleLogo = () => {
-    const pool = data.roads.filter((r) => r.kind === 'A' || r.kind === 'N')
+    // Two-digit numbers only: three digits crowd the shield.
+    const pool = data.roads.filter((r) => (r.kind === 'A' || r.kind === 'N') && r.num < 100)
     const pick = pool[Math.floor(Math.random() * pool.length)]
     if (pick) setLogoCode(pick.ref)
     sfx.tap()

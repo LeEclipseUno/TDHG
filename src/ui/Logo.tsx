@@ -25,8 +25,8 @@ export function Logo({ code = 'A', plus = false, onShieldTap }: { code?: string;
           <stop offset="1" stopColor="#b80d26" />
         </linearGradient>
         <linearGradient id="wk-shield-n" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#ffe066" />
-          <stop offset="1" stopColor="#f0b400" />
+          <stop offset="0" stopColor="#fff176" />
+          <stop offset="1" stopColor="#ffd400" />
         </linearGradient>
         <linearGradient id="wk-shield-plus" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stopColor="#fff1a8" />
