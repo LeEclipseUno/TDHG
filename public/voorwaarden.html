@@ -23,11 +23,17 @@
       .sub { color: rgba(255,255,255,.72); margin: 0; }
       a { color: #fff; }
       .en { color: rgba(255,255,255,.72); font-size: 14px; }
+      .back { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 14px 0 10px; margin: 0 0 14px; background: #fff; color: #1b2430; border: 2px solid #fff; border-radius: 5px; text-decoration: none; font-weight: 700; font-size: 16px; box-shadow: 0 6px 18px rgba(0,0,0,.3); }
+      .back svg { width: 20px; height: 20px; }
+      .back:hover { background: #eef2f7; }
+      .bottom { text-align: center; margin: 8px 0 0; }
+      .bottom .back { margin: 0; }
     </style>
   </head>
   <body>
     <div class="wrap">
       <div class="top"><a href="/"><img src="/logo.png" alt="Wegenkenner" /></a><a href="/privacy.html">Privacy</a></div>
+      <a class="back" href="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden><path d="M15 5l-7 7 7 7" /></svg>Home</a>
 
       <div class="board"><div class="inner">
         <h1>Voorwaarden</h1>
@@ -82,6 +88,7 @@
         <h2 class="en">In English</h2>
         <p class="en">Wegenkenner is a free hobby project, offered as is and without warranty. Pick a nickname that does not offend, play with the game itself, and expect nicknames, groups or accounts to be removed on abuse. Map data comes from OpenStreetMap (ODbL), CBS and Natural Earth. The name, logo and game belong to the maker. Plus is a one-year pass tied to your Google account; it does not renew by itself. Refunds within fourteen days of purchase on request, as long as Plus has not been used. Referral codes are personal and limited; gift codes are single use. Free players see Google ads. What Plus unlocks may change over time; what you have stays until your pass ends. Do not use the map for navigation. Dutch law applies.</p>
       </div></div>
+      <p class="bottom"><a class="back" href="/"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden><path d="M15 5l-7 7 7 7" /></svg>Naar de start</a></p>
     </div>
   </body>
 </html>
