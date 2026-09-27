@@ -44,8 +44,9 @@ export function Stats({ data, account, plus, settings, onSettings, onSignOut, on
     // The chosen time shows at once; only the on switch waits for the server.
     setReminder((r) => ({ ...r, hour, minute }))
     if (!on) {
-      await disableReminder()
+      // Off shows at once; the unsubscribe runs in the background.
       setReminder({ on: false, hour, minute })
+      void disableReminder()
       return
     }
     const fail = await enableReminder(hour, minute, lang)

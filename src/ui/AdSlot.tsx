@@ -32,14 +32,18 @@ export function AdSlot({ place, plus }: { place: 'home' | 'results'; plus: boole
   useEffect(() => {
     if (!show) return
     ensureScript()
-    try {
-      ;(window.adsbygoogle = window.adsbygoogle ?? []).push({})
-    } catch {
-      /* blocked */
-    }
-    // Google marks the unit filled or unfilled; an unfilled one should not leave a hole in the page.
     const el = ref.current
     if (!el) return
+    // Push each unit once; a second push on the same element makes the ad script throw.
+    if (!el.hasAttribute('data-adsbygoogle-status') && el.dataset.pushed !== '1') {
+      el.dataset.pushed = '1'
+      try {
+        ;(window.adsbygoogle = window.adsbygoogle ?? []).push({})
+      } catch {
+        /* blocked */
+      }
+    }
+    // Google marks the unit filled or unfilled; an unfilled one should not leave a hole in the page.
     const check = () => setEmpty(el.getAttribute('data-ad-status') === 'unfilled')
     const obs = new MutationObserver(check)
     obs.observe(el, { attributes: true, attributeFilter: ['data-ad-status'] })

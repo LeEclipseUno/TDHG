@@ -39,6 +39,12 @@ function keyBytes(b64: string): Uint8Array {
   return Uint8Array.from(raw, (c) => c.charCodeAt(0))
 }
 
+/** The service worker registration, or null when none takes control within a few seconds. */
+async function swReady(ms = 5000): Promise<ServiceWorkerRegistration | null> {
+  if (!('serviceWorker' in navigator)) return null
+  return Promise.race([navigator.serviceWorker.ready, new Promise<null>((r) => window.setTimeout(() => r(null), ms))])
+}
+
 /**
  * Asks permission, subscribes the browser and stores the subscription.
  * Returns null when it worked, otherwise a short reason: 'unsupported', 'offline', 'permission' or 'server: ...'.
@@ -49,7 +55,8 @@ export async function enableReminder(hour: number, minute: number, lang: string)
   if (!c || !(await ensureSession())) return 'offline'
   try {
     if ((await Notification.requestPermission()) !== 'granted') return 'permission'
-    const reg = await navigator.serviceWorker.ready
+    const reg = await swReady()
+    if (!reg) return 'push: no service worker'
     const subscribe = () => reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(VAPID!) as BufferSource })
     const save = async (sub: PushSubscription) => {
       const j = sub.toJSON()
@@ -82,8 +89,8 @@ export function setReminderTime(hour: number, minute: number) {
 export async function disableReminder(): Promise<void> {
   remember({ ...getReminder(), on: false })
   try {
-    const reg = await navigator.serviceWorker.ready
-    const sub = await reg.pushManager.getSubscription()
+    const reg = await swReady()
+    const sub = await reg?.pushManager.getSubscription()
     if (!sub) return
     const c = await sb()
     if (c) await c.from('push_subs').delete().eq('endpoint', sub.endpoint)
