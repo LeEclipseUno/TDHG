@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useLang } from '../i18n'
 import { Board } from './widgets'
 import { IconMenu, IconReplay, IconShare, PictGroup, PlusMark } from './icons'
-import { createGroup, getNickname, groupBoard, groupRivals, groupWeek, joinGroup, leaveGroup, myGroups, ONLINE, setNickname, validNickname, type BoardRow, type Group, type WeekRow } from '../game/backend'
+import { createGroup, getNickname, groupBoard, groupRivals, groupWeek, joinGroup, leaveGroup, myGroups, ONLINE, setNickname, validGroupName, validNickname, type BoardRow, type Group, type WeekRow } from '../game/backend'
 import { dailyNumber } from '../game/daily'
 import { formatTime } from '../game/session'
 import type { GameData } from '../data'
@@ -23,6 +23,7 @@ export function Groups({ data, onHome, joinCode }: { data: GameData; onHome: () 
   const [tick, setTick] = useState(0)
   const n = dailyNumber()
   const nickOk = validNickname(nick)
+  const nameOk = validGroupName(name)
 
   const refresh = async (select?: string) => {
     const g = await myGroups()
@@ -52,7 +53,7 @@ export function Groups({ data, onHome, joinCode }: { data: GameData; onHome: () 
     if (nickOk) setNickname(nick.trim())
   }
   const doCreate = async () => {
-    if (!nickOk || name.trim().length < 2) return
+    if (!nickOk || !nameOk) return
     saveNick()
     setBusy(true)
     const g = await createGroup(name.trim(), nick.trim())
@@ -131,10 +132,11 @@ export function Groups({ data, onHome, joinCode }: { data: GameData; onHome: () 
                   <span>{t('newGroup')}</span>
                   <div className="field-row">
                     <input value={name} maxLength={32} placeholder={t('groupName')} onChange={(e) => setName(e.target.value)} />
-                    <button type="submit" className="btn btn-small" disabled={busy || !nickOk || name.trim().length < 2}>
+                    <button type="submit" className="btn btn-small" disabled={busy || !nickOk || !nameOk}>
                       {t('create')}
                     </button>
                   </div>
+                  {!nameOk && name.trim().length > 1 && <span className="field-hint">{t('groupNameInvalid')}</span>}
                 </form>
                 <form
                   className="field"

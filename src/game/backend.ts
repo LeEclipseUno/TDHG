@@ -51,14 +51,8 @@ export function setNickname(n: string) {
     /* ignore */
   }
 }
-const BLOCK = ['kanker', 'hoer', 'kut', 'nazi', 'hitler', 'neger', 'fuck', 'shit', 'cunt', 'nigger']
-export function validNickname(n: string): boolean {
-  const s = n.trim()
-  if (s.length < 2 || s.length > 16) return false
-  if (!/^[\p{L}\p{N} _.-]+$/u.test(s)) return false
-  const low = s.toLowerCase()
-  return !BLOCK.some((w) => low.includes(w))
-}
+import { tidyName, validGroupName, validNickname } from './clean'
+export { validNickname, validGroupName }
 
 export interface Group {
   code: string
@@ -108,12 +102,14 @@ export async function submitDaily(daily: number, score: number, good: number, to
 }
 
 export async function createGroup(name: string, nick: string): Promise<Group | null> {
-  const rows = await rpc<{ code: string; name: string }[]>('create_group', { p_name: name, p_nick: nick })
+  if (!validGroupName(name) || !validNickname(nick)) return null
+  const rows = await rpc<{ code: string; name: string }[]>('create_group', { p_name: tidyName(name), p_nick: tidyName(nick) })
   const g = rows?.[0]
   return g ? { ...g, members: 1 } : null
 }
 export async function joinGroup(code: string, nick: string): Promise<Group | null> {
-  const rows = await rpc<{ code: string; name: string }[]>('join_group', { p_code: code, p_nick: nick })
+  if (!validNickname(nick)) return null
+  const rows = await rpc<{ code: string; name: string }[]>('join_group', { p_code: code, p_nick: tidyName(nick) })
   const g = rows?.[0]
   return g ? { ...g, members: 0 } : null
 }

@@ -148,23 +148,23 @@ export function Results({ data, session, newBest, streak, plus, badges, onAgain,
         <Board className="results-board">
           <div className="board-title">{session.dailyNumber ? `Wegenkenner #${session.dailyNumber}` : session.personal ? t('personalDaily') : t('results')}</div>
           <div className="results-mode">
-            {t(`mode_${session.mode}`)} <span className="sep" /> {t(`tier_${session.tier}_short`)}
+            <span>{t(`mode_${session.mode}`)}</span>
+            <span className="sep" />
+            <span>{t(`tier_${session.tier}_short`)}</span>
             {session.variant !== 'normal' && (
               <>
-                <span className="sep" /> {t(`variant_${session.variant}`)}
+                <span className="sep" />
+                <span>{t(`variant_${session.variant}`)}</span>
               </>
             )}
             {session.daily && !session.dailyNumber && (
               <>
-                <span className="sep" /> {dateKey()}
-              </>
-            )}
-            {session.practice && (
-              <>
-                <span className="sep" /> {t('practiceNote')}
+                <span className="sep" />
+                <span>{dateKey()}</span>
               </>
             )}
           </div>
+          {session.practice && <div className="results-note">{t('practiceNote')}</div>}
           <div className="results-map">
             <MapView data={data} tier={session.tier} highlights={highlights} markers={markers} interactive={false} />
           </div>

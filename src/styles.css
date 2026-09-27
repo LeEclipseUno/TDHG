@@ -1060,8 +1060,21 @@ button {
   font-weight: 600;
   letter-spacing: 0.03em;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
-  gap: 8px;
+  gap: 6px 8px;
+}
+.results-mode > span:not(.sep) {
+  white-space: nowrap;
+}
+.results-note {
+  font-family: var(--font-sign);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  opacity: 0.8;
+  margin-top: 2px;
 }
 .sep {
   display: inline-block;
@@ -1114,6 +1127,7 @@ button {
 }
 .results-board .stat,
 .results-board .results-mode,
+.results-board .results-note,
 .results-board .learn-note {
   color: var(--white);
 }

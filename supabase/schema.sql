@@ -76,11 +76,31 @@ create or replace function make_code() returns text language sql volatile as $$
   from generate_series(1, 6);
 $$;
 
+-- Nicknames and group names on the shared boards: same list as src/game/clean.ts.
+create or replace function clean_name(p text, p_min int, p_max int) returns boolean language sql immutable as $$
+  with n as (
+    select trim(regexp_replace(translate(lower(p), '0134578@$!|áàäâãåéèëêíìïîóòöôõúùüûýÿñç', 'oieastbasiiaaaaaaeeeeiiiiooooouuuuyync'), '[^a-z]+', ' ', 'g')) as s
+  )
+  select length(trim(p)) between p_min and p_max
+    and trim(p) ~ '^[[:alnum:] _.-]+$'
+    and trim(p) ~ '[[:alnum:]]'
+    -- long words: blocked anywhere, even split up with dots or spaces
+    and not exists (
+      select 1 from n, unnest(array['kanker','tering','tyfus','klootzak','flikker','mongool','debiel','nikker','verkracht',
+        'nigger','nigga','faggot','bitch','whore','pussy','rapist','retard','hitler','siegheil','wegenkenner','beheerder','moderator']) w
+      where replace(n.s, ' ', '') like '%' || w || '%')
+    -- short words: only at the start or end of a word
+    and not exists (
+      select 1 from n, unnest(array['hoer','kut','neger','pedo','fuck','shit','cunt','slut','nazi','admin']) w
+      where n.s ~ ('(^| )' || w) or n.s ~ (w || '( |$)'));
+$$;
+
 create or replace function create_group(p_name text, p_nick text)
 returns table (code text, name text) language plpgsql security definer set search_path = public as $$
 declare g groups%rowtype; c text;
 begin
   if auth.uid() is null then raise exception 'not signed in'; end if;
+  if not clean_name(p_name, 2, 32) or not clean_name(p_nick, 2, 16) then raise exception 'bad name'; end if;
   loop
     c := make_code();
     exit when not exists (select 1 from groups where groups.code = c);
@@ -95,6 +115,7 @@ returns table (code text, name text) language plpgsql security definer set searc
 declare g groups%rowtype;
 begin
   if auth.uid() is null then raise exception 'not signed in'; end if;
+  if not clean_name(p_nick, 2, 16) then raise exception 'bad name'; end if;
   select * into g from groups where groups.code = upper(trim(p_code));
   if not found then raise exception 'unknown group'; end if;
   insert into members (group_id, player_id, nickname) values (g.id, auth.uid(), trim(p_nick))
@@ -115,7 +136,7 @@ returns void language plpgsql security definer set search_path = public as $$
 begin
   if auth.uid() is null then raise exception 'not signed in'; end if;
   insert into daily_scores (daily, player_id, nickname, score, good, total, ms)
-    values (p_daily, auth.uid(), nullif(trim(p_nick), ''), p_score, p_good, p_total, p_ms)
+    values (p_daily, auth.uid(), case when clean_name(coalesce(p_nick, ''), 2, 16) then trim(p_nick) end, p_score, p_good, p_total, p_ms)
     on conflict (daily, player_id) do update
       set score = greatest(daily_scores.score, excluded.score),
           good = case when excluded.score > daily_scores.score then excluded.good else daily_scores.good end,
