@@ -342,6 +342,10 @@ const nl = {
   offline: 'Geen verbinding. Scores en groepen wachten even.',
   whatsapp: 'WhatsApp',
   statsEmpty: 'Speel een potje en hier komen je cijfers.',
+  badgesEmpty: 'Nog geen badges. De eerste komt na je eerste potje.',
+  groupAlone: 'Nog alleen jij. Stuur de code naar je vrienden.',
+  copyCode: 'Code kopiëren',
+  lastPlayed: 'laatst gespeeld',
   groups: 'Vriendengroepen',
   groups_desc: 'Eigen ranglijst met vrienden, per dag en per week.',
   nickname: 'Je naam',
@@ -717,6 +721,10 @@ const en: Record<Key, string> = {
   offline: 'No connection. Scores and groups will wait.',
   whatsapp: 'WhatsApp',
   statsEmpty: 'Play a game and your numbers show up here.',
+  badgesEmpty: 'No badges yet. The first comes after your first game.',
+  groupAlone: 'Just you so far. Send the code to your friends.',
+  copyCode: 'Copy code',
+  lastPlayed: 'last played',
   groups: 'Friend groups',
   groups_desc: 'Your own board with friends, per day and per week.',
   nickname: 'Your name',
@@ -753,6 +761,16 @@ const en: Record<Key, string> = {
 const STRINGS: Record<Lang, Record<Key, string>> = { nl, en }
 
 export type Vars = Record<string, string | number>
+
+const LOCALE: Record<Lang, string> = { nl: 'nl-NL', en: 'en-GB' }
+/** 1.234 in Dutch, 1,234 in English. */
+export const formatNumber = (n: number, lang: Lang): string => new Intl.NumberFormat(LOCALE[lang]).format(n)
+/** '27 sep' / '27 Sept' by default; 'long' adds the year in words. */
+export function formatDate(d: Date | number | string, lang: Lang, style: 'short' | 'long' = 'short'): string {
+  const date = d instanceof Date ? d : new Date(d)
+  if (Number.isNaN(date.getTime())) return ''
+  return new Intl.DateTimeFormat(LOCALE[lang], style === 'long' ? { day: 'numeric', month: 'long', year: 'numeric' } : { day: 'numeric', month: 'short' }).format(date)
+}
 
 export function translate(lang: Lang, key: Key, vars?: Vars): string {
   let s: string = STRINGS[lang][key]

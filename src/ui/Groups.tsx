@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { useLang } from '../i18n'
+import { formatNumber, useLang } from '../i18n'
 import { BackBar, Board, BottomHome } from './widgets'
-import { IconMenu, IconReplay, IconShare, PictGroup, PlusMark } from './icons'
+import { IconCopy, IconMenu, IconReplay, IconShare, PictGroup, PlusMark } from './icons'
 import { createGroup, getNickname, groupBoard, groupRivals, groupWeek, joinGroup, leaveGroup, myGroups, ONLINE, setNickname, validGroupName, validNickname, type BoardRow, type Group, type WeekRow } from '../game/backend'
 import { dailyNumber } from '../game/daily'
 import { formatTime } from '../game/session'
@@ -9,7 +9,7 @@ import type { GameData } from '../data'
 import { Backdrop } from './Backdrop'
 
 export function Groups({ data, plus, onPlus, onHome, joinCode }: { data: GameData; plus: boolean; onPlus: () => void; onHome: () => void; joinCode?: string }) {
-  const { t } = useLang()
+  const { t, lang } = useLang()
   const [nick, setNick] = useState(getNickname())
   const [groups, setGroups] = useState<Group[] | null>(null)
   const [open, setOpen] = useState<string | null>(null)
@@ -21,6 +21,8 @@ export function Groups({ data, plus, onPlus, onHome, joinCode }: { data: GameDat
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const [leaving, setLeaving] = useState<Group | null>(null)
+  const [loadingBoard, setLoadingBoard] = useState(false)
+  const [codeCopied, setCodeCopied] = useState(false)
   const [tick, setTick] = useState(0)
   const n = dailyNumber()
   const nickOk = validNickname(nick)
@@ -38,8 +40,10 @@ export function Groups({ data, plus, onPlus, onHome, joinCode }: { data: GameDat
   useEffect(() => {
     if (!open) return
     let alive = true
+    setLoadingBoard(true)
     Promise.all([groupBoard(open, n), groupWeek(open, n), groupRivals(open, n)]).then(([b, w, r]) => {
       if (!alive) return
+      setLoadingBoard(false)
       setBoard(b)
       setWeek(w)
       const top = r.filter((x) => x.beat_me >= 2 && x.beat_me > x.i_beat).sort((x, y) => y.beat_me - x.beat_me)[0]
@@ -194,7 +198,21 @@ export function Groups({ data, plus, onPlus, onHome, joinCode }: { data: GameDat
           <Board tone="dark">
             <div className="group-head">
               <div className="stats-title">
-                {current.name} <span className="group-code">{current.code}</span>
+                {current.name}{' '}
+                <button
+                  type="button"
+                  className="group-code"
+                  title={t('copyCode')}
+                  aria-label={t('copyCode')}
+                  onClick={() => {
+                    navigator.clipboard?.writeText(current.code).then(() => {
+                      setCodeCopied(true)
+                      window.setTimeout(() => setCodeCopied(false), 1500)
+                    }).catch(() => {})
+                  }}
+                >
+                  {codeCopied ? t('copied') : current.code} <IconCopy />
+                </button>
               </div>
               <div className="group-actions">
                 <button type="button" className="btn btn-small" onClick={() => invite(current)}>
@@ -206,6 +224,14 @@ export function Groups({ data, plus, onPlus, onHome, joinCode }: { data: GameDat
               </div>
             </div>
             <div className="stats-title group-sub">Wegenkenner #{n}</div>
+            {loadingBoard && board.length === 0 && (
+              <div className="board-skeleton" aria-busy="true">
+                <div className="skeleton-row" />
+                <div className="skeleton-row" />
+                <div className="skeleton-row" />
+              </div>
+            )}
+            {!loadingBoard && board.length <= 1 && <p className="learn-note group-alone">{t('groupAlone')}</p>}
             <ul className="stats-list group-board">
               {board.map((r, i) => (
                 <li key={i} className={r.is_me ? 'is-me' : ''}>
@@ -221,7 +247,7 @@ export function Groups({ data, plus, onPlus, onHome, joinCode }: { data: GameDat
                     {r.is_me && <small> ({t('you').toLowerCase()})</small>}
                   </span>
                   <span className="group-detail">{r.played ? `${r.good}/${r.total} · ${formatTime(r.ms)}` : t('notPlayed')}</span>
-                  <span className="results-points">{r.played ? r.score : ''}</span>
+                  <span className="results-points">{r.played ? formatNumber(r.score, lang) : ''}</span>
                 </li>
               ))}
             </ul>
@@ -237,7 +263,7 @@ export function Groups({ data, plus, onPlus, onHome, joinCode }: { data: GameDat
                   <span className="group-detail">
                     {r.days} {t('days', { n: r.days })}
                   </span>
-                  <span className="results-points">{r.total}</span>
+                  <span className="results-points">{formatNumber(r.total, lang)}</span>
                 </li>
               ))}
             </ul>

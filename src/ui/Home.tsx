@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { GameData, Tier } from '../data'
 import type { Deck } from '../game/learn'
 import { useLang, type Lang } from '../i18n'
-import { MODES, VARIANTS, dailyShareText, getBest, type Challenge, type ModeId, type PostStyle, type Settings, type Variant } from '../game/session'
+import { getLastMode, MODES, VARIANTS, dailyShareText, getBest, type Challenge, type ModeId, type PostStyle, type Settings, type Variant } from '../game/session'
 import { isPlusMode } from '../game/premium'
 import { canRepairStreak, dailyMode, dailyNumber, getDailyResult, getPersonal, getStreak, msUntilNextDaily } from '../game/daily'
 import { season, SEASON_TEXT } from '../game/season'
@@ -167,6 +167,10 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
     if (pick) setLogoCode(pick.ref)
     sfx.tap()
   }
+
+  // The mode you played last goes first.
+  const lastMode = getLastMode()
+  const orderedModes = lastMode ? [lastMode, ...MODES.filter((m) => m !== lastMode)] : MODES
 
   return (
     <div className={'home' + (s ? ` season-${s}` : '')}>
@@ -342,10 +346,11 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
 
         <Board className="modes-board">
           <div className="board-title">{t('chooseMode')}</div>
-          {MODES.map((mode) => {
+          {orderedModes.map((mode) => {
             const best = getBest(mode, settings.tier, settings.timer, settings.variant, settings.province)
             const Pict = PICTS[mode]
             const locked = isPlusMode(mode) && !plus
+            const last = mode === lastMode
             return (
               <button key={mode} type="button" className={'sign-row' + (locked ? ' sign-row-locked' : '')} onClick={() => (locked ? onPlus() : onPlay(mode))}>
                 <span className="sign-pict">
@@ -355,6 +360,7 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
                   <span className="sign-name">
                     {t(`mode_${mode}`)}
                     {locked && <span className="locked-tag">{t('plusTag')}</span>}
+                    {last && !locked && <span className="last-tag">{t('lastPlayed')}</span>}
                   </span>
                   <span className="sign-desc">{t(`mode_${mode}_desc`)}</span>
                   {best && (

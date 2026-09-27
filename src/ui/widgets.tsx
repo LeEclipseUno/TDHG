@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Grade } from '../game/session'
 import { IconBack, IconLock } from './icons'
+import { formatNumber, useLang } from '../i18n'
 
 /** Countdown styled as a Dutch speed limit sign: white disc, red ring that depletes. */
 export function SpeedSign({ remainingMs, totalMs, size = 48 }: { remainingMs: number; totalMs: number; size?: number }) {
@@ -34,10 +35,11 @@ export function SpeedSign({ remainingMs, totalMs, size = 48 }: { remainingMs: nu
 
 /** Score on a matrix sign: dark panel, amber digits. */
 export function Matrix({ value, label, big = false }: { value: string | number; label?: string; big?: boolean }) {
+  const { lang } = useLang()
   return (
     <div className={'matrix' + (big ? ' matrix-big' : '')}>
       {label && <span className="matrix-label">{label}</span>}
-      <span className="matrix-value">{value}</span>
+      <span className="matrix-value">{typeof value === 'number' ? formatNumber(value, lang) : value}</span>
     </div>
   )
 }

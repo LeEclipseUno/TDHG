@@ -7,6 +7,18 @@ export function setSoundEnabled(on: boolean) {
   enabled = on
 }
 
+// Everything runs through one master gain so the whole set sits at half volume.
+let master: GainNode | null = null
+const MASTER = 0.5
+function out(c: AudioContext): AudioNode {
+  if (!master) {
+    master = c.createGain()
+    master.gain.value = MASTER
+    master.connect(out(c))
+  }
+  return master
+}
+
 function ac(): AudioContext | null {
   if (!enabled) return null
   try {
@@ -30,7 +42,7 @@ function tone(freq: number, dur: number, type: OscillatorType = 'sine', gain = 0
   g.gain.setValueAtTime(0.0001, t0)
   g.gain.exponentialRampToValueAtTime(gain, t0 + 0.01)
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur)
-  osc.connect(g).connect(c.destination)
+  osc.connect(g).connect(out(c))
   osc.start(t0)
   osc.stop(t0 + dur + 0.02)
 }
@@ -50,7 +62,7 @@ function thud(delay = 0) {
   const f = c.createBiquadFilter()
   f.type = 'lowpass'
   f.frequency.value = 900
-  src.connect(f).connect(g).connect(c.destination)
+  src.connect(f).connect(g).connect(out(c))
   src.start(t0)
   tone(150, 0.14, 'sine', 0.35, delay, 55)
 }

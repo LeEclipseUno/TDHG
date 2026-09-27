@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { GameData } from '../data'
-import { useLang } from '../i18n'
+import { formatDate, useLang } from '../i18n'
 import { BackBar, Board, BottomHome } from './widgets'
 import { IconGoogle, IconMenu, IconReplay, PictGroup, PictLearn, PictExit, PictJunction, PictRoute, PictDistance, PictStats, PictFind, PictQuiz } from './icons'
 import { Backdrop } from './Backdrop'
@@ -61,7 +61,7 @@ export function Plus({ data, account, onSignIn, onRefresh, onNotice, onHome }: P
   const active = hasPlus(account)
   const shop = account.id ? checkoutUrl(account.id, account.email) : ''
   const untilMs = plusUntil(account)
-  const until = untilMs ? new Date(untilMs).toLocaleDateString(lang === 'nl' ? 'nl-NL' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : ''
+  const until = untilMs ? formatDate(untilMs, lang, 'long') : ''
   const refresh = async () => {
     setBusy(true)
     await onRefresh()

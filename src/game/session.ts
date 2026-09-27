@@ -269,6 +269,23 @@ export function shareText(s: Session, lang: Lang, url: string): string {
 
 // ---- persistence ----
 
+const LAST_MODE_KEY = 'tdhg:v1:lastMode'
+export function getLastMode(): ModeId | null {
+  try {
+    const v = localStorage.getItem(LAST_MODE_KEY)
+    return v && MODES.includes(v as ModeId) ? (v as ModeId) : null
+  } catch {
+    return null
+  }
+}
+export function rememberMode(mode: ModeId) {
+  try {
+    localStorage.setItem(LAST_MODE_KEY, mode)
+  } catch {
+    /* ignore */
+  }
+}
+
 const SETTINGS_KEY = 'tdhg:v1:settings'
 
 export function loadSettings(): Settings {

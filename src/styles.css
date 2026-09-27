@@ -1991,13 +1991,44 @@ button {
   flex-wrap: wrap;
 }
 .group-code {
-  margin-left: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 4px;
   background: var(--white);
   color: var(--navy);
+  border: 0;
   border-radius: 3px;
-  padding: 1px 7px;
+  padding: 2px 7px;
+  font: inherit;
   font-size: 13px;
   letter-spacing: 0.12em;
+  cursor: pointer;
+  vertical-align: middle;
+}
+.group-code svg {
+  width: 13px;
+  height: 13px;
+  opacity: 0.7;
+}
+@media (hover: hover) {
+  .group-code:hover svg {
+    opacity: 1;
+  }
+}
+.board-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 14px 10px;
+}
+.board-skeleton .skeleton-row {
+  height: 34px;
+}
+.group-alone,
+.badges-empty {
+  padding: 4px 14px 10px;
+  margin: 0;
 }
 .group-actions {
   display: flex;
@@ -2218,6 +2249,18 @@ body,
 .sign-row-locked .sign-pict,
 .sign-row-locked .sign-desc {
   opacity: 0.6;
+}
+.last-tag {
+  margin-left: 8px;
+  vertical-align: middle;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 3px;
+  padding: 1px 6px;
 }
 .sign-name .locked-tag {
   float: none;

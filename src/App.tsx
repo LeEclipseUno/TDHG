@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { loadData, type GameData } from './data'
 import { LangProvider, useLang } from './i18n'
-import { dailySeedOn, dateKey, loadSettings, MODES, newSession, parseChallenge, saveSettings, submitBest, summarize, type Challenge, type ModeId, type Session, type Settings } from './game/session'
+import { dailySeedOn, dateKey, loadSettings, MODES, newSession, parseChallenge, rememberMode, saveSettings, submitBest, summarize, type Challenge, type ModeId, type Session, type Settings } from './game/session'
 import { dailyDate, dailyMode, dailyNumber, getDailyResult, marksOf, repairStreak, saveDailyResult, savePersonal, updateBadge } from './game/daily'
 import { loadLabelStats } from './game/history'
 import { roadsForTier } from './data'
@@ -147,6 +147,7 @@ function Shell() {
   const play = (mode: ModeId) => {
     if (isPlusMode(mode) && !plus) return go('plus')
     const tierSettings = settings.tier === 'P' && !plus ? { ...settings, tier: 'A' as const } : settings
+    rememberMode(mode)
     setHash(mode)
     const start = () => setScreen({ kind: 'game', session: newSession(mode, tierSettings) })
     if (tierSettings.tier === 'P' && data) void data.ready.then(start)

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useLang } from '../i18n'
-import { dateKey, formatTime, loadSettings, rankKey, shareText, summarize, type Session } from '../game/session'
+import { formatDate, formatNumber, useLang } from '../i18n'
+import { formatTime, loadSettings, rankKey, shareText, summarize, type Session } from '../game/session'
 import type { GameData } from '../data'
 import MapView, { type Highlight, type Marker } from '../map/MapView'
 import { Shield } from './Shield'
@@ -160,7 +160,7 @@ export function Results({ data, session, newBest, streak, plus, badges, onAgain,
             {session.daily && !session.dailyNumber && (
               <>
                 <span className="sep" />
-                <span>{dateKey()}</span>
+                <span>{formatDate(new Date(), lang)}</span>
               </>
             )}
           </div>
@@ -231,7 +231,7 @@ export function Results({ data, session, newBest, streak, plus, badges, onAgain,
                 </span>
                 {road ? <Shield code={road.ref} kind={road.kind} size="sm" /> : <span className="results-label">{r.label}</span>}
                 <span className="results-detail">{r.detail}</span>
-                <span className="results-points">{r.points}</span>
+                <span className="results-points">{formatNumber(r.points, lang)}</span>
               </li>
             )
           })}

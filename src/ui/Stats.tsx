@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { GameData } from '../data'
-import { useLang } from '../i18n'
+import { formatDate, formatNumber, useLang } from '../i18n'
 import { clearHistory, loadHistory, loadLabelStats } from '../game/history'
 import { formatTime, MODES, POST_STYLES, SHIELD_STYLES, type PostStyle, type Settings, type ShieldStyle } from '../game/session'
 import { BackBar, Board, BottomHome, Matrix, Seg } from './widgets'
@@ -95,7 +95,7 @@ export function Stats({ data, account, plus, settings, onSettings, onSignOut, on
   }
   const { t, lang } = useLang()
   const untilMs = plusUntil(account)
-  const until = untilMs ? new Date(untilMs).toLocaleDateString(lang === 'nl' ? 'nl-NL' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : ''
+  const until = untilMs ? formatDate(untilMs, lang, 'long') : ''
   const [tick, setTick] = useState(0)
   const hist = useMemo(() => loadHistory(), [tick])
   const labels = useMemo(() => loadLabelStats(), [tick])
@@ -253,6 +253,7 @@ export function Stats({ data, account, plus, settings, onSettings, onSignOut, on
         </Board>
         <Board className="results-board">
           <div className="board-title">{t('badges')}</div>
+          {earned.size === 0 && <p className="learn-note badges-empty">{t('badgesEmpty')}</p>}
           <ul className="badge-list">
             {BADGES.map((id) => {
               const on = earned.has(id)
@@ -265,7 +266,7 @@ export function Stats({ data, account, plus, settings, onSettings, onSignOut, on
                     <span className="badge-name">{t(`badge_${id}`)}</span>
                     <span className="badge-desc">{t(`badge_${id}_desc`)}</span>
                   </span>
-                  <span className="badge-when">{on ? (earnedAt[id] ? new Date(earnedAt[id]).toLocaleDateString(lang === 'nl' ? 'nl-NL' : 'en-GB', { day: 'numeric', month: 'short' }) : '') : <IconLock />}</span>
+                  <span className="badge-when">{on ? (earnedAt[id] ? formatDate(earnedAt[id], lang) : '') : <IconLock />}</span>
                 </li>
               )
             })}
@@ -394,9 +395,9 @@ export function Stats({ data, account, plus, settings, onSettings, onSignOut, on
                 <li key={i}>
                   <span>{t(`mode_${g.mode}`)}</span>
                   <small>
-                    {t(`tier_${g.tier}_short`)} {'·'} {new Date(g.at).toLocaleDateString()}
+                    {t(`tier_${g.tier}_short`)} {'·'} {formatDate(g.at, lang)}
                   </small>
-                  <span className="results-points">{g.score}</span>
+                  <span className="results-points">{formatNumber(g.score, lang)}</span>
                 </li>
               ))}
             </ul>
