@@ -1,5 +1,5 @@
 import { useLang } from '../i18n'
-import { Board } from './widgets'
+import { BackBar, Board } from './widgets'
 import { IconMenu } from './icons'
 import { Backdrop } from './Backdrop'
 import type { GameData } from '../data'
@@ -10,6 +10,7 @@ export function About({ data, onHome }: { data: GameData; onHome: () => void }) 
     <div className="results">
       <Backdrop data={data} />
       <div className="results-inner about">
+        <BackBar label={t('home')} onBack={onHome} />
         <Board className="results-board">
           <div className="board-title">{t('about')}</div>
           <div className="about-body">

@@ -1,5 +1,5 @@
 import type { Grade } from '../game/session'
-import { IconLock } from './icons'
+import { IconBack, IconLock } from './icons'
 
 /** Countdown styled as a Dutch speed limit sign: white disc, red ring that depletes. */
 export function SpeedSign({ remainingMs, totalMs, size = 48 }: { remainingMs: number; totalMs: number; size?: number }) {
@@ -72,6 +72,18 @@ export function Seg<T extends string>({ value, options, onChange, label, wide = 
           {o.label}
         </button>
       ))}
+    </div>
+  )
+}
+
+/** Top of a sub-screen: a sign-style back button with the destination next to it. */
+export function BackBar({ label, onBack }: { label: string; onBack: () => void }) {
+  return (
+    <div className="back-bar">
+      <button type="button" className="sign-btn back-btn" onClick={onBack}>
+        <IconBack />
+        <span>{label}</span>
+      </button>
     </div>
   )
 }

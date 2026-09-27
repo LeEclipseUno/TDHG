@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { GameData } from '../data'
 import { useLang } from '../i18n'
-import { Board } from './widgets'
+import { BackBar, Board } from './widgets'
 import { IconGoogle, IconMenu, IconReplay, PictLearn, PictExit, PictJunction, PictRoute, PictDistance, PictStats, PictFind, PictQuiz } from './icons'
 import { Backdrop } from './Backdrop'
 import { getReferralCode, ONLINE, redeemGift, type Account } from '../game/backend'
@@ -71,6 +71,7 @@ export function Plus({ data, account, onSignIn, onRefresh, onNotice, onHome }: P
     <div className="results">
       <Backdrop data={data} />
       <div className="results-inner">
+        <BackBar label={t('home')} onBack={onHome} />
         <Board className="results-board plus-board">
           <div className="board-title">{t('plus')}</div>
           <div className="plus-body">

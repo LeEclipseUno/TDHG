@@ -3,7 +3,7 @@ import type { GameData } from '../data'
 import { useLang } from '../i18n'
 import { clearHistory, loadHistory, loadLabelStats } from '../game/history'
 import { formatTime, MODES, POST_STYLES, SHIELD_STYLES, type PostStyle, type Settings, type ShieldStyle } from '../game/session'
-import { Board, Matrix, Seg } from './widgets'
+import { BackBar, Board, Matrix, Seg } from './widgets'
 import { Shield } from './Shield'
 import { IconLock, IconMenu, IconPencil, PlusMark, SeasonIcon, PictStats, PictDrag, PictFind, PictJunction, PictQuiz, PictRoute, PictPost } from './icons'
 import MapView, { type Highlight } from '../map/MapView'
@@ -138,6 +138,7 @@ export function Stats({ data, account, plus, settings, onSettings, onSignOut, on
     <div className="results">
       <Backdrop data={data} />
       <div className="results-inner">
+        <BackBar label={t('home')} onBack={onHome} />
         {ONLINE && account.signedIn && (
           <Board className="results-board profile-board">
             <div className="board-title">{t('stats')}</div>

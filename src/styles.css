@@ -1570,6 +1570,25 @@ button {
   opacity: 0.3;
   cursor: default;
 }
+.back-bar {
+  display: flex;
+}
+.back-btn {
+  width: auto;
+  height: 40px;
+  padding: 0 14px 0 10px;
+  gap: 6px;
+  font-family: var(--font-sign);
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.02em;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+}
+@media (hover: hover) {
+  .back-btn:hover {
+    background: #eef2f7;
+  }
+}
 .sign-btn-small {
   width: 30px;
   height: 30px;

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLang } from '../i18n'
-import { Board } from './widgets'
+import { BackBar, Board } from './widgets'
 import { IconMenu, IconReplay, IconShare, PictGroup, PlusMark } from './icons'
 import { createGroup, getNickname, groupBoard, groupRivals, groupWeek, joinGroup, leaveGroup, myGroups, ONLINE, setNickname, validGroupName, validNickname, type BoardRow, type Group, type WeekRow } from '../game/backend'
 import { dailyNumber } from '../game/daily'
@@ -118,6 +118,7 @@ export function Groups({ data, onHome, joinCode }: { data: GameData; onHome: () 
     <div className="results">
       <Backdrop data={data} />
       <div className="results-inner">
+        <BackBar label={t('home')} onBack={onHome} />
         <Board className="results-board">
           <div className="board-title">{t('groups')}</div>
           {!ONLINE ? (
