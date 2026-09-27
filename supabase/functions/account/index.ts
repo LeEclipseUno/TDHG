@@ -3,7 +3,7 @@
 // Body: { "action": "export" } or { "action": "delete" }. Needs the player's JWT (the app sends it).
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
-const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization, content-type', 'access-control-allow-methods': 'POST, OPTIONS' }
+const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type', 'access-control-allow-methods': 'POST, OPTIONS' }
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...cors, 'content-type': 'application/json' } })
 
 Deno.serve(async (req) => {
