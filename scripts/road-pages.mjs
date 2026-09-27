@@ -123,6 +123,7 @@ export function buildRoadPages(dist) {
   const load = (n) => JSON.parse(fs.readFileSync(path.join(dataDir, n), 'utf8'))
   const roads = load('roads-core.json').filter((r) => r.kind === 'A' || r.kind === 'N')
   const notes = JSON.parse(fs.readFileSync(path.resolve('scripts/road-notes.json'), 'utf8'))
+  const jnotes = JSON.parse(fs.readFileSync(path.resolve('scripts/junction-notes.json'), 'utf8'))
   const land = load('land.json')
   const abroad = load('abroad.json')
   const junctions = load('junctions.json')
@@ -424,7 +425,8 @@ ${neighbourList}
     const near = junctions.filter((o) => o !== j).map((o) => ({ o, d: Math.hypot(o.x - j.x, o.y - j.y) })).sort((a, b) => a.d - b.d).slice(0, 4)
     const where = place ? (placeKm < 2 ? `in ${place.n}` : `bij ${place.n}`) : ''
     const title = `Knooppunt ${j.name}: ${roadNames} ${where} | Wegenkenner`
-    const desc = `Knooppunt ${j.name} verbindt de ${roadNames}${where ? `, ${where}` : ''}${provs.length ? ` in ${listNl(provs)}` : ''}. Bekijk de kaart met de verbindingswegen en test of je het knooppunt kunt aanwijzen.`
+    const jfirst = jnotes[j.name] ? jnotes[j.name].split(/(?<=\.)\s/)[0] : ''
+    const desc = `${jfirst ? jfirst + ' ' : `Knooppunt ${j.name} verbindt de ${roadNames}${where ? `, ${where}` : ''}${provs.length ? ` in ${listNl(provs)}` : ''}. `}Bekijk de kaart met de verbindingswegen en test of je het knooppunt kunt aanwijzen.`
 
     const body = `
 <div class="board"><div class="inner">
@@ -439,6 +441,7 @@ ${place ? `<dt>Ligging</dt><dd>${placeKm < 2 ? `In ${esc(place.n)}` : `${placeKm
 ${provs.length ? `<dt>Provincie</dt><dd>${esc(listNl(provs))}</dd>` : ''}
 <dt>In de buurt</dt><dd>${near.map(({ o, d }) => `<a href="${junctionUrl(o)}">${esc(o.name)}</a> (${Math.round(d / 1000)} km)`).join(', ')}</dd>
 </dl></div></div>
+${jnotes[j.name] ? `<div class="board"><div class="inner"><h2>Over knooppunt ${esc(j.name)}</h2><p>${esc(jnotes[j.name])}</p></div></div>` : ''}
 <div class="board"><div class="inner"><h2>Weet jij waar ${esc(j.name)} ligt?</h2>
 <p>In Wegenkenner krijg je de naam van een knooppunt en tik je de plek aan op een kaart zonder namen. Hoe dichterbij, hoe meer punten.</p>
 <div class="cta"><a class="btn alt" href="/#junction">Speel Knooppunten</a><a class="btn" href="/#daily">Speel de dagelijkse puzzel</a></div>

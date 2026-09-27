@@ -209,7 +209,14 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
             ) : (
               <span />
             )}
-            <LangPost lang={lang} onChange={setLang} label={t('language')} />
+            <LangPost
+              lang={lang}
+              onChange={(l) => {
+                sfx.post()
+                setLang(l)
+              }}
+              label={t('language')}
+            />
           </div>
           <div className="home-logo-wrap">
             <Logo code={logoCode} plus={plus} onShieldTap={cycleLogo} />

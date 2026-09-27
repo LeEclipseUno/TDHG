@@ -74,6 +74,18 @@ export const sfx = {
   },
   /** Counting ticks on the results board. */
   count: () => tone(2200, 0.015, 'square', 0.035),
+  /** The click of a hectometre post: a short wooden knock with a bright tip. */
+  post: () => {
+    thud()
+    tone(2600, 0.02, 'square', 0.05, 0.01)
+  },
+  /** Perfect daily: a small road-sign fanfare. */
+  perfect: () => {
+    const notes = [523, 659, 784, 1047, 784, 1047, 1319]
+    const when = [0, 0.11, 0.22, 0.33, 0.5, 0.61, 0.72]
+    notes.forEach((f, i) => tone(f, i === notes.length - 1 ? 0.6 : 0.13, 'triangle', 0.17, when[i]))
+    ;[0.33, 0.72].forEach((d) => tone(262, 0.3, 'sine', 0.1, d))
+  },
   /** End of round. */
   done: () => {
     ;[0, 0.12, 0.24, 0.42].forEach((d, i) => tone([523, 659, 784, 1047][i], i === 3 ? 0.4 : 0.14, 'triangle', 0.16, d))

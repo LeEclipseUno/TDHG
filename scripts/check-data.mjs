@@ -8,6 +8,7 @@ const junctions = load('junctions.json')
 const exits = load('exits.json')
 const daily = load('daily.json')
 const notes = JSON.parse(fs.readFileSync('scripts/road-notes.json', 'utf8'))
+const jnotes = JSON.parse(fs.readFileSync('scripts/junction-notes.json', 'utf8'))
 
 let problems = 0
 const warn = (msg) => {
@@ -34,6 +35,9 @@ const noNote = playable.filter((r) => !notes[r.ref]).map((r) => r.ref)
 if (noNote.length) warn(`roads without a note in scripts/road-notes.json: ${noNote.join(' ')}`)
 const orphanNotes = Object.keys(notes).filter((ref) => !refs.has(ref))
 if (orphanNotes.length) console.log('note: notes for roads no longer in the data:', orphanNotes.join(' '))
+
+const noJNote = junctions.filter((j) => !jnotes[j.name]).map((j) => j.name)
+if (noJNote.length) warn(`interchanges without a note in scripts/junction-notes.json: ${noJNote.join(', ')}`)
 
 // 3. Rough plausibility of the data itself.
 if (playable.length < 60) warn(`only ${playable.length} playable roads, expected around 73`)

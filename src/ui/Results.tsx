@@ -72,8 +72,15 @@ export function Results({ data, session, newBest, streak, plus, badges, onAgain,
     }
     if (countP >= 1 && lastTick.current !== -1) {
       lastTick.current = -1
-      sfx.done()
-      haptic(RANK_HAPTIC[rank])
+      const perfect = !!session.dailyNumber && !session.practice && sum.total > 0 && sum.good === sum.total
+      if (perfect) {
+        sfx.perfect()
+        haptic([30, 60, 30, 60, 80])
+      } else {
+        sfx.done()
+        haptic(RANK_HAPTIC[rank])
+      }
+      if (streak > 0) window.setTimeout(() => sfx.post(), perfect ? 900 : 450)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [elapsed])

@@ -18,7 +18,7 @@ export function About({ data, onHome }: { data: GameData; onHome: () => void }) 
             <p>{t('aboutPrivacy')}</p>
             <p>{t('aboutData')}</p>
             <p>
-              {t('aboutContact')}{' '}
+              {t('aboutContact')} <a href="mailto:hello@wegenkenner.nl">hello@wegenkenner.nl</a>. {t('aboutBugs')}{' '}
               <a href={`${REPO_URL}/issues`} target="_blank" rel="noreferrer">
                 GitHub
               </a>
