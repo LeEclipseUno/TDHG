@@ -55,6 +55,7 @@ function Shell() {
   const [error, setError] = useState<string | null>(null)
   const [settings, setSettingsState] = useState<Settings>(loadSettings)
   const [screen, setScreen] = useState<Screen>({ kind: 'home' })
+  const [fact] = useState(() => 1 + Math.floor(Math.random() * 12))
   useEffect(() => {
     setErrorContext('screen', screen.kind === 'game' ? `game:${screen.session.mode}` : screen.kind)
   }, [screen])
@@ -293,7 +294,7 @@ function Shell() {
         <div className="skeleton-inner">
           <div className="skeleton-lang" />
           <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" className="loading-logo" />
-          <div className="skeleton-line" />
+          <p className="loading-fact">{t(`fact_${fact}` as 'fact_1')}</p>
           <div className="skeleton-board tall" />
           <div className="skeleton-row" />
           <div className="skeleton-board" />

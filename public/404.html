@@ -3,30 +3,121 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#091b2c" />
-    <title>Verkeerde afslag</title>
-    <link rel="icon" href="./favicon.ico" />
+    <meta name="theme-color" content="#0a1628" />
+    <meta name="robots" content="noindex" />
+    <title>Verkeerd afgeslagen</title>
+    <link rel="icon" href="/favicon.ico" />
     <style>
-      body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #0a1628; color: #f7f8fa; font-family: 'Barlow', system-ui, sans-serif; padding: 16px; }
-      .board { background: #0d4a9c; border-radius: 8px; padding: 5px; box-shadow: 0 12px 32px rgba(0,0,0,.4); max-width: 420px; width: 100%; }
-      .inner { border: 3px solid #fff; border-radius: 5px; padding: 22px 20px; text-align: center; }
-      h1 { margin: 0 0 6px; font-size: 34px; letter-spacing: .02em; }
-      p { margin: 0 0 18px; color: rgba(255,255,255,.85); }
-      a { display: inline-block; background: #fff; color: #0d4a9c; text-decoration: none; font-weight: 700; padding: 10px 18px; border-radius: 5px; }
-      .num { display: inline-block; background: #c8102e; color: #fff; font-weight: 800; padding: 2px 12px; border-radius: 5px; box-shadow: inset 0 0 0 2px #c8102e, inset 0 0 0 3.5px #fff; font-size: 26px; margin-bottom: 12px; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #0a1628;
+        color: #f7f8fa;
+        font-family: 'Barlow', system-ui, sans-serif;
+        padding: 16px;
+        position: relative;
+        overflow: hidden;
+      }
+      /* faint road network behind everything */
+      .roads {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0.22;
+        pointer-events: none;
+      }
+      .glow {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(700px 420px at 50% 30%, rgba(27, 74, 141, 0.55), transparent 70%);
+        pointer-events: none;
+      }
+      .wrap { position: relative; width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 14px; align-items: center; }
+      /* direction sign with an arrow pointing back */
+      .sign {
+        width: 100%;
+        background: #0d4a9c;
+        border: 3px solid #fff;
+        border-radius: 8px;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45), inset 0 0 0 3px #0d4a9c, inset 0 0 0 5px rgba(255, 255, 255, 0.35);
+        padding: 20px 22px;
+        text-align: left;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 12px;
+        align-items: center;
+      }
+      .num {
+        display: inline-block;
+        background: #c8102e;
+        color: #fff;
+        font-weight: 800;
+        padding: 3px 12px;
+        border-radius: 5px;
+        box-shadow: inset 0 0 0 2px #c8102e, inset 0 0 0 3.5px #fff;
+        font-size: 24px;
+        letter-spacing: 0.02em;
+        margin-bottom: 10px;
+      }
+      h1 { margin: 0 0 4px; font-size: 32px; letter-spacing: 0.02em; line-height: 1; }
+      p { margin: 0; color: rgba(255, 255, 255, 0.85); font-size: 15px; line-height: 1.35; }
+      .en { display: block; opacity: 0.65; margin-top: 4px; }
+      .arrow { width: 54px; height: 54px; flex: none; }
+      a.btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #fff;
+        color: #0d4a9c;
+        text-decoration: none;
+        font-weight: 700;
+        padding: 12px 20px;
+        border-radius: 6px;
+        border: 2px solid #0a1628;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+      }
+      a.btn:hover { background: #eef2f7; }
+      /* posts under the sign */
+      .poles { display: flex; gap: 120px; margin-top: -14px; }
+      .poles span { width: 8px; height: 34px; background: #7f868e; border-radius: 0 0 3px 3px; box-shadow: inset 2px 0 0 #a2a8ae; }
     </style>
   </head>
   <body>
-    <div class="board"><div class="inner">
-      <div class="num">A404</div>
-      <h1>Verkeerde afslag</h1>
-      <p>Deze weg bestaat niet. Keer om naar het beginscherm.<br /><span style="opacity:.7">Wrong exit. This page does not exist.</span></p>
-      <a id="home" href="/">Naar de start</a>
-    </div></div>
-    <script>
-      // On GitHub project pages the site lives under /<repo>/; keep that prefix.
-      var first = location.pathname.split('/')[1]
-      if (first && !first.includes('.')) document.getElementById('home').href = '/' + first + '/'
-    </script>
+    <svg class="roads" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice" aria-hidden>
+      <g fill="none" stroke="#f6f8fc" stroke-width="3" stroke-linecap="round">
+        <path d="M-20 120 C 160 90, 300 160, 420 140 S 700 60, 820 110" />
+        <path d="M-20 300 C 120 260, 260 330, 400 300 S 660 240, 820 290" />
+        <path d="M-20 470 C 180 430, 320 500, 480 460 S 700 420, 820 470" />
+        <path d="M140 -20 C 120 150, 200 280, 160 620" />
+        <path d="M420 -20 C 440 160, 380 320, 430 620" />
+        <path d="M660 -20 C 640 180, 700 360, 650 620" />
+      </g>
+      <g fill="none" stroke="#f6c400" stroke-width="2" stroke-dasharray="6 10" opacity="0.7">
+        <path d="M-20 200 C 200 190, 320 240, 520 210 S 720 160, 820 190" />
+        <path d="M-20 390 C 160 370, 300 420, 500 380 S 720 350, 820 400" />
+        <path d="M280 -20 C 300 200, 250 400, 300 620" />
+        <path d="M560 -20 C 540 220, 600 380, 550 620" />
+      </g>
+    </svg>
+    <div class="glow"></div>
+    <div class="wrap">
+      <div class="sign">
+        <div>
+          <div class="num">A404</div>
+          <h1>Verkeerd afgeslagen</h1>
+          <p>Deze weg bestaat niet. Keer om naar de start.<span class="en">Wrong exit. This page does not exist.</span></p>
+        </div>
+        <svg class="arrow" viewBox="0 0 48 48" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" aria-hidden>
+          <path d="M30 10 L14 24 L30 38" />
+          <path d="M16 24 H40" />
+        </svg>
+      </div>
+      <div class="poles"><span></span><span></span></div>
+      <a class="btn" id="home" href="/">Naar de start</a>
+    </div>
   </body>
 </html>
