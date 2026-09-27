@@ -125,6 +125,13 @@ export const SeasonIcon = ({ season }: { season: 'kingsday' | 'sinterklaas' | 'c
   )
 }
 
+export const IconPencil = (p: P) => (
+  <svg {...line} {...p}>
+    <path d="M4 20l4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20z" />
+    <path d="M13.5 7.5l3 3" />
+  </svg>
+)
+
 export const IconLock = (p: P) => (
   <svg {...line} {...p}>
     <rect x="5" y="10.5" width="14" height="10" rx="2" />
@@ -293,6 +300,17 @@ export const PictPost = (p: P) => (
 )
 
 /** Small gold shield with a plus, shown next to Plus members. */
+/** The Plus pass: a blue motorway sign with a bold plus on it. */
+export const IconPlusSign = (p: P) => (
+  <svg width="36" height="36" viewBox="0 0 48 48" aria-hidden {...p}>
+    <rect x="3" y="8" width="42" height="32" rx="5" fill="#154889" />
+    <rect x="6.5" y="11.5" width="35" height="25" rx="3" fill="none" stroke="#fff" strokeWidth="1.8" />
+    <path d="M24 16.5v15M16.5 24h15" stroke="#fff" strokeWidth="4.5" strokeLinecap="round" />
+    <rect x="30" y="4" width="15" height="9" rx="2" fill="#ffb000" stroke="#0a1628" strokeWidth="1.2" />
+    <path d="M37.5 6v5M35 8.5h5" stroke="#0a1628" strokeWidth="1.6" strokeLinecap="round" />
+  </svg>
+)
+
 export const PlusMark = (p: P) => (
   <svg width="18" height="14" viewBox="0 0 18 14" className="plus-mark" aria-label="Plus" {...p}>
     <rect x="0.5" y="0.5" width="17" height="13" rx="2.5" fill="#ffb000" stroke="#0a1628" strokeWidth="1" />

@@ -2,13 +2,12 @@ import { useEffect, useState } from 'react'
 import type { GameData, Tier } from '../data'
 import type { Deck } from '../game/learn'
 import { useLang, type Lang } from '../i18n'
-import { MODES, POST_STYLES, SHIELD_STYLES, VARIANTS, dailyShareText, getBest, type Challenge, type ModeId, type PostStyle, type Settings, type ShieldStyle, type Variant } from '../game/session'
+import { MODES, VARIANTS, dailyShareText, getBest, type Challenge, type ModeId, type PostStyle, type Settings, type Variant } from '../game/session'
 import { isPlusMode } from '../game/premium'
-import { disableReminder, enableReminder, getReminder, pushSupported } from '../game/push'
 import { canRepairStreak, dailyMode, dailyNumber, getDailyResult, getPersonal, getStreak, msUntilNextDaily } from '../game/daily'
 import { season, SEASON_TEXT } from '../game/season'
-import { Board, Matrix } from './widgets'
-import { IconGoogle, IconLock, IconReplay, IconShare, IconSignArrow, PictDistance, PictSign, PictDrag, PictExit, PictFind, PictGroup, PictJunction, PictLearn, PictQuiz, PictRoute, PictStats, SeasonIcon, IconFreeze } from './icons'
+import { Board, Matrix, Seg } from './widgets'
+import { IconGoogle, IconLock, IconPlusSign, IconReplay, IconShare, IconSignArrow, PictDistance, PictSign, PictDrag, PictExit, PictFind, PictGroup, PictJunction, PictLearn, PictQuiz, PictRoute, PictStats, SeasonIcon, IconFreeze } from './icons'
 import { AdSlot } from './AdSlot'
 import { InitialsShield } from './icons'
 import { Logo } from './Logo'
@@ -50,18 +49,6 @@ export interface HomeProps {
 }
 
 const PICTS: Record<ModeId, typeof PictDrag> = { drag: PictDrag, find: PictFind, junction: PictJunction, quiz: PictQuiz, exit: PictExit, route: PictRoute, distance: PictDistance, sign: PictSign }
-
-function Seg<T extends string>({ value, options, onChange, label, wide = false }: { value: T; options: { v: T; label: string; title?: string }[]; onChange: (v: T) => void; label: string; wide?: boolean }) {
-  return (
-    <div className={'seg' + (wide ? ' seg-wide' : '') + (options.length > 3 ? ' seg-wrap' : '')} role="group" aria-label={label}>
-      {options.map((o, i) => (
-        <button key={o.v} type="button" className={'seg-btn' + (value === o.v ? ' seg-on' : '') + (options.length > 3 && i % 3 === 0 ? ' row-start' : '') + (i >= 3 ? ' row-next' : '')} onClick={() => onChange(o.v)} title={o.title}>
-          {o.label}
-        </button>
-      ))}
-    </div>
-  )
-}
 
 /** Language switch drawn as a real hectometerpaal: grey pole, green plates with a white border,
     the small red A-shield with the side letter on top, and the big number field showing the language. */
@@ -112,8 +99,8 @@ export function StreakPosts({ count, gold = false, style }: { count: number; gol
   )
 }
 
-const isIosSafari = /iphone|ipad|ipod/i.test(navigator.userAgent) && !('standalone' in navigator && (navigator as { standalone?: boolean }).standalone)
-const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+export const isIosSafari = /iphone|ipad|ipod/i.test(navigator.userAgent) && !('standalone' in navigator && (navigator as { standalone?: boolean }).standalone)
+export const isStandalone = window.matchMedia('(display-mode: standalone)').matches
 
 export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onStats, onAbout, onGroups, challenge, onChallenge, onInstall, account, onSignIn, plus, onPlus, onArchive, onPersonal, onRepair }: HomeProps) {
   const { t, lang, setLang } = useLang()
@@ -180,20 +167,6 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
     if (pick) setLogoCode(pick.ref)
     sfx.tap()
   }
-  const [reminder, setReminder] = useState(getReminder)
-  const [reminderNote, setReminderNote] = useState('')
-  const applyReminder = async (on: boolean, hour: number, minute: number) => {
-    setReminderNote('')
-    if (!on) {
-      await disableReminder()
-      setReminder({ on: false, hour, minute })
-      return
-    }
-    const ok = await enableReminder(hour, minute, lang)
-    if (ok) setReminder({ on: true, hour, minute })
-    else setReminderNote(isIosSafari && !isStandalone ? t('reminderInstall') : t('reminderDenied'))
-  }
-  const reminderTime = `${String(reminder.hour).padStart(2, '0')}:${String(reminder.minute).padStart(2, '0')}`
 
   return (
     <div className={'home' + (s ? ` season-${s}` : '')}>
@@ -400,7 +373,9 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
 
         {!plus && (
           <button type="button" className="google-row plus-row" onClick={onPlus}>
-            <span className="google-row-icon plus-row-icon">+</span>
+            <span className="google-row-icon plus-row-icon">
+              <IconPlusSign />
+            </span>
             <span className="sign-text">
               <span className="google-row-name">{t('plus')}</span>
               <span className="google-row-sub">{t('plusPitch')}</span>
@@ -445,7 +420,7 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
           <div className="board-title">{t('settings')}</div>
           <div className="setting">
             <span className="setting-label">{t('roads')}</span>
-            <Seg<Tier> wide label={t('roads')} value={plus || settings.tier !== 'P' ? settings.tier : 'A'} onChange={(tier) => (tier === 'P' && !plus ? onPlus() : onSettings({ ...settings, tier }))} options={tiers.map((v) => ({ v, label: t(`tier_${v}_short`) + (v === 'P' && !plus ? ' +' : ''), title: t(`tier_${v}`) }))} />
+            <Seg<Tier> wide label={t('roads')} value={plus || settings.tier !== 'P' ? settings.tier : 'A'} onChange={(tier) => (tier === 'P' && !plus ? onPlus() : onSettings({ ...settings, tier }))} options={tiers.map((v) => ({ v, label: t(`tier_${v}_short`), title: t(`tier_${v}`), locked: v === 'P' && !plus }))} />
             <span className="setting-hint">{t(`tier_${settings.tier}`)}</span>
           </div>
           <div className="setting-pair">
@@ -465,50 +440,15 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
           </div>
           <div className="setting">
             <span className="setting-label">
-              {t('theme')} {!plus && <span className="locked-tag">{t('plusTag')}</span>}
+              {t('theme')} <span className="locked-tag">{t('plusTag')}</span>
             </span>
-            <Seg<ThemeName> wide label={t('theme')} value={plus ? settings.theme : 'signage'} onChange={(theme) => (plus || theme === 'signage' ? onSettings({ ...settings, theme }) : onPlus())} options={THEME_NAMES.map((v) => ({ v, label: t(`theme_${v}` as 'theme_signage') }))} />
+            <Seg<ThemeName> wide label={t('theme')} value={plus ? settings.theme : 'signage'} onChange={(theme) => (plus || theme === 'signage' ? onSettings({ ...settings, theme }) : onPlus())} options={THEME_NAMES.map((v) => ({ v, label: t(`theme_${v}` as 'theme_signage'), locked: !plus && v !== 'signage' }))} />
+            {!plus && (
+              <button type="button" className="setting-hint setting-hint-link" onClick={onPlus}>
+                {t('plusSettingsHint')}
+              </button>
+            )}
           </div>
-          <div className="setting-pair">
-            <div className="setting">
-              <span className="setting-label">
-                {t('postStyle')} {!plus && <span className="locked-tag">{t('plusTag')}</span>}
-              </span>
-              <Seg<PostStyle> wide label={t('postStyle')} value={plus ? settings.postStyle : 'green'} onChange={(postStyle) => (plus ? onSettings({ ...settings, postStyle }) : onPlus())} options={POST_STYLES.map((v) => ({ v, label: t(`post_${v}`) }))} />
-            </div>
-            <div className="setting">
-              <span className="setting-label">
-                {t('shieldStyle')} {!plus && <span className="locked-tag">{t('plusTag')}</span>}
-              </span>
-              <Seg<ShieldStyle> wide label={t('shieldStyle')} value={plus ? settings.shieldStyle : 'A'} onChange={(shieldStyle) => (plus ? onSettings({ ...settings, shieldStyle }) : onPlus())} options={SHIELD_STYLES.map((v) => ({ v, label: v }))} />
-            </div>
-          </div>
-          <div className="setting">
-            <span className="setting-label">{t('colors')}</span>
-            <Seg<'normal' | 'cb'> wide label={t('colors')} value={settings.colorblind ? 'cb' : 'normal'} onChange={(v) => onSettings({ ...settings, colorblind: v === 'cb' })} options={[{ v: 'normal', label: t('colors_normal') }, { v: 'cb', label: t('colors_cb') }]} />
-            <span className="setting-hint">{t('colorsHint')}</span>
-          </div>
-          {ONLINE && pushSupported() && (
-            <div className="setting">
-              <span className="setting-label">{t('reminder')}</span>
-              <div className="reminder-row">
-                <Seg<string> wide label={t('reminder')} value={reminder.on ? 'on' : 'off'} onChange={(v) => void applyReminder(v === 'on', reminder.hour, reminder.minute)} options={[{ v: 'on', label: t('timerOn') }, { v: 'off', label: t('timerOff') }]} />
-                <input
-                  type="time"
-                  className="time-input"
-                  aria-label={t('reminder')}
-                  value={reminderTime}
-                  step={300}
-                  onChange={(e) => {
-                    const [h, m] = e.target.value.split(':').map(Number)
-                    if (Number.isNaN(h)) return
-                    void applyReminder(reminder.on, h, m || 0)
-                  }}
-                />
-              </div>
-              <span className="setting-hint">{reminderNote || t('reminderHint')}</span>
-            </div>
-          )}
           {plus && (
           <div className="setting">
             <span className="setting-label">{t('learnDeck')}</span>

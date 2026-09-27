@@ -1,4 +1,5 @@
 import type { Grade } from '../game/session'
+import { IconLock } from './icons'
 
 /** Countdown styled as a Dutch speed limit sign: white disc, red ring that depletes. */
 export function SpeedSign({ remainingMs, totalMs, size = 48 }: { remainingMs: number; totalMs: number; size?: number }) {
@@ -57,6 +58,20 @@ export function Board({ children, className = '', tone = 'blue' }: { children: R
   return (
     <div className={`board board-${tone} ${className}`}>
       <div className="board-inner">{children}</div>
+    </div>
+  )
+}
+
+/** Segmented control in the style of a sign plate. Locked options show a lock and still call onChange (the caller opens Plus). */
+export function Seg<T extends string>({ value, options, onChange, label, wide = false }: { value: T; options: { v: T; label: string; title?: string; locked?: boolean }[]; onChange: (v: T) => void; label: string; wide?: boolean }) {
+  return (
+    <div className={'seg' + (wide ? ' seg-wide' : '') + (options.length > 3 ? ' seg-wrap' : '')} role="group" aria-label={label}>
+      {options.map((o, i) => (
+        <button key={o.v} type="button" className={'seg-btn' + (value === o.v ? ' seg-on' : '') + (o.locked ? ' seg-locked' : '') + (options.length > 3 && i % 3 === 0 ? ' row-start' : '') + (i >= 3 ? ' row-next' : '')} onClick={() => onChange(o.v)} title={o.title}>
+          {o.locked && <IconLock className="seg-lock" />}
+          {o.label}
+        </button>
+      ))}
     </div>
   )
 }

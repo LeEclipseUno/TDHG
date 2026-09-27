@@ -216,6 +216,34 @@ button {
 .seg-btn + .seg-on::before {
   display: none;
 }
+@media (hover: hover) {
+  .seg-btn:not(.seg-on):hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
+  .seg-btn.seg-locked:hover {
+    background: rgba(255, 176, 0, 0.18);
+    color: var(--amber);
+  }
+  .seg-btn:active {
+    transform: scale(0.98);
+  }
+  .time-input:hover {
+    border-color: var(--white);
+  }
+}
+.seg-btn {
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.seg-locked {
+  color: rgba(255, 255, 255, 0.5);
+}
+.seg-lock {
+  width: 13px;
+  height: 13px;
+  margin-right: 5px;
+  vertical-align: -1px;
+  opacity: 0.8;
+}
 
 /* ---------- buttons ---------- */
 
@@ -2133,20 +2161,86 @@ body,
   background: var(--amber);
   color: var(--navy);
 }
-.board-plus .board-title .locked-tag {
+.board-plus .board-title .locked-tag,
+.settings-plus .board-title .locked-tag {
   background: var(--amber);
   color: var(--navy);
 }
+.settings-plus .board-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.settings-plus .board-title .locked-tag {
+  float: none;
+}
+.setting-hint-link {
+  background: transparent;
+  border: 0;
+  text-align: left;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.settings-plus-hint {
+  background: transparent;
+  border: 0;
+  padding: 10px 14px 12px;
+  text-align: left;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .plus-row {
+  position: relative;
+  overflow: hidden;
   background: var(--amber);
   color: var(--navy);
+  border: 2px solid var(--navy);
+}
+.plus-row::after {
+  content: '';
+  position: absolute;
+  top: -40%;
+  bottom: -40%;
+  left: -45%;
+  width: 30%;
+  background: linear-gradient(100deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.55) 50%, rgba(255, 255, 255, 0) 100%);
+  transform: skewX(-20deg);
+  pointer-events: none;
+  animation: plus-shine 8s ease-in-out infinite;
+}
+@keyframes plus-shine {
+  0% {
+    left: -45%;
+  }
+  12% {
+    left: 130%;
+  }
+  100% {
+    left: 130%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .plus-row::after {
+    animation: none;
+  }
 }
 .plus-row-icon {
   border-color: rgba(10, 22, 40, 0.25);
-  font-family: var(--font-sign);
-  font-weight: 800;
-  font-size: 34px;
-  line-height: 1;
+  background: #fff;
+}
+.plus-row-icon svg {
+  width: 38px;
+  height: 38px;
+}
+.plus-row .google-row-sub {
+  color: rgba(10, 22, 40, 0.8);
 }
 .plus-row .sign-arrow {
   color: var(--navy);
@@ -2304,6 +2398,94 @@ body,
   font-size: 13px;
   color: var(--amber);
   font-weight: 600;
+}
+.profile-name-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+}
+.profile-name-btn .profile-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.profile-pencil {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  opacity: 0.7;
+}
+@media (hover: hover) {
+  .profile-name-btn:hover .profile-pencil {
+    opacity: 1;
+  }
+}
+.profile-edit {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.profile-edit input {
+  min-width: 0;
+  flex: 1;
+  font: inherit;
+  font-family: var(--font-sign);
+  font-weight: 700;
+  font-size: 18px;
+  padding: 4px 8px;
+  border-radius: 5px;
+  border: 2px solid var(--white);
+  background: var(--white);
+  color: var(--navy);
+}
+.profile-plus-band {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 16px 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--amber);
+  color: var(--navy);
+  font-size: 14px;
+  border: 2px solid var(--navy);
+  text-align: left;
+}
+.profile-plus-band strong {
+  font-family: var(--font-sign);
+  font-weight: 800;
+  font-size: 16px;
+  margin-right: 4px;
+}
+.profile-plus-band .plus-mark {
+  width: 26px;
+  height: 20px;
+  flex: none;
+}
+.profile-plus-off {
+  background: transparent;
+  color: var(--white);
+  border: 2px dashed rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  width: calc(100% - 32px);
+}
+@media (hover: hover) {
+  .profile-plus-off:hover {
+    border-color: var(--amber);
+    color: var(--amber);
+  }
+}
+.results-inner .settings-board {
+  width: 100%;
 }
 .profile-plus-link {
   align-self: flex-start;
@@ -2474,6 +2656,13 @@ body,
 }
 .badge-sign .shield {
   font-size: 15px;
+}
+.badge-shield {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  transform: rotate(-8deg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 .badge-mark {
   position: absolute;
