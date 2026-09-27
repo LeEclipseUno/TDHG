@@ -100,7 +100,8 @@ export function StreakPosts({ count, gold = false, style }: { count: number; gol
 }
 
 export const isIosSafari = /iphone|ipad|ipod/i.test(navigator.userAgent) && !('standalone' in navigator && (navigator as { standalone?: boolean }).standalone)
-export const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+// Installed app, or ?standalone=1 to preview the installed layout in a normal browser.
+export const isStandalone = window.matchMedia('(display-mode: standalone)').matches || new URLSearchParams(location.search).has('standalone')
 
 export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onStats, onAbout, onGroups, challenge, onChallenge, onInstall, account, onSignIn, plus, onPlus, onArchive, onPersonal, onRepair }: HomeProps) {
   const { t, lang, setLang } = useLang()

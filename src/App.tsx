@@ -30,6 +30,8 @@ import { setSoundEnabled } from './game/sound'
 import { getAccount, ONLINE, signInWithGoogle, signOut, type Account } from './game/backend'
 import { pushSoon, syncNow } from './game/sync'
 import { ErrorBoundary } from './ui/ErrorBoundary'
+import { TabBar, type Tab } from './ui/TabBar'
+import { isStandalone } from './ui/Home'
 import { setErrorContext } from './game/errors'
 
 interface BeforeInstallPromptEvent extends Event {
@@ -64,6 +66,19 @@ function Shell() {
   const [account, setAccount] = useState<Account>({ signedIn: false })
   const [notice, setNotice] = useState<string | null>(null)
   const [challenge, setChallenge] = useState<Challenge | null>(() => {
+    // Shared into the installed app (manifest share_target): find the wegenkenner link in the shared text.
+    const q = new URLSearchParams(location.search)
+    if (q.has('text') || q.has('url')) {
+      const m = `${q.get('url') ?? ''} ${q.get('text') ?? ''}`.match(/https?:\/\/[^\s]+/)
+      let shared: URL | null = null
+      try {
+        shared = m ? new URL(m[0]) : null
+      } catch {
+        shared = null
+      }
+      const keep = shared && /wegenkenner/.test(shared.host) ? shared : null
+      history.replaceState(null, '', location.pathname + (keep?.search ?? '') + (keep?.hash ?? ''))
+    }
     const c = parseChallenge(location.search)
     if (c) history.replaceState(null, '', location.pathname + location.hash)
     return c
@@ -254,7 +269,7 @@ function Shell() {
     <ThemeCtx.Provider value={seasonalTheme(plus ? settings.theme : 'signage') ?? (plus ? settings.theme : 'signage')} key={key}>
     <AccessCtx.Provider value={settings.colorblind}>
     <ErrorBoundary title={t('crashTitle')} body={t('crashBody')} retry={t('home')} reload={t('crashReload')} onReset={() => go('home')}>
-    <div className={'screen' + (settings.colorblind ? ' cb' : '')}>
+    <div className={'screen' + (settings.colorblind ? ' cb' : '') + (isStandalone && screen.kind !== 'game' && screen.kind !== 'learn' ? ' has-tabs' : '')}>
       {!online && (
         <div role="status" className="offline-bar">
           {t('offline')}
@@ -266,6 +281,15 @@ function Shell() {
         </div>
       )}
       {node}
+      {isStandalone && screen.kind !== 'game' && screen.kind !== 'learn' && (
+        <TabBar
+          active={screen.kind === 'home' || screen.kind === 'stats' || screen.kind === 'groups' ? screen.kind : null}
+          onTab={(tab: Tab) => {
+            if (tab === 'daily') void playDaily()
+            else go(tab)
+          }}
+        />
+      )}
     </div>
     </ErrorBoundary>
     </AccessCtx.Provider>

@@ -40,6 +40,33 @@ export const IconReplay = (p: P) => (
     <path d="M4 12a8 8 0 1 0 2.6-5.9M4 4v5h5" />
   </svg>
 )
+export const IconHouse = (p: P) => (
+  <svg {...line} {...p}>
+    <path d="M4 11l8-7 8 7" />
+    <path d="M6 10v10h5v-6h2v6h5V10" />
+  </svg>
+)
+export const IconCalendar = (p: P) => (
+  <svg {...line} {...p}>
+    <rect x="3.5" y="5" width="17" height="15" rx="2.5" />
+    <path d="M3.5 10h17M8 3v4M16 3v4" />
+    <path d="M9 14l2 2 4-4" />
+  </svg>
+)
+export const IconPeople = (p: P) => (
+  <svg {...line} {...p}>
+    <circle cx="9" cy="8.5" r="3.2" />
+    <circle cx="16.5" cy="9.5" r="2.5" />
+    <path d="M3.5 19c.5-3.5 2.8-5 5.5-5s5 1.5 5.5 5" />
+    <path d="M15 14.5c2.5 0 4.5 1.3 5 4.5" />
+  </svg>
+)
+export const IconUser = (p: P) => (
+  <svg {...line} {...p}>
+    <circle cx="12" cy="8.5" r="3.6" />
+    <path d="M4.5 20c.8-4 3.8-6 7.5-6s6.7 2 7.5 6" />
+  </svg>
+)
 export const IconMenu = (p: P) => (
   <svg {...line} {...p}>
     <path d="M4 7h16M4 12h16M4 17h16" />
