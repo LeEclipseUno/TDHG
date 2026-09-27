@@ -2742,3 +2742,27 @@ body,
 .cb .streak-post-on {
   background: #2f80ed;
 }
+
+/* segment controls with more than three options: rows of three, the last row shares the width */
+.seg-wrap {
+  flex-wrap: wrap;
+}
+.seg-wrap .seg-btn {
+  flex: 1 1 30%;
+  box-sizing: border-box;
+  max-width: none;
+}
+.seg-wrap .seg-btn.row-start::before {
+  display: none;
+}
+.seg-wrap .seg-btn.row-next::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: -1px;
+  border-top: 2px dashed rgba(255, 255, 255, 0.45);
+}
+.seg-wrap .seg-btn.row-next.seg-on::after {
+  display: none;
+}

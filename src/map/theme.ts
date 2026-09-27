@@ -1,9 +1,9 @@
 // Map themes. Signage is the default dark look; paper and night are Plus perks.
 import { createContext } from 'react'
 
-export type ThemeName = 'signage' | 'paper' | 'night' | 'kingsday' | 'sinterklaas' | 'snow'
+export type ThemeName = 'signage' | 'paper' | 'night' | 'blueprint' | 'retro' | 'kingsday' | 'sinterklaas' | 'snow'
 /** The ones a player can pick; the rest are day-specific. */
-export const THEME_NAMES: ThemeName[] = ['signage', 'paper', 'night']
+export const THEME_NAMES: ThemeName[] = ['signage', 'paper', 'night', 'blueprint', 'retro']
 
 export interface Palette {
   bg: string
@@ -93,6 +93,48 @@ export const NIGHT: Palette = {
   ripple: 'rgba(255,255,255,0.03)',
 }
 
+/** Blueprint: a technical drawing, white lines on drafting blue. */
+export const BLUEPRINT: Palette = {
+  bg: '#0b2a6e',
+  land: '#123b8a',
+  landEdge: '#7fa6e6',
+  abroad: '#0d2f72',
+  abroadEdge: '#3a5aa0',
+  A: '#ffffff',
+  N: '#9fd7ff',
+  P: '#4f78c2',
+  correct: '#3ddc84',
+  wrong: '#ff6b6b',
+  active: '#ffd23f',
+  text: '#dbe8ff',
+  glow: 'rgba(160,200,255,0.18)',
+  border: 'rgba(255,255,255,0.35)',
+  structure: '#c7dcff',
+  casing: '#0b2a6e',
+  ripple: '',
+}
+
+/** Retro: a 1970s road atlas, faded beige paper and brick-red motorways. */
+export const RETRO: Palette = {
+  bg: '#c9dcd6',
+  land: '#efe4c4',
+  landEdge: '#b9c6b3',
+  abroad: '#dfd7bd',
+  abroadEdge: '#c3bba2',
+  A: '#c9452c',
+  N: '#d99a00',
+  P: '#9a8c6c',
+  correct: '#2e8b57',
+  wrong: '#b0312b',
+  active: '#1f5fd0',
+  text: '#3a3225',
+  glow: 'rgba(120,150,140,0.35)',
+  border: 'rgba(58,50,37,0.35)',
+  structure: '#5a5040',
+  casing: '#8a2a1c',
+  ripple: '',
+}
+
 /** Koningsdag: the country in orange for one day. */
 export const KINGSDAY: Palette = {
   ...SIGNAGE,
@@ -146,7 +188,7 @@ export const SNOW: Palette = {
   ripple: '',
 }
 
-export const THEMES: Record<ThemeName, Palette> = { signage: SIGNAGE, paper: PAPER, night: NIGHT, kingsday: KINGSDAY, sinterklaas: SINTERKLAAS, snow: SNOW }
+export const THEMES: Record<ThemeName, Palette> = { signage: SIGNAGE, paper: PAPER, night: NIGHT, blueprint: BLUEPRINT, retro: RETRO, kingsday: KINGSDAY, sinterklaas: SINTERKLAAS, snow: SNOW }
 
 /** Day-specific theme, or null. Koningsdag and pakjesavond override everything for their day; snow covers December for players on the default look. */
 export function seasonalTheme(chosen: ThemeName, d = new Date()): ThemeName | null {

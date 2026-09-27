@@ -51,9 +51,9 @@ const PICTS: Record<ModeId, typeof PictDrag> = { drag: PictDrag, find: PictFind,
 
 function Seg<T extends string>({ value, options, onChange, label, wide = false }: { value: T; options: { v: T; label: string; title?: string }[]; onChange: (v: T) => void; label: string; wide?: boolean }) {
   return (
-    <div className={'seg' + (wide ? ' seg-wide' : '')} role="group" aria-label={label}>
-      {options.map((o) => (
-        <button key={o.v} type="button" className={'seg-btn' + (value === o.v ? ' seg-on' : '')} onClick={() => onChange(o.v)} title={o.title}>
+    <div className={'seg' + (wide ? ' seg-wide' : '') + (options.length > 3 ? ' seg-wrap' : '')} role="group" aria-label={label}>
+      {options.map((o, i) => (
+        <button key={o.v} type="button" className={'seg-btn' + (value === o.v ? ' seg-on' : '') + (options.length > 3 && i % 3 === 0 ? ' row-start' : '') + (i >= 3 ? ' row-next' : '')} onClick={() => onChange(o.v)} title={o.title}>
           {o.label}
         </button>
       ))}
