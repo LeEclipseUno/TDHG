@@ -11,7 +11,7 @@ import { BADGES, computeBadges, loadBadges, type BadgeId } from '../game/achieve
 import { Backdrop } from './Backdrop'
 import { deleteAccount, exportAccount, getNickname, ONLINE, setNickname, validNickname, type Account } from '../game/backend'
 import { pushSoon } from '../game/sync'
-import { disableReminder, enableReminder, getReminder, pushSupported } from '../game/push'
+import { disableReminder, enableReminder, getReminder, pushSupported, setReminderTime } from '../game/push'
 import { plusUntil } from '../game/premium'
 import { initials, isIosSafari, isStandalone } from './Home'
 import { InitialsShield } from './icons'
@@ -40,6 +40,7 @@ export function Stats({ data, account, plus, settings, onSettings, onSignOut, on
   const [reminderNote, setReminderNote] = useState('')
   const applyReminder = async (on: boolean, hour: number, minute: number) => {
     setReminderNote('')
+    setReminderTime(hour, minute)
     if (!on) {
       await disableReminder()
       setReminder({ on: false, hour, minute })
@@ -234,18 +235,23 @@ export function Stats({ data, account, plus, settings, onSettings, onSignOut, on
               <span className="setting-label">{t('reminder')}</span>
               <div className="reminder-row">
                 <Seg<string> wide label={t('reminder')} value={reminder.on ? 'on' : 'off'} onChange={(v) => void applyReminder(v === 'on', reminder.hour, reminder.minute)} options={[{ v: 'on', label: t('timerOn') }, { v: 'off', label: t('timerOff') }]} />
-                <input
-                  type="time"
-                  className="time-input"
-                  aria-label={t('reminder')}
-                  value={reminderTime}
-                  step={300}
-                  onChange={(e) => {
-                    const [h, m] = e.target.value.split(':').map(Number)
-                    if (Number.isNaN(h)) return
-                    void applyReminder(reminder.on, h, m || 0)
-                  }}
-                />
+                <div className="time-pick" aria-label={reminderTime}>
+                  <select className="time-input" aria-label={t('reminderHour')} value={reminder.hour} onChange={(e) => void applyReminder(reminder.on, Number(e.target.value), reminder.minute)}>
+                    {Array.from({ length: 24 }, (_, h) => (
+                      <option key={h} value={h}>
+                        {String(h).padStart(2, '0')}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="time-colon">:</span>
+                  <select className="time-input" aria-label={t('reminderMinute')} value={reminder.minute - (reminder.minute % 5)} onChange={(e) => void applyReminder(reminder.on, reminder.hour, Number(e.target.value))}>
+                    {Array.from({ length: 12 }, (_, i) => i * 5).map((m) => (
+                      <option key={m} value={m}>
+                        {String(m).padStart(2, '0')}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <span className="setting-hint">{reminderNote || t('reminderHint')}</span>
             </div>

@@ -61,6 +61,11 @@ export async function enableReminder(hour: number, minute: number, lang: string)
   }
 }
 
+/** Keep the chosen time even while the reminder is off, so switching it on later uses it. */
+export function setReminderTime(hour: number, minute: number) {
+  remember({ ...getReminder(), hour, minute })
+}
+
 export async function disableReminder(): Promise<void> {
   remember({ ...getReminder(), on: false })
   try {

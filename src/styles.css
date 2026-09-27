@@ -2468,6 +2468,17 @@ body,
   gap: 10px;
   flex-wrap: wrap;
 }
+.time-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.time-colon {
+  font-family: var(--font-sign);
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--white);
+}
 .time-input {
   font: inherit;
   font-family: var(--font-sign);
@@ -2479,6 +2490,11 @@ body,
   background: var(--navy);
   color: var(--white);
   color-scheme: dark;
+  appearance: none;
+  -webkit-appearance: none;
+  text-align: center;
+  min-width: 54px;
+  cursor: pointer;
 }
 
 .avatar-btn.avatar-plus {
