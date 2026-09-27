@@ -8,7 +8,7 @@ import { formatTime } from '../game/session'
 import type { GameData } from '../data'
 import { Backdrop } from './Backdrop'
 
-export function Groups({ data, onHome, joinCode }: { data: GameData; onHome: () => void; joinCode?: string }) {
+export function Groups({ data, plus, onPlus, onHome, joinCode }: { data: GameData; plus: boolean; onPlus: () => void; onHome: () => void; joinCode?: string }) {
   const { t } = useLang()
   const [nick, setNick] = useState(getNickname())
   const [groups, setGroups] = useState<Group[] | null>(null)
@@ -113,6 +113,8 @@ export function Groups({ data, onHome, joinCode }: { data: GameData; onHome: () 
   }
 
   const current = groups?.find((g) => g.code === open) ?? null
+  // Free players sit in one group; Plus opens the rest.
+  const atLimit = !plus && (groups?.length ?? 0) >= 1
 
   return (
     <div className="results">
@@ -130,6 +132,11 @@ export function Groups({ data, onHome, joinCode }: { data: GameData; onHome: () 
                 <input value={nick} maxLength={16} placeholder={t('nickPlaceholder')} onChange={(e) => setNick(e.target.value)} onBlur={saveNick} />
               </label>
               {!nickOk && nick.length > 0 && <span className="field-hint">{t('nickInvalid')}</span>}
+              {atLimit ? (
+                <button type="button" className="group-limit" onClick={onPlus}>
+                  <span className="locked-tag">{t('plusTag')}</span> {t('groupLimit')}
+                </button>
+              ) : (
               <div className="groups-forms">
                 <form
                   className="field"
@@ -163,6 +170,7 @@ export function Groups({ data, onHome, joinCode }: { data: GameData; onHome: () 
                   </div>
                 </form>
               </div>
+              )}
               {msg && (
                 <span role="status" className="field-hint">
                   {msg}

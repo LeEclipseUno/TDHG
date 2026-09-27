@@ -303,7 +303,7 @@ function Shell() {
   if (screen.kind === 'about') return wrap('about', <About data={data} onHome={() => go('home')} />)
   if (screen.kind === 'plus') return wrap('plus', <Plus data={data} account={account} onSignIn={signIn} onRefresh={refreshAccount} onNotice={(m) => { setNotice(m); setTimeout(() => setNotice(null), 2500) }} onHome={() => go('home')} />)
   if (screen.kind === 'archive') return wrap('archive', <Archive data={data} onPlay={(n) => void playDaily(n)} onHome={() => go('home')} />)
-  if (screen.kind === 'groups') return wrap('groups', <Groups data={data} onHome={() => go('home')} joinCode={screen.joinCode} />)
+  if (screen.kind === 'groups') return wrap('groups', <Groups data={data} plus={plus} onPlus={() => go('plus')} onHome={() => go('home')} joinCode={screen.joinCode} />)
   if (screen.kind === 'results') {
     const again = () => (screen.session.dailyNumber ? void playDaily(screen.session.dailyNumber) : play(screen.session.mode))
     return wrap('results', <Results data={data} session={screen.session} newBest={screen.newBest} streak={screen.streak} badges={screen.badges} plus={plus} onAgain={again} onHome={() => go('home')} />)

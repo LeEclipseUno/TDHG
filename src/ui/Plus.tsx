@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { GameData } from '../data'
 import { useLang } from '../i18n'
 import { BackBar, Board } from './widgets'
-import { IconGoogle, IconMenu, IconReplay, PictLearn, PictExit, PictJunction, PictRoute, PictDistance, PictStats, PictFind, PictQuiz } from './icons'
+import { IconGoogle, IconMenu, IconReplay, PictGroup, PictLearn, PictExit, PictJunction, PictRoute, PictDistance, PictStats, PictFind, PictQuiz } from './icons'
 import { Backdrop } from './Backdrop'
 import { getReferralCode, ONLINE, redeemGift, type Account } from '../game/backend'
 import { checkoutUrl, GIFT_CHECKOUT, hasPlus, pendingReferral, PLUS_PRICE, plusUntil, referralLink } from '../game/premium'
@@ -118,6 +118,12 @@ export function Plus({ data, account, onSignIn, onRefresh, onNotice, onHome }: P
                   <PictQuiz />
                 </span>
                 {t('plusFeat8')}
+              </li>
+              <li>
+                <span className="plus-pict">
+                  <PictGroup />
+                </span>
+                {t('plusFeat9')}
               </li>
               <li>
                 <span className="plus-pict">

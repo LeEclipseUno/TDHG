@@ -95,11 +95,18 @@ create or replace function clean_name(p text, p_min int, p_max int) returns bool
       where n.s ~ ('(^| )' || w) or n.s ~ (w || '( |$)'));
 $$;
 
+-- Without Plus a player is in at most one group.
+create or replace function group_limit_ok() returns boolean language sql security definer set search_path = public as $$
+  select exists (select 1 from premium p where p.player_id = auth.uid() and p.until > now())
+      or (select count(*) from members m where m.player_id = auth.uid()) < 1;
+$$;
+
 create or replace function create_group(p_name text, p_nick text)
 returns table (code text, name text) language plpgsql security definer set search_path = public as $$
 declare g groups%rowtype; c text;
 begin
   if auth.uid() is null then raise exception 'not signed in'; end if;
+  if not group_limit_ok() then raise exception 'group limit'; end if;
   if not clean_name(p_name, 2, 32) or not clean_name(p_nick, 2, 16) then raise exception 'bad name'; end if;
   loop
     c := make_code();
@@ -118,6 +125,7 @@ begin
   if not clean_name(p_nick, 2, 16) then raise exception 'bad name'; end if;
   select * into g from groups where groups.code = upper(trim(p_code));
   if not found then raise exception 'unknown group'; end if;
+  if not exists (select 1 from members m where m.group_id = g.id and m.player_id = auth.uid()) and not group_limit_ok() then raise exception 'group limit'; end if;
   insert into members (group_id, player_id, nickname) values (g.id, auth.uid(), trim(p_nick))
     on conflict (group_id, player_id) do update set nickname = excluded.nickname;
   return query select g.code, g.name;
