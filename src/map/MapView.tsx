@@ -332,10 +332,10 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
     const { cx, cy, scale } = viewRef.current
     const mirror = !!propsRef.current.mirror
     /** Screen geometry for a view: projection, zoom level, line widths and a polyline tracer. */
-    const geom = (c: CanvasRenderingContext2D, v: View) => {
-      const tx = w / 2 - v.cx * v.scale
-      const ty = h / 2 - v.cy * v.scale
-      const X = (x: number) => (mirror ? w - (x * v.scale + tx) : x * v.scale + tx)
+    const geom = (c: CanvasRenderingContext2D, v: View, W = w, H = h) => {
+      const tx = W / 2 - v.cx * v.scale
+      const ty = H / 2 - v.cy * v.scale
+      const X = (x: number) => (mirror ? W - (x * v.scale + tx) : x * v.scale + tx)
       const Y = (y: number) => y * v.scale + ty
       const z = Math.log2(v.scale / minScaleRef.current)
       const basePx: Record<RoadKind, number> = { A: Math.min(9, 2.2 + z * 0.9), N: Math.min(6, 1.5 + z * 0.6), P: Math.min(4, 0.8 + z * 0.45) }
@@ -343,10 +343,10 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
       const linkWidth: Record<'A' | 'N' | 'P', number> = { A: Math.max(basePx.A * 0.55, 5.5 * v.scale), N: Math.max(basePx.N * 0.6, 5 * v.scale), P: Math.max(basePx.P * 0.7, 4 * v.scale) }
       const detailed = v.scale > 0.25 // dark casings so crossings and ramps separate visually
       const smooth = v.scale > 0.6 // round off the polyline corners at deep zoom
-      const vx0 = v.cx - w / 2 / v.scale
-      const vy0 = v.cy - h / 2 / v.scale
-      const vx1 = v.cx + w / 2 / v.scale
-      const vy1 = v.cy + h / 2 / v.scale
+      const vx0 = v.cx - W / 2 / v.scale
+      const vy0 = v.cy - H / 2 / v.scale
+      const vx1 = v.cx + W / 2 / v.scale
+      const vy1 = v.cy + H / 2 / v.scale
       const inView = (b: readonly number[]) => b[2] >= vx0 && b[0] <= vx1 && b[3] >= vy0 && b[1] <= vy1
       const trace = (line: number[]) => {
         let px = X(line[0])
@@ -368,11 +368,14 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
     }
 
     /** Everything that only depends on the view: background, land, water, roads, structures and labels. */
+    const MARGIN = 0.35 // the cached layer extends this far beyond the viewport on each side, so panning has slack
+    const W = Math.round(w * (1 + 2 * MARGIN))
+    const H = Math.round(h * (1 + 2 * MARGIN))
     const paintBase = (c: CanvasRenderingContext2D, v: View) => {
-      const { X, Y, z, widths, linkWidth, detailed, inView, trace } = geom(c, v)
+      const { X, Y, z, widths, linkWidth, detailed, inView, trace } = geom(c, v, W, H)
       c.setTransform(dpr, 0, 0, dpr, 0, 0)
       c.fillStyle = C.bg
-      c.fillRect(0, 0, w, h)
+      c.fillRect(0, 0, W, H)
       if (patternKeyRef.current !== C.ripple) {
         // Faint wave texture for the water, built once per theme.
         patternKeyRef.current = C.ripple
@@ -396,7 +399,7 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
       }
       if (patternRef.current && C.ripple && propsRef.current.palette !== 'light') {
         c.fillStyle = patternRef.current
-        c.fillRect(0, 0, w, h)
+        c.fillRect(0, 0, W, H)
       }
 
       // Land polygons. Screen-space decimation skips vertices within a pixel of the previous one.
@@ -559,7 +562,7 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
           if (pl.c === 0 && z < 2.6) continue
           const sx = X(pl.x)
           const sy = Y(pl.y)
-          if (sx < -60 || sx > w + 60 || sy < -20 || sy > h + 20) continue
+          if (sx < -60 || sx > W + 60 || sy < -20 || sy > H + 20) continue
           c.beginPath()
           c.arc(sx, sy, pl.c ? 3.5 : 2.5, 0, Math.PI * 2)
           c.fillStyle = C.text
@@ -585,7 +588,7 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
         for (const j of data.junctions) {
           const sx = X(j.x)
           const sy = Y(j.y)
-          if (sx < -80 || sx > w + 80 || sy < -30 || sy > h + 30) continue
+          if (sx < -80 || sx > W + 80 || sy < -30 || sy > H + 30) continue
           const label = 'Knooppunt ' + j.name
           const tw = c.measureText(label).width + 12
           roundRect(c, sx - tw / 2, sy - 22, tw, 17, 3)
@@ -605,7 +608,7 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
           for (const e of data.exits) {
             const sx = X(e.x)
             const sy = Y(e.y)
-            if (sx < -80 || sx > w + 80 || sy < -30 || sy > h + 30) continue
+            if (sx < -80 || sx > W + 80 || sy < -30 || sy > H + 30) continue
             const label = `${e.r} ${e.n}`
             const tw = c.measureText(label).width + 10
             roundRect(c, sx - tw / 2, sy + 8, tw, 15, 2)
@@ -618,37 +621,37 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
       }
     }
 
-    // Base layer: repaint when anything static changed and the view is at rest; otherwise blit the cached image.
+    // Base layer: repaint when anything static changed and the view is at rest, when the zoom has drifted more than
+    // a quarter level from the cached one, or when the viewport has moved off the cached area; otherwise blit.
     const moving = live || !!panRef.current || !!pinchRef.current || now < settleRef.current
     const staticKey = [w, h, dpr, themeRef.current, propsRef.current.palette ?? '', cbRef.current ? 1 : 0, tier, hideRoads ? 1 : 0, mirror ? 1 : 0, labels ? 1 : 0, Object.keys(highlights).sort().join(','), data.roads.length, data.links.length, data.minor.length, data.water.length, data.structures.length].join('|')
     let layer = baseRef.current
     const bv = baseViewRef.current
     const sameStatic = layer !== null && baseKeyRef.current === staticKey
     const sameView = sameStatic && bv !== null && bv.cx === cx && bv.cy === cy && bv.scale === scale
-    if (!sameView && (!sameStatic || !moving || !bv)) {
-      if (!layer || layer.width !== Math.round(w * dpr) || layer.height !== Math.round(h * dpr)) {
+    // Where the cached image lands on screen for the current view.
+    const k = bv ? scale / bv.scale : 1
+    const offX = bv ? w / 2 - (W / 2) * k + (mirror ? -1 : 1) * (bv.cx - cx) * scale : 0
+    const offY = bv ? h / 2 - (H / 2) * k + (bv.cy - cy) * scale : 0
+    const covered = bv !== null && offX <= 0 && offY <= 0 && offX + W * k >= w && offY + H * k >= h
+    const drifted = bv !== null && Math.abs(Math.log2(k)) > 0.25
+    if (!sameView && (!sameStatic || !moving || !bv || !covered || drifted)) {
+      if (!layer || layer.width !== Math.round(W * dpr) || layer.height !== Math.round(H * dpr)) {
         layer = document.createElement('canvas')
-        layer.width = Math.round(w * dpr)
-        layer.height = Math.round(h * dpr)
+        layer.width = Math.round(W * dpr)
+        layer.height = Math.round(H * dpr)
         baseRef.current = layer
       }
       const bctx = layer.getContext('2d')
       if (bctx) paintBase(bctx, viewRef.current)
       baseKeyRef.current = staticKey
       baseViewRef.current = { cx, cy, scale, w, h }
-      ctx.drawImage(layer, 0, 0, w, h)
+      ctx.drawImage(layer, -(W - w) / 2, -(H - h) / 2, W, H)
     } else if (layer && bv) {
       // Same static content, view in motion: reuse the cached image with a scale and offset.
-      const k = scale / bv.scale
-      const tx0 = w / 2 - bv.cx * bv.scale
-      const ty0 = h / 2 - bv.cy * bv.scale
-      const tx = w / 2 - cx * scale
-      const ty = h / 2 - cy * scale
-      const offX = mirror ? w - (w - tx0) * k - tx : tx - tx0 * k
-      const offY = ty - ty0 * k
       ctx.fillStyle = C.bg
       ctx.fillRect(0, 0, w, h)
-      ctx.drawImage(layer, offX, offY, w * k, h * k)
+      ctx.drawImage(layer, offX, offY, W * k, H * k)
     }
     if (moving && !live && !rafRef.current && now < settleRef.current) {
       // Nothing else animates: make sure one more frame follows once the view has settled, to paint crisp.
