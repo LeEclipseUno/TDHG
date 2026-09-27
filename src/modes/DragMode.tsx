@@ -5,7 +5,7 @@ import { tierIncludes } from '../data'
 import { useLang } from '../i18n'
 import { HUD } from '../ui/HUD'
 import { Shield } from '../ui/Shield'
-import { mulberry32, pickRoads, QUESTION_COUNT, questionCount, roadsFromPicks, TIME_LIMITS, type QuestionResult } from '../game/session'
+import { mulberry32, pickRoads, questionCount, roadsFromPicks, TIME_LIMITS, type QuestionResult } from '../game/session'
 import { useNow, useToast } from '../game/hooks'
 import type { ModeProps } from './types'
 
