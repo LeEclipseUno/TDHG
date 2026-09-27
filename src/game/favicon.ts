@@ -17,8 +17,11 @@ function draw(ref: string): string {
     ctx.arcTo(x, y, x + w, y, r)
     ctx.closePath()
   }
-  // Shield: wide red plate with the white inner line, centred on a transparent square.
-  round(1, 14, 62, 36, 6)
+  // Shield: wide red plate with a white rim (so it reads on dark and light tab bars) and the white inner line.
+  round(0, 12, 64, 40, 8)
+  ctx.fillStyle = '#fff'
+  ctx.fill()
+  round(2, 14, 60, 36, 6)
   ctx.fillStyle = '#c90002'
   ctx.fill()
   round(5, 18, 54, 28, 4)

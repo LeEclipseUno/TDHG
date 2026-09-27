@@ -29,6 +29,8 @@ import { recordSession } from './game/history'
 import { setSoundEnabled } from './game/sound'
 import { getAccount, ONLINE, signInWithGoogle, signOut, type Account } from './game/backend'
 import { pushSoon, syncNow } from './game/sync'
+import { ErrorBoundary } from './ui/ErrorBoundary'
+import { setErrorContext } from './game/errors'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>
@@ -53,6 +55,9 @@ function Shell() {
   const [error, setError] = useState<string | null>(null)
   const [settings, setSettingsState] = useState<Settings>(loadSettings)
   const [screen, setScreen] = useState<Screen>({ kind: 'home' })
+  useEffect(() => {
+    setErrorContext('screen', screen.kind === 'game' ? `game:${screen.session.mode}` : screen.kind)
+  }, [screen])
   const [installEvt, setInstallEvt] = useState<BeforeInstallPromptEvent | null>(null)
   const [online, setOnline] = useState(navigator.onLine)
   const [account, setAccount] = useState<Account>({ signedIn: false })
@@ -246,6 +251,7 @@ function Shell() {
   const wrap = (key: string, node: ReactNode) => (
     <ThemeCtx.Provider value={seasonalTheme(plus ? settings.theme : 'signage') ?? (plus ? settings.theme : 'signage')} key={key}>
     <AccessCtx.Provider value={settings.colorblind}>
+    <ErrorBoundary title={t('crashTitle')} body={t('crashBody')} retry={t('home')} reload={t('crashReload')} onReset={() => go('home')}>
     <div className={'screen' + (settings.colorblind ? ' cb' : '')}>
       {!online && (
         <div role="status" className="offline-bar">
@@ -259,11 +265,27 @@ function Shell() {
       )}
       {node}
     </div>
+    </ErrorBoundary>
     </AccessCtx.Provider>
     </ThemeCtx.Provider>
   )
 
-  if (error) return <div className="loading">{t('loadError')}</div>
+  if (error)
+    return (
+      <div className="loading crash">
+        <div className="board board-blue results-board crash-board">
+          <div className="board-inner">
+            <div className="board-title">{t('loadErrorTitle')}</div>
+            <p className="crash-text">{online ? t('loadError') : t('loadErrorOffline')}</p>
+            <div className="modal-actions">
+              <button type="button" className="btn btn-primary" onClick={() => location.reload()}>
+                {t('retry')}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   if (!data)
     return (
       <div className="loading skeleton" aria-busy="true" aria-label={t('loading')}>

@@ -31,7 +31,8 @@ for s in (512, 192, 64, 32):
 from PIL import ImageFont
 fav = Image.new("RGBA", (128, 128), (0, 0, 0, 0))
 fd = ImageDraw.Draw(fav)
-fd.rounded_rectangle((2, 28, 126, 100), radius=12, fill=(201, 0, 2))
+fd.rounded_rectangle((0, 24, 128, 104), radius=16, fill=(255, 255, 255))
+fd.rounded_rectangle((4, 28, 124, 100), radius=12, fill=(201, 0, 2))
 fd.rounded_rectangle((10, 36, 118, 92), radius=8, outline=(255, 255, 255), width=5)
 try:
     font = ImageFont.truetype("C:/Windows/Fonts/arialbd.ttf", 48)

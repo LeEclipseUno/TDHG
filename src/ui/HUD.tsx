@@ -3,6 +3,7 @@ import { useLang } from '../i18n'
 import { formatTime, type Grade } from '../game/session'
 import { Matrix, RouteStrip, SpeedSign } from './widgets'
 import { IconBack } from './icons'
+import { setErrorContext } from '../game/errors'
 
 export interface HUDProps {
   index: number
@@ -21,6 +22,10 @@ export interface HUDProps {
 export function HUD({ index, total, grades, score, scoreLabel, remainingMs, limitMs, elapsedMs, prompt, onQuit, countLabel }: HUDProps) {
   const { t } = useLang()
   const [confirm, setConfirm] = useState(false)
+  useEffect(() => {
+    setErrorContext('q', `${index + 1}/${total}`)
+    return () => setErrorContext('q', '')
+  }, [index, total])
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setConfirm((c) => !c)

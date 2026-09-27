@@ -6,6 +6,14 @@ const MAX_PER_SESSION = 5
 const seen = new Set<string>()
 let sent = 0
 
+// What the player was doing, added to every report: screen or mode, and the question number.
+const context: Record<string, string> = {}
+export function setErrorContext(key: 'screen' | 'q', value: string) {
+  if (value) context[key] = value
+  else delete context[key]
+}
+const contextLine = () => Object.entries(context).map(([k, v]) => `${k}=${v}`).join(' ')
+
 const IGNORE = [/ResizeObserver loop/, /extension:\/\//, /chrome-extension/, /moz-extension/, /Script error\.?$/, /Load failed/, /Failed to fetch/, /NetworkError/, /AbortError/]
 
 async function report(message: string, stack: string | undefined, where: string) {
@@ -21,7 +29,7 @@ async function report(message: string, stack: string | undefined, where: string)
     await c.from('errors').insert({
       message: message.slice(0, 500),
       stack: (stack ?? '').slice(0, 2000),
-      where: where.slice(0, 200),
+      where: `${where} | ${contextLine()}`.slice(0, 200),
       url: location.href.slice(0, 300),
       ua: navigator.userAgent.slice(0, 300),
       build: typeof __BUILD__ === 'string' ? __BUILD__ : '',
