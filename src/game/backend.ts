@@ -132,14 +132,7 @@ export async function groupWeek(code: string, daily: number): Promise<WeekRow[]>
   return (await rpc<WeekRow[]>('group_week', { p_code: code, p_daily: daily })) ?? []
 }
 export async function leaveGroup(code: string): Promise<boolean> {
-  const c = await sb()
-  if (!c || !(await ensureSession())) return false
-  const { data: g } = await c.from('groups').select('id').eq('code', code).maybeSingle()
-  if (!g) return false
-  const { data: u } = await c.auth.getUser()
-  if (!u.user) return false
-  const { error } = await c.from('members').delete().eq('group_id', g.id).eq('player_id', u.user.id)
-  return !error
+  return (await rpc<boolean>('leave_group', { p_code: code })) === true
 }
 
 /** Uploads the card and registers a share. Returns the preview link, or null when offline. */

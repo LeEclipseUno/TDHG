@@ -20,6 +20,7 @@ export function Groups({ data, onHome, joinCode }: { data: GameData; onHome: () 
   const [code, setCode] = useState(joinCode ?? '')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
+  const [leaving, setLeaving] = useState<Group | null>(null)
   const [tick, setTick] = useState(0)
   const n = dailyNumber()
   const nickOk = validNickname(nick)
@@ -98,8 +99,15 @@ export function Groups({ data, onHome, joinCode }: { data: GameData; onHome: () 
     }
   }
   const doLeave = async (g: Group) => {
-    if (!window.confirm(t('leaveConfirm', { name: g.name }))) return
-    await leaveGroup(g.code)
+    setLeaving(null)
+    setBusy(true)
+    const ok = await leaveGroup(g.code)
+    setBusy(false)
+    if (!ok) {
+      setMsg(t('leaveFail'))
+      return
+    }
+    setMsg(null)
     setOpen(null)
     await refresh()
   }
@@ -224,10 +232,25 @@ export function Groups({ data, onHome, joinCode }: { data: GameData; onHome: () 
                 </li>
               ))}
             </ul>
-            <button type="button" className="link-btn group-leave" onClick={() => doLeave(current)}>
+            <button type="button" className="link-btn group-leave" onClick={() => setLeaving(current)} disabled={busy}>
               {t('leave')}
             </button>
           </Board>
+        )}
+        {leaving && (
+          <div className="modal-backdrop" onClick={() => setLeaving(null)}>
+            <div className="modal" onClick={(e) => e.stopPropagation()}>
+              <p>{t('leaveConfirm', { name: leaving.name })}</p>
+              <div className="modal-actions">
+                <button type="button" className="btn btn-ghost" onClick={() => setLeaving(null)}>
+                  {t('cancel')}
+                </button>
+                <button type="button" className="btn btn-danger" onClick={() => void doLeave(leaving)}>
+                  {t('leave')}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {groups && groups.length === 0 && ONLINE && (
