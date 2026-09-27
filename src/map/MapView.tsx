@@ -1,6 +1,6 @@
 import { forwardRef, useCallback, useContext, useEffect, useImperativeHandle, useRef, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { AccessCtx, CB_ACTIVE, CB_CORRECT, CB_WRONG, SIGNAGE, THEMES, ThemeCtx, type Palette } from './theme'
-import { tierIncludes, type Bounds, type GameData, type Road, type RoadKind, type Tier } from '../data'
+import { tierIncludes, type Bounds, type GameData, type RoadKind, type Tier } from '../data'
 import { IconFit, IconMinus, IconPlus } from '../ui/icons'
 
 /** setPointerCapture can throw when the pointer is already gone (synthetic or cancelled events). */
@@ -272,6 +272,13 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
   const interactive = props.interactive !== false
   const patternRef = useRef<CanvasPattern | null>(null)
   const patternKeyRef = useRef<string | null>(null)
+  // Static layers (land, water, roads, labels) live in an offscreen canvas. While the view moves the cached
+  // image is blitted with a transform; once it settles the layers are painted again, crisp.
+  const baseRef = useRef<HTMLCanvasElement | null>(null)
+  const baseKeyRef = useRef('')
+  const baseViewRef = useRef<{ cx: number; cy: number; scale: number; w: number; h: number } | null>(null)
+  const settleRef = useRef(0)
+  const settleTimer = useRef(0)
 
   const clampView = useCallback((v: View): View => {
     const w = propsRef.current.data.world
@@ -323,193 +330,340 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
     const dpr = window.devicePixelRatio || 1
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     const { cx, cy, scale } = viewRef.current
-    const tx = w / 2 - cx * scale
-    const ty = h / 2 - cy * scale
     const mirror = !!propsRef.current.mirror
-    const X = (x: number) => (mirror ? w - (x * scale + tx) : x * scale + tx)
-    const Y = (y: number) => y * scale + ty
-
-    ctx.fillStyle = C.bg
-    ctx.fillRect(0, 0, w, h)
-    if (patternKeyRef.current !== C.ripple) {
-      // Faint wave texture for the water, built once per theme.
-      patternKeyRef.current = C.ripple
-      patternRef.current = null
-      const pc = document.createElement('canvas')
-      pc.width = 48
-      pc.height = 48
-      const pctx = pc.getContext('2d')
-      if (pctx && C.ripple) {
-        pctx.strokeStyle = C.ripple
-        pctx.lineWidth = 1.2
-        for (const oy of [10, 34]) {
-          pctx.beginPath()
-          pctx.moveTo(0, oy)
-          pctx.quadraticCurveTo(12, oy - 5, 24, oy)
-          pctx.quadraticCurveTo(36, oy + 5, 48, oy)
-          pctx.stroke()
+    /** Screen geometry for a view: projection, zoom level, line widths and a polyline tracer. */
+    const geom = (c: CanvasRenderingContext2D, v: View) => {
+      const tx = w / 2 - v.cx * v.scale
+      const ty = h / 2 - v.cy * v.scale
+      const X = (x: number) => (mirror ? w - (x * v.scale + tx) : x * v.scale + tx)
+      const Y = (y: number) => y * v.scale + ty
+      const z = Math.log2(v.scale / minScaleRef.current)
+      const basePx: Record<RoadKind, number> = { A: Math.min(9, 2.2 + z * 0.9), N: Math.min(6, 1.5 + z * 0.6), P: Math.min(4, 0.8 + z * 0.45) }
+      const widths: Record<RoadKind, number> = { A: Math.max(basePx.A, 11 * v.scale), N: Math.max(basePx.N, 8 * v.scale), P: Math.max(basePx.P, 7 * v.scale) }
+      const linkWidth: Record<'A' | 'N' | 'P', number> = { A: Math.max(basePx.A * 0.55, 5.5 * v.scale), N: Math.max(basePx.N * 0.6, 5 * v.scale), P: Math.max(basePx.P * 0.7, 4 * v.scale) }
+      const detailed = v.scale > 0.25 // dark casings so crossings and ramps separate visually
+      const smooth = v.scale > 0.6 // round off the polyline corners at deep zoom
+      const vx0 = v.cx - w / 2 / v.scale
+      const vy0 = v.cy - h / 2 / v.scale
+      const vx1 = v.cx + w / 2 / v.scale
+      const vy1 = v.cy + h / 2 / v.scale
+      const inView = (b: readonly number[]) => b[2] >= vx0 && b[0] <= vx1 && b[3] >= vy0 && b[1] <= vy1
+      const trace = (line: number[]) => {
+        let px = X(line[0])
+        let py = Y(line[1])
+        c.moveTo(px, py)
+        const last = line.length - 2
+        for (let i = 2; i < line.length; i += 2) {
+          const sx = X(line[i])
+          const sy = Y(line[i + 1])
+          if (i !== last && Math.abs(sx - px) + Math.abs(sy - py) < MIN_STEP) continue
+          if (smooth) c.quadraticCurveTo(px, py, (px + sx) / 2, (py + sy) / 2)
+          else c.lineTo(sx, sy)
+          px = sx
+          py = sy
         }
-        patternRef.current = ctx.createPattern(pc, 'repeat')
+        if (smooth) c.lineTo(px, py)
       }
-    }
-    if (patternRef.current && C.ripple && propsRef.current.palette !== 'light') {
-      ctx.fillStyle = patternRef.current
-      ctx.fillRect(0, 0, w, h)
+      return { tx, ty, X, Y, z, widths, linkWidth, detailed, inView, trace }
     }
 
-    // Land polygons. Screen-space decimation skips vertices within a pixel of the previous one.
-    const fillLand = (polys: typeof data.land, fill: string, edge: string, glow?: { color: string; width: number }) => {
-      ctx.beginPath()
-      for (const poly of polys) {
-        for (const ring of poly.rings) {
-          let lx = X(ring[0])
-          let ly = Y(ring[1])
-          ctx.moveTo(lx, ly)
-          for (let i = 2; i < ring.length; i += 2) {
-            const sx = X(ring[i])
-            const sy = Y(ring[i + 1])
-            if (Math.abs(sx - lx) + Math.abs(sy - ly) < MIN_STEP) continue
-            ctx.lineTo(sx, sy)
-            lx = sx
-            ly = sy
+    /** Everything that only depends on the view: background, land, water, roads, structures and labels. */
+    const paintBase = (c: CanvasRenderingContext2D, v: View) => {
+      const { X, Y, z, widths, linkWidth, detailed, inView, trace } = geom(c, v)
+      c.setTransform(dpr, 0, 0, dpr, 0, 0)
+      c.fillStyle = C.bg
+      c.fillRect(0, 0, w, h)
+      if (patternKeyRef.current !== C.ripple) {
+        // Faint wave texture for the water, built once per theme.
+        patternKeyRef.current = C.ripple
+        patternRef.current = null
+        const pc = document.createElement('canvas')
+        pc.width = 48
+        pc.height = 48
+        const pctx = pc.getContext('2d')
+        if (pctx && C.ripple) {
+          pctx.strokeStyle = C.ripple
+          pctx.lineWidth = 1.2
+          for (const oy of [10, 34]) {
+            pctx.beginPath()
+            pctx.moveTo(0, oy)
+            pctx.quadraticCurveTo(12, oy - 5, 24, oy)
+            pctx.quadraticCurveTo(36, oy + 5, 48, oy)
+            pctx.stroke()
           }
-          ctx.closePath()
+          patternRef.current = c.createPattern(pc, 'repeat')
         }
       }
-      if (glow) {
-        ctx.strokeStyle = glow.color
-        ctx.lineWidth = glow.width
-        ctx.lineJoin = 'round'
-        ctx.stroke()
+      if (patternRef.current && C.ripple && propsRef.current.palette !== 'light') {
+        c.fillStyle = patternRef.current
+        c.fillRect(0, 0, w, h)
       }
-      ctx.fillStyle = fill
-      ctx.fill('evenodd')
-      ctx.strokeStyle = edge
-      ctx.lineWidth = 1
-      ctx.stroke()
-    }
-    fillLand(data.abroad, C.abroad, C.abroadEdge) // neighbours, muted, so the country does not float in the void
-    // Shallow water glow along the coast, then the land itself.
-    fillLand(data.land, C.land, C.landEdge, { color: C.glow, width: Math.min(16, 5 + Math.log2(scale / minScaleRef.current) * 1.6) })
 
-    const z = Math.log2(scale / minScaleRef.current)
-    // Line widths: a zoom-dependent minimum in px, or the real road width once zoomed in far enough.
-    const basePx: Record<RoadKind, number> = { A: Math.min(9, 2.2 + z * 0.9), N: Math.min(6, 1.5 + z * 0.6), P: Math.min(4, 0.8 + z * 0.45) }
-    const widths: Record<RoadKind, number> = { A: Math.max(basePx.A, 11 * scale), N: Math.max(basePx.N, 8 * scale), P: Math.max(basePx.P, 7 * scale) }
-    const linkWidth: Record<'A' | 'N' | 'P', number> = { A: Math.max(basePx.A * 0.55, 5.5 * scale), N: Math.max(basePx.N * 0.6, 5 * scale), P: Math.max(basePx.P * 0.7, 4 * scale) }
-    const detailed = scale > 0.25 // dark casings so crossings and ramps separate visually
-    const smooth = scale > 0.6 // round off the polyline corners at deep zoom
-    const vx0 = cx - w / 2 / scale
-    const vy0 = cy - h / 2 / scale
-    const vx1 = cx + w / 2 / scale
-    const vy1 = cy + h / 2 / scale
-    const inView = (b: readonly number[]) => b[2] >= vx0 && b[0] <= vx1 && b[3] >= vy0 && b[1] <= vy1
+      // Land polygons. Screen-space decimation skips vertices within a pixel of the previous one.
+      const fillLand = (polys: typeof data.land, fill: string, edge: string, glow?: { color: string; width: number }) => {
+        c.beginPath()
+        for (const poly of polys) {
+          for (const ring of poly.rings) {
+            let lx = X(ring[0])
+            let ly = Y(ring[1])
+            c.moveTo(lx, ly)
+            for (let i = 2; i < ring.length; i += 2) {
+              const sx = X(ring[i])
+              const sy = Y(ring[i + 1])
+              if (Math.abs(sx - lx) + Math.abs(sy - ly) < MIN_STEP) continue
+              c.lineTo(sx, sy)
+              lx = sx
+              ly = sy
+            }
+            c.closePath()
+          }
+        }
+        if (glow) {
+          c.strokeStyle = glow.color
+          c.lineWidth = glow.width
+          c.lineJoin = 'round'
+          c.stroke()
+        }
+        c.fillStyle = fill
+        c.fill('evenodd')
+        c.strokeStyle = edge
+        c.lineWidth = 1
+        c.stroke()
+      }
+      fillLand(data.abroad, C.abroad, C.abroadEdge) // neighbours, muted, so the country does not float in the void
+      // Shallow water glow along the coast, then the land itself.
+      fillLand(data.land, C.land, C.landEdge, { color: C.glow, width: Math.min(16, 5 + z * 1.6) })
+
+      c.lineCap = 'round'
+      c.lineJoin = 'round'
+      const strokeLines = (ls: number[][], color: string, width: number, alpha: number) => {
+        c.beginPath()
+        for (const line of ls) trace(line)
+        c.globalAlpha = alpha
+        if (detailed) {
+          c.strokeStyle = C.bg
+          c.lineWidth = width + 3
+          c.stroke()
+        }
+        c.strokeStyle = color
+        c.lineWidth = width
+        c.stroke()
+      }
+      // Rivers and main canals as water lines over the land.
+      if (z > 0.6 && data.water.length) {
+        const riverW = Math.max(1.4, 110 * v.scale)
+        const canalW = Math.max(1, 55 * v.scale)
+        for (const cls of ['c', 'r'] as const) {
+          c.beginPath()
+          for (const wl of data.water) {
+            if (wl.c !== cls || !inView(wl.b)) continue
+            trace(wl.l)
+          }
+          c.strokeStyle = C.bg
+          c.lineWidth = cls === 'r' ? riverW : canalW
+          c.globalAlpha = cls === 'r' ? 0.95 : 0.8
+          c.stroke()
+        }
+        c.globalAlpha = 1
+      }
+
+      // Province borders, faint and dashed.
+      if (z > 0.8 && data.provinces.borders.length) {
+        c.beginPath()
+        for (const bl of data.provinces.borders) {
+          if (!inView(bl.b)) continue
+          trace(bl.l)
+        }
+        c.setLineDash([6, 5])
+        c.strokeStyle = C.border
+        c.lineWidth = 1
+        c.stroke()
+        c.setLineDash([])
+      }
+
+      // Local roads as context: secondary from mid zoom, tertiary closer in. Thin, dim, never interactive.
+      if (!hideRoads && z > 2.8) {
+        const minorW = Math.max(Math.min(2.2, 0.5 + z * 0.25), 5.5 * v.scale)
+        for (const cls of ['t', 's'] as const) {
+          if (cls === 't' && z < 4.2) continue
+          c.beginPath()
+          for (const mn of data.minor) {
+            if (mn.c !== cls || !inView(mn.b)) continue
+            trace(mn.l)
+          }
+          c.globalAlpha = cls === 's' ? 0.5 : 0.32
+          c.strokeStyle = C.P
+          c.lineWidth = cls === 's' ? minorW : minorW * 0.8
+          c.stroke()
+        }
+        c.globalAlpha = 1
+      }
+
+      const drawKind = (order: RoadKind) => {
+        for (const r of data.roads) {
+          if (r.kind !== order || !inView(r.bbox) || highlights[r.ref]) continue
+          if (hideRoads) continue
+          const inTier = tierIncludes(tier, r.kind)
+          if (r.kind === 'P' && !inTier && z < 2.5) continue
+          strokeLines(r.lines, C[r.kind], widths[r.kind], inTier ? 1 : 0.35)
+        }
+      }
+      drawKind('P')
+      if (z > 1.5 && !hideRoads) {
+        for (const lk of data.links) {
+          if (!inView(lk.b)) continue
+          strokeLines([lk.l], C[lk.k], linkWidth[lk.k], tierIncludes(tier, lk.k) ? 0.95 : 0.35)
+        }
+      }
+      drawKind('N')
+      drawKind('A')
+      c.globalAlpha = 1
+
+      // Bridges get rails, tunnels a dashed casing, once the roads are wide enough to show it.
+      if (detailed && !hideRoads) {
+        for (const st of data.structures) {
+          if (!inView(st.b)) continue
+          c.beginPath()
+          trace(st.l)
+          if (st.t === 'b') {
+            // A bridge deck: square ends and a thin edge line on both sides, like a road atlas.
+            c.lineCap = 'butt'
+            c.strokeStyle = C.structure
+            c.lineWidth = widths.A + 3
+            c.stroke()
+            c.strokeStyle = C.A
+            c.lineWidth = widths.A
+            c.stroke()
+            c.lineCap = 'round'
+          } else {
+            c.setLineDash([10, 7])
+            c.strokeStyle = C.structure
+            c.lineWidth = widths.A + 4
+            c.stroke()
+            c.setLineDash([])
+            c.strokeStyle = C.bg
+            c.lineWidth = widths.A + 1
+            c.globalAlpha = 0.55
+            c.stroke()
+            c.globalAlpha = 1
+          }
+        }
+      }
+
+      // Cities from mid zoom, towns closer in.
+      if (z > 1.3) {
+        c.font = '600 11px Barlow, system-ui, sans-serif'
+        c.textAlign = 'left'
+        c.textBaseline = 'middle'
+        for (const pl of data.places) {
+          if (pl.c === 0 && z < 2.6) continue
+          const sx = X(pl.x)
+          const sy = Y(pl.y)
+          if (sx < -60 || sx > w + 60 || sy < -20 || sy > h + 20) continue
+          c.beginPath()
+          c.arc(sx, sy, pl.c ? 3.5 : 2.5, 0, Math.PI * 2)
+          c.fillStyle = C.text
+          c.fill()
+          c.strokeStyle = C.bg
+          c.lineWidth = 1.5
+          c.stroke()
+          c.lineWidth = 3
+          c.strokeStyle = C.bg
+          c.strokeText(pl.n, sx + 7, sy)
+          c.fillStyle = C.text
+          c.globalAlpha = pl.c ? 1 : 0.8
+          c.fillText(pl.n, sx + 7, sy)
+          c.globalAlpha = 1
+        }
+      }
+
+      // Interchange names as small blue signs once the map is zoomed in enough to read them.
+      if (labels && z > 3.2) {
+        c.font = '700 11px "Barlow Condensed", system-ui, sans-serif'
+        c.textAlign = 'center'
+        c.textBaseline = 'middle'
+        for (const j of data.junctions) {
+          const sx = X(j.x)
+          const sy = Y(j.y)
+          if (sx < -80 || sx > w + 80 || sy < -30 || sy > h + 30) continue
+          const label = 'Knooppunt ' + j.name
+          const tw = c.measureText(label).width + 12
+          roundRect(c, sx - tw / 2, sy - 22, tw, 17, 3)
+          c.fillStyle = '#0d4a9c'
+          c.fill()
+          c.strokeStyle = '#fff'
+          c.lineWidth = 1
+          c.stroke()
+          c.fillStyle = '#fff'
+          c.fillText(label, sx, sy - 13)
+          c.beginPath()
+          c.arc(sx, sy, 3, 0, Math.PI * 2)
+          c.fill()
+        }
+        if (v.scale > 0.5) {
+          c.font = '700 10px "Barlow Condensed", system-ui, sans-serif'
+          for (const e of data.exits) {
+            const sx = X(e.x)
+            const sy = Y(e.y)
+            if (sx < -80 || sx > w + 80 || sy < -30 || sy > h + 30) continue
+            const label = `${e.r} ${e.n}`
+            const tw = c.measureText(label).width + 10
+            roundRect(c, sx - tw / 2, sy + 8, tw, 15, 2)
+            c.fillStyle = '#fff'
+            c.fill()
+            c.fillStyle = '#0d4a9c'
+            c.fillText(label, sx, sy + 15.5)
+          }
+        }
+      }
+    }
+
+    // Base layer: repaint when anything static changed and the view is at rest; otherwise blit the cached image.
+    const moving = live || !!panRef.current || !!pinchRef.current || now < settleRef.current
+    const staticKey = [w, h, dpr, themeRef.current, propsRef.current.palette ?? '', cbRef.current ? 1 : 0, tier, hideRoads ? 1 : 0, mirror ? 1 : 0, labels ? 1 : 0, Object.keys(highlights).sort().join(','), data.roads.length, data.links.length, data.minor.length, data.water.length, data.structures.length].join('|')
+    let layer = baseRef.current
+    const bv = baseViewRef.current
+    const sameStatic = layer !== null && baseKeyRef.current === staticKey
+    const sameView = sameStatic && bv !== null && bv.cx === cx && bv.cy === cy && bv.scale === scale
+    if (!sameView && (!sameStatic || !moving || !bv)) {
+      if (!layer || layer.width !== Math.round(w * dpr) || layer.height !== Math.round(h * dpr)) {
+        layer = document.createElement('canvas')
+        layer.width = Math.round(w * dpr)
+        layer.height = Math.round(h * dpr)
+        baseRef.current = layer
+      }
+      const bctx = layer.getContext('2d')
+      if (bctx) paintBase(bctx, viewRef.current)
+      baseKeyRef.current = staticKey
+      baseViewRef.current = { cx, cy, scale, w, h }
+      ctx.drawImage(layer, 0, 0, w, h)
+    } else if (layer && bv) {
+      // Same static content, view in motion: reuse the cached image with a scale and offset.
+      const k = scale / bv.scale
+      const tx0 = w / 2 - bv.cx * bv.scale
+      const ty0 = h / 2 - bv.cy * bv.scale
+      const tx = w / 2 - cx * scale
+      const ty = h / 2 - cy * scale
+      const offX = mirror ? w - (w - tx0) * k - tx : tx - tx0 * k
+      const offY = ty - ty0 * k
+      ctx.fillStyle = C.bg
+      ctx.fillRect(0, 0, w, h)
+      ctx.drawImage(layer, offX, offY, w * k, h * k)
+    }
+    if (moving && !live && !rafRef.current && now < settleRef.current) {
+      // Nothing else animates: make sure one more frame follows once the view has settled, to paint crisp.
+      window.clearTimeout(settleTimer.current)
+      settleTimer.current = window.setTimeout(() => {
+        if (!rafRef.current) rafRef.current = requestAnimationFrame(draw)
+      }, settleRef.current - now + 10)
+    }
+
+    const { X, Y, z, widths, trace } = geom(ctx, viewRef.current)
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
-    const trace = (line: number[]) => {
-      let px = X(line[0])
-      let py = Y(line[1])
-      ctx.moveTo(px, py)
-      const last = line.length - 2
-      for (let i = 2; i < line.length; i += 2) {
-        const sx = X(line[i])
-        const sy = Y(line[i + 1])
-        if (i !== last && Math.abs(sx - px) + Math.abs(sy - py) < MIN_STEP) continue
-        if (smooth) ctx.quadraticCurveTo(px, py, (px + sx) / 2, (py + sy) / 2)
-        else ctx.lineTo(sx, sy)
-        px = sx
-        py = sy
-      }
-      if (smooth) ctx.lineTo(px, py)
-    }
-    const strokeLines = (ls: number[][], color: string, width: number, alpha: number) => {
-      ctx.beginPath()
-      for (const line of ls) trace(line)
-      ctx.globalAlpha = alpha
-      if (detailed) {
-        ctx.strokeStyle = C.bg
-        ctx.lineWidth = width + 3
-        ctx.stroke()
-      }
-      ctx.strokeStyle = color
-      ctx.lineWidth = width
-      ctx.stroke()
-    }
-    // Rivers and main canals as water lines over the land.
-    if (z > 0.6 && data.water.length) {
-      const riverW = Math.max(1.4, 110 * scale)
-      const canalW = Math.max(1, 55 * scale)
-      for (const cls of ['c', 'r'] as const) {
-        ctx.beginPath()
-        for (const wl of data.water) {
-          if (wl.c !== cls || !inView(wl.b)) continue
-          trace(wl.l)
-        }
-        ctx.strokeStyle = C.bg
-        ctx.lineWidth = cls === 'r' ? riverW : canalW
-        ctx.globalAlpha = cls === 'r' ? 0.95 : 0.8
-        ctx.stroke()
-      }
-      ctx.globalAlpha = 1
-    }
-
-    // Province borders, faint and dashed.
-    if (z > 0.8 && data.provinces.borders.length) {
-      ctx.beginPath()
-      for (const bl of data.provinces.borders) {
-        if (!inView(bl.b)) continue
-        trace(bl.l)
-      }
-      ctx.setLineDash([6, 5])
-      ctx.strokeStyle = C.border
-      ctx.lineWidth = 1
-      ctx.stroke()
-      ctx.setLineDash([])
-    }
-
-    // Local roads as context: secondary from mid zoom, tertiary closer in. Thin, dim, never interactive.
-    if (!hideRoads && z > 2.8) {
-      const minorW = Math.max(Math.min(2.2, 0.5 + z * 0.25), 5.5 * scale)
-      for (const cls of ['t', 's'] as const) {
-        if (cls === 't' && z < 4.2) continue
-        ctx.beginPath()
-        for (const mn of data.minor) {
-          if (mn.c !== cls || !inView(mn.b)) continue
-          trace(mn.l)
-        }
-        ctx.globalAlpha = cls === 's' ? 0.5 : 0.32
-        ctx.strokeStyle = C.P
-        ctx.lineWidth = cls === 's' ? minorW : minorW * 0.8
-        ctx.stroke()
-      }
-      ctx.globalAlpha = 1
-    }
-
-    const later: Road[] = []
-    const drawKind = (order: RoadKind) => {
-      for (const r of data.roads) {
-        if (r.kind !== order || !inView(r.bbox)) continue
-        if (highlights[r.ref]) {
-          later.push(r)
-          continue
-        }
-        if (hideRoads) continue
-        const inTier = tierIncludes(tier, r.kind)
-        if (r.kind === 'P' && !inTier && z < 2.5) continue
-        strokeLines(r.lines, C[r.kind], widths[r.kind], inTier ? 1 : 0.35)
-      }
-    }
-    drawKind('P')
-    if (z > 1.5 && !hideRoads) {
-      for (const lk of data.links) {
-        if (!inView(lk.b)) continue
-        strokeLines([lk.l], C[lk.k], linkWidth[lk.k], tierIncludes(tier, lk.k) ? 0.95 : 0.35)
-      }
-    }
-    drawKind('N')
-    drawKind('A')
-    ctx.globalAlpha = 1
-    for (const r of later) {
+    // Highlighted roads sit above everything static.
+    for (const r of data.roads) {
+      if (!highlights[r.ref]) continue
       const color = C[highlights[r.ref]]
       ctx.beginPath()
       for (const line of r.lines) trace(line)
@@ -522,64 +676,6 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
       ctx.stroke()
     }
 
-    // Bridges get rails, tunnels a dashed casing, once the roads are wide enough to show it.
-    if (detailed && !hideRoads) {
-      for (const st of data.structures) {
-        if (!inView(st.b)) continue
-        ctx.beginPath()
-        trace(st.l)
-        if (st.t === 'b') {
-          // A bridge deck: square ends and a thin edge line on both sides, like a road atlas.
-          ctx.lineCap = 'butt'
-          ctx.strokeStyle = C.structure
-          ctx.lineWidth = widths.A + 3
-          ctx.stroke()
-          ctx.strokeStyle = C.A
-          ctx.lineWidth = widths.A
-          ctx.stroke()
-          ctx.lineCap = 'round'
-        } else {
-          ctx.setLineDash([10, 7])
-          ctx.strokeStyle = C.structure
-          ctx.lineWidth = widths.A + 4
-          ctx.stroke()
-          ctx.setLineDash([])
-          ctx.strokeStyle = C.bg
-          ctx.lineWidth = widths.A + 1
-          ctx.globalAlpha = 0.55
-          ctx.stroke()
-          ctx.globalAlpha = 1
-        }
-      }
-    }
-
-    // Cities from mid zoom, towns closer in.
-    if (z > 1.3) {
-      ctx.font = '600 11px Barlow, system-ui, sans-serif'
-      ctx.textAlign = 'left'
-      ctx.textBaseline = 'middle'
-      for (const pl of data.places) {
-        if (pl.c === 0 && z < 2.6) continue
-        const sx = X(pl.x)
-        const sy = Y(pl.y)
-        if (sx < -60 || sx > w + 60 || sy < -20 || sy > h + 20) continue
-        ctx.beginPath()
-        ctx.arc(sx, sy, pl.c ? 3.5 : 2.5, 0, Math.PI * 2)
-        ctx.fillStyle = C.text
-        ctx.fill()
-        ctx.strokeStyle = C.bg
-        ctx.lineWidth = 1.5
-        ctx.stroke()
-        ctx.lineWidth = 3
-        ctx.strokeStyle = C.bg
-        ctx.strokeText(pl.n, sx + 7, sy)
-        ctx.fillStyle = C.text
-        ctx.globalAlpha = pl.c ? 1 : 0.8
-        ctx.fillText(pl.n, sx + 7, sy)
-        ctx.globalAlpha = 1
-      }
-    }
-
     for (const path of paths) {
       ctx.beginPath()
       trace(path)
@@ -590,46 +686,6 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
       ctx.globalAlpha = 1
       ctx.lineWidth = Math.max(4, widths.A * 0.6)
       ctx.stroke()
-    }
-
-    // Interchange names as small blue signs once the map is zoomed in enough to read them.
-    if (labels && z > 3.2) {
-      ctx.font = '700 11px "Barlow Condensed", system-ui, sans-serif'
-      ctx.textAlign = 'center'
-      ctx.textBaseline = 'middle'
-      for (const j of data.junctions) {
-        const sx = X(j.x)
-        const sy = Y(j.y)
-        if (sx < -80 || sx > w + 80 || sy < -30 || sy > h + 30) continue
-        const label = 'Knooppunt ' + j.name
-        const tw = ctx.measureText(label).width + 12
-        roundRect(ctx, sx - tw / 2, sy - 22, tw, 17, 3)
-        ctx.fillStyle = '#0d4a9c'
-        ctx.fill()
-        ctx.strokeStyle = '#fff'
-        ctx.lineWidth = 1
-        ctx.stroke()
-        ctx.fillStyle = '#fff'
-        ctx.fillText(label, sx, sy - 13)
-        ctx.beginPath()
-        ctx.arc(sx, sy, 3, 0, Math.PI * 2)
-        ctx.fill()
-      }
-      if (scale > 0.5) {
-        ctx.font = '700 10px "Barlow Condensed", system-ui, sans-serif'
-        for (const e of data.exits) {
-          const sx = X(e.x)
-          const sy = Y(e.y)
-          if (sx < -80 || sx > w + 80 || sy < -30 || sy > h + 30) continue
-          const label = `${e.r} ${e.n}`
-          const tw = ctx.measureText(label).width + 10
-          roundRect(ctx, sx - tw / 2, sy + 8, tw, 15, 2)
-          ctx.fillStyle = '#fff'
-          ctx.fill()
-          ctx.fillStyle = '#0d4a9c'
-          ctx.fillText(label, sx, sy + 15.5)
-        }
-      }
     }
 
     if (showJunctions) {
@@ -716,6 +772,7 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
   const setView = useCallback(
     (v: View) => {
       viewRef.current = clampView(v)
+      settleRef.current = performance.now() + 140
       requestRedraw()
     },
     [clampView, requestRedraw],

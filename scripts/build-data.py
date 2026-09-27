@@ -259,7 +259,7 @@ def build_land():
     d = json.load(open(os.path.join(RAW, "gemeenten.json"), encoding="utf-8"))
     geoms = [transform(lambda lon, lat, z=None: proj(lon, lat), shape(f["geometry"])) for f in d["features"] if f["properties"].get("water") == "NEE"]
     land = unary_union(geoms).buffer(0)
-    land = land.simplify(3, preserve_topology=True)
+    land = land.simplify(20, preserve_topology=True)
     polys = list(land.geoms) if land.geom_type == "MultiPolygon" else [land]
     out = []; pts = 0
     for poly in polys:

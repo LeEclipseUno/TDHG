@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { createHash } from 'node:crypto'
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { buildRoadPages } from './scripts/road-pages.mjs'
@@ -21,10 +22,20 @@ function serviceWorkerAssets(adsClient: string): Plugin {
       const html = fs.readFileSync(path.join(dist, 'index.html'), 'utf8')
       const built = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map((m) => m[1]).filter((u) => u.startsWith(base) && /\.(js|css)$/.test(u))
       const fonts = fs.readdirSync(path.join(dist, 'fonts')).map((f) => `${base}fonts/${f}`)
-      const data = ['roads-core', 'roads-extra', 'links', 'structures', 'minor', 'water', 'provinces', 'land', 'abroad', 'junctions', 'exits', 'places', 'daily'].map((n) => `${base}data/${n}.json`)
-      const list = [base, ...built, ...data, ...fonts, `${base}logo.png`, `${base}icon-192.png`, `${base}manifest.webmanifest`]
+      // The shell: html, js, css, fonts, logo. Small, precached, keyed by build.
+      const list = [base, ...built, ...fonts, `${base}logo.png`, `${base}icon-192.png`, `${base}manifest.webmanifest`]
+      // Map data is cached as the game asks for it, in a cache keyed by the data's own content, so a deploy
+      // that only changes code keeps every player's map on disk.
+      const dataDir = path.join(dist, 'data')
+      const hash = createHash('md5')
+      for (const f of fs.readdirSync(dataDir).sort()) hash.update(fs.readFileSync(path.join(dataDir, f)))
+      // The worker's source lives outside public/, so Vite's own copy of public/ can never overwrite the filled-in file.
       const swPath = path.join(dist, 'sw.js')
-      const sw = fs.readFileSync(swPath, 'utf8').replace('__ASSETS__', JSON.stringify(list)).replace('__BUILD__', Date.now().toString(36))
+      const sw = fs
+        .readFileSync(path.resolve('scripts/sw.template.js'), 'utf8')
+        .replaceAll('__ASSETS__', JSON.stringify(list))
+        .replaceAll('__BUILD__', Date.now().toString(36))
+        .replaceAll('__DATA__', hash.digest('hex').slice(0, 10))
       fs.writeFileSync(swPath, sw)
     },
   }

@@ -94,8 +94,11 @@ function Shell() {
       return
     }
     loadData()
-      .then(async (d) => {
-        if (ONLINE) {
+      .then((d) => {
+        // The home screen shows as soon as the map is in; the account lookup and cloud sync follow in the background.
+        setData(d)
+        if (!ONLINE) return
+        void (async () => {
           // Only a successful answer may clear a cached Plus pass; offline keeps the last known state.
           const acc = await getAccount().then((a) => (rememberPlus(a.plusUntil), a)).catch(() => ({ signedIn: false }) as Account)
           setAccount(acc)
@@ -107,8 +110,7 @@ function Shell() {
             history.replaceState(null, '', location.pathname + (rest ? '?' + rest : '') + location.hash)
           }
           if (acc.signedIn) await syncNow().catch(() => {})
-        }
-        setData(d)
+        })()
       })
       .catch((e: unknown) => setError(String(e)))
     updateBadge()
