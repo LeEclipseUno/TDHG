@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import type { Grade } from '../game/session'
 import { IconBack, IconLock } from './icons'
 
@@ -85,5 +86,51 @@ export function BackBar({ label, onBack }: { label: string; onBack: () => void }
         <span>{label}</span>
       </button>
     </div>
+  )
+}
+
+/** True when the nearest scrolling container (or the page) is taller than what is visible, so a bottom Home button is worth having. */
+function isTall(from: HTMLElement | null): boolean {
+  let el: HTMLElement | null = from
+  while (el && el !== document.body) {
+    const oy = getComputedStyle(el).overflowY
+    if ((oy === 'auto' || oy === 'scroll') && el.scrollHeight > el.clientHeight + 24) return true
+    el = el.parentElement
+  }
+  const root = document.scrollingElement ?? document.documentElement
+  return root.scrollHeight > window.innerHeight + 24
+}
+
+/** Bottom Home button, shown only on pages that scroll. */
+export function BottomHome({ label, onHome, children }: { label: string; onHome: () => void; children: React.ReactNode }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const [tall, setTall] = useState(false)
+  useEffect(() => {
+    const check = () => setTall(isTall(ref.current?.parentElement ?? null))
+    check()
+    const obs = new ResizeObserver(check)
+    obs.observe(document.body)
+    let el: HTMLElement | null = ref.current?.parentElement ?? null
+    while (el) {
+      obs.observe(el)
+      el = el.parentElement
+    }
+    window.addEventListener('resize', check)
+    const t = window.setTimeout(check, 600)
+    return () => {
+      obs.disconnect()
+      window.removeEventListener('resize', check)
+      window.clearTimeout(t)
+    }
+  }, [])
+  return (
+    <>
+      <span ref={ref} hidden />
+      {tall && (
+        <button type="button" className="btn btn-ghost" onClick={onHome}>
+          {children} {label}
+        </button>
+      )}
+    </>
   )
 }

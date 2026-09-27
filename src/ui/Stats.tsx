@@ -3,7 +3,7 @@ import type { GameData } from '../data'
 import { useLang } from '../i18n'
 import { clearHistory, loadHistory, loadLabelStats } from '../game/history'
 import { formatTime, MODES, POST_STYLES, SHIELD_STYLES, type PostStyle, type Settings, type ShieldStyle } from '../game/session'
-import { BackBar, Board, Matrix, Seg } from './widgets'
+import { BackBar, Board, BottomHome, Matrix, Seg } from './widgets'
 import { Shield } from './Shield'
 import { IconLock, IconMenu, IconPencil, PlusMark, SeasonIcon, PictStats, PictDrag, PictFind, PictJunction, PictQuiz, PictRoute, PictPost } from './icons'
 import MapView, { type Highlight } from '../map/MapView'
@@ -409,9 +409,9 @@ export function Stats({ data, account, plus, settings, onSettings, onSignOut, on
           </div>
         )}
         <div className="results-actions">
-          <button type="button" className="btn btn-ghost" onClick={onHome}>
-            <IconMenu /> {t('home')}
-          </button>
+          <BottomHome label={t('home')} onHome={onHome}>
+            <IconMenu />
+          </BottomHome>
           {games > 0 && (
             <button
               type="button"

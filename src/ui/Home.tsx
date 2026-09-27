@@ -21,7 +21,7 @@ export function initials(a: { name?: string; email?: string }): string {
 }
 
 import { THEME_NAMES, type ThemeName } from '../map/theme'
-import { ONLINE, type Account } from '../game/backend'
+import { getNickname, ONLINE, type Account } from '../game/backend'
 import DriftMap from '../map/DriftMap'
 import { useNow } from '../game/hooks'
 
@@ -180,7 +180,7 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
               <button type="button" className={'avatar-btn' + (plus ? ' avatar-plus' : '')} onClick={onStats} aria-label={t('stats')}>
                 {account.avatar ? <img className="avatar-img" src={account.avatar} alt="" referrerPolicy="no-referrer" /> : plus ? <span className="avatar-img avatar-shield"><InitialsShield text={initials(account)} style={settings.shieldStyle} /></span> : <span className="avatar-img avatar-fallback">{initials(account).slice(0, 1)}</span>}
                 <span className="avatar-text">
-                  <span className="avatar-name">{account.name ?? account.email?.split('@')[0]}</span>
+                  <span className="avatar-name">{getNickname() || account.name || account.email?.split('@')[0]}</span>
                   <span className="avatar-sub">{t('stats')}</span>
                 </span>
               </button>

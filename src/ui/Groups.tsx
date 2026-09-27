@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLang } from '../i18n'
-import { BackBar, Board } from './widgets'
+import { BackBar, Board, BottomHome } from './widgets'
 import { IconMenu, IconReplay, IconShare, PictGroup, PlusMark } from './icons'
 import { createGroup, getNickname, groupBoard, groupRivals, groupWeek, joinGroup, leaveGroup, myGroups, ONLINE, setNickname, validGroupName, validNickname, type BoardRow, type Group, type WeekRow } from '../game/backend'
 import { dailyNumber } from '../game/daily'
@@ -270,9 +270,9 @@ export function Groups({ data, plus, onPlus, onHome, joinCode }: { data: GameDat
         )}
 
         <div className="results-actions">
-          <button type="button" className="btn btn-ghost" onClick={onHome}>
-            <IconMenu /> {t('home')}
-          </button>
+          <BottomHome label={t('home')} onHome={onHome}>
+            <IconMenu />
+          </BottomHome>
         </div>
       </div>
     </div>

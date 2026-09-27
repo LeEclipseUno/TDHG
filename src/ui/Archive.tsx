@@ -1,6 +1,6 @@
 import type { GameData } from '../data'
 import { useLang } from '../i18n'
-import { BackBar, Board } from './widgets'
+import { BackBar, Board, BottomHome } from './widgets'
 import { IconMenu, IconSignArrow } from './icons'
 import { Backdrop } from './Backdrop'
 import { allDailyResults, dailyDate, dailyMode, dailyNumber } from '../game/daily'
@@ -47,9 +47,9 @@ export function Archive({ data, onPlay, onHome }: ArchiveProps) {
           </div>
         </Board>
         <div className="results-actions">
-          <button type="button" className="btn btn-ghost" onClick={onHome}>
-            <IconMenu /> {t('home')}
-          </button>
+          <BottomHome label={t('home')} onHome={onHome}>
+            <IconMenu />
+          </BottomHome>
         </div>
       </div>
     </div>

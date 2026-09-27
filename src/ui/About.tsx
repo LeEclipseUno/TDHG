@@ -1,5 +1,5 @@
 import { useLang } from '../i18n'
-import { BackBar, Board } from './widgets'
+import { BackBar, Board, BottomHome } from './widgets'
 import { IconMenu } from './icons'
 import { Backdrop } from './Backdrop'
 import type { GameData } from '../data'
@@ -32,9 +32,9 @@ export function About({ data, onHome }: { data: GameData; onHome: () => void }) 
           {t('version')} {typeof __BUILD__ === 'string' ? __BUILD__.replace('T', ' ') : ''}
         </p>
         <div className="results-actions">
-          <button type="button" className="btn btn-ghost" onClick={onHome}>
-            <IconMenu /> {t('home')}
-          </button>
+          <BottomHome label={t('home')} onHome={onHome}>
+            <IconMenu />
+          </BottomHome>
         </div>
       </div>
     </div>

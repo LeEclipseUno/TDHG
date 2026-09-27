@@ -1237,6 +1237,9 @@ button {
   gap: 10px;
   margin-top: 6px;
 }
+.results-actions:empty {
+  display: none;
+}
 
 /* ---------- learn mode ---------- */
 

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { GameData } from '../data'
 import { useLang } from '../i18n'
-import { BackBar, Board } from './widgets'
+import { BackBar, Board, BottomHome } from './widgets'
 import { IconGoogle, IconMenu, IconReplay, PictGroup, PictLearn, PictExit, PictJunction, PictRoute, PictDistance, PictStats, PictFind, PictQuiz } from './icons'
 import { Backdrop } from './Backdrop'
 import { getReferralCode, ONLINE, redeemGift, type Account } from '../game/backend'
@@ -206,9 +206,9 @@ export function Plus({ data, account, onSignIn, onRefresh, onNotice, onHome }: P
               <IconReplay /> {t('plusRestore')}
             </button>
           )}
-          <button type="button" className="btn btn-ghost" onClick={onHome}>
-            <IconMenu /> {t('home')}
-          </button>
+          <BottomHome label={t('home')} onHome={onHome}>
+            <IconMenu />
+          </BottomHome>
         </div>
       </div>
     </div>
