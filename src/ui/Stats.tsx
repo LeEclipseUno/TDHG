@@ -41,14 +41,20 @@ export function Stats({ data, account, plus, settings, onSettings, onSignOut, on
   const applyReminder = async (on: boolean, hour: number, minute: number) => {
     setReminderNote('')
     setReminderTime(hour, minute)
+    // The chosen time shows at once; only the on switch waits for the server.
+    setReminder((r) => ({ ...r, hour, minute }))
     if (!on) {
       await disableReminder()
       setReminder({ on: false, hour, minute })
       return
     }
-    const ok = await enableReminder(hour, minute, lang)
-    if (ok) setReminder({ on: true, hour, minute })
-    else setReminderNote(isIosSafari && !isStandalone ? t('reminderInstall') : t('reminderDenied'))
+    const fail = await enableReminder(hour, minute, lang)
+    if (!fail) setReminder({ on: true, hour, minute })
+    else if (fail === 'permission') setReminderNote(isIosSafari && !isStandalone ? t('reminderInstall') : t('reminderDenied'))
+    else {
+      setReminder((r) => ({ ...r, on: false }))
+      setReminderNote(t('reminderFail', { code: fail }))
+    }
   }
   const reminderTime = `${String(reminder.hour).padStart(2, '0')}:${String(reminder.minute).padStart(2, '0')}`
   const doExport = async () => {

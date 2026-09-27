@@ -39,25 +39,38 @@ function keyBytes(b64: string): Uint8Array {
   return Uint8Array.from(raw, (c) => c.charCodeAt(0))
 }
 
-/** Asks permission, subscribes the browser and stores the subscription. Returns false when anything refuses. */
-export async function enableReminder(hour: number, minute: number, lang: string): Promise<boolean> {
-  if (!pushSupported()) return false
+/**
+ * Asks permission, subscribes the browser and stores the subscription.
+ * Returns null when it worked, otherwise a short reason: 'unsupported', 'offline', 'permission' or 'server: ...'.
+ */
+export async function enableReminder(hour: number, minute: number, lang: string): Promise<string | null> {
+  if (!pushSupported()) return 'unsupported'
   const c = await sb()
-  if (!c || !(await ensureSession())) return false
+  if (!c || !(await ensureSession())) return 'offline'
   try {
-    if ((await Notification.requestPermission()) !== 'granted') return false
+    if ((await Notification.requestPermission()) !== 'granted') return 'permission'
     const reg = await navigator.serviceWorker.ready
-    const sub = (await reg.pushManager.getSubscription()) ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(VAPID!) as BufferSource }))
-    const j = sub.toJSON()
-    const { error } = await c.from('push_subs').upsert(
-      { endpoint: sub.endpoint, p256dh: j.keys?.p256dh ?? '', auth: j.keys?.auth ?? '', hour, minute, tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Amsterdam', lang },
-      { onConflict: 'endpoint' },
-    )
-    if (error) return false
+    const subscribe = () => reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(VAPID!) as BufferSource })
+    const save = async (sub: PushSubscription) => {
+      const j = sub.toJSON()
+      const { error } = await c.from('push_subs').upsert(
+        { endpoint: sub.endpoint, p256dh: j.keys?.p256dh ?? '', auth: j.keys?.auth ?? '', hour, minute, tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Amsterdam', lang },
+        { onConflict: 'endpoint' },
+      )
+      return error
+    }
+    const existing = await reg.pushManager.getSubscription()
+    let error = await save(existing ?? (await subscribe()))
+    if (error && existing) {
+      // The old subscription's row belongs to another account (signed out and in again): start a fresh one.
+      await existing.unsubscribe().catch(() => {})
+      error = await save(await subscribe())
+    }
+    if (error) return `server: ${error.message}`
     remember({ on: true, hour, minute })
-    return true
-  } catch {
-    return false
+    return null
+  } catch (e) {
+    return `push: ${(e as Error)?.message ?? e}`
   }
 }
 
