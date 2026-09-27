@@ -2766,3 +2766,33 @@ body,
 .seg-wrap .seg-btn.row-next.seg-on::after {
   display: none;
 }
+
+.stats-more {
+  display: block !important;
+  padding-top: 4px;
+}
+.stats-more-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(255, 176, 0, 0.12);
+  border: 1px dashed var(--amber);
+  color: var(--amber);
+  border-radius: 5px;
+  padding: 8px 10px;
+  font: inherit;
+  font-family: var(--font-sign);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.stats-more-btn svg {
+  width: 16px;
+  height: 16px;
+}
+.cb .legend-mid {
+  background: #d94fd9;
+}

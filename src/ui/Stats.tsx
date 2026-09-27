@@ -58,9 +58,10 @@ export function Stats({ data, account, plus, onSignOut, onPlus, onDeleted, onNot
     return { mode: m, games: gs.length, best: gs.reduce((a, g) => Math.max(a, g.score), 0) }
   }).filter((m) => m.games > 0)
   const entries = Object.entries(labels).map(([label, s]) => ({ label, ...s, n: s.r + s.w, ratio: s.r / (s.r + s.w) }))
-  const hardest = entries.filter((e) => e.n >= 2).sort((a, b) => a.ratio - b.ratio || b.n - a.n).slice(0, 10)
+  const hardestAll = entries.filter((e) => e.n >= 2).sort((a, b) => a.ratio - b.ratio || b.n - a.n).slice(0, 10)
+  const hardest = plus ? hardestAll : hardestAll.slice(0, 2)
   const strongest = entries.filter((e) => e.n >= 2 && e.ratio >= 0.75).sort((a, b) => b.ratio - a.ratio || b.n - a.n).slice(0, 10)
-  const recent = hist.slice(-10).reverse()
+  const recent = hist.slice(-3).reverse()
   const earned = useMemo(() => computeBadges(data), [data, tick])
   const earnedAt = loadBadges()
   // Plus: which roads you know, per province, and your fastest clean run per mode.
@@ -76,7 +77,8 @@ export function Stats({ data, account, plus, onSignOut, onPlus, onDeleted, onNot
     }
     if (road && e.n >= 1) known[road.ref] = e.ratio >= 0.75 ? 'correct' : e.ratio < 0.5 ? 'wrong' : 'active'
   }
-  const provList = Object.entries(provAcc).map(([c, v]) => ({ c, n: v.r + v.w, ratio: v.r / (v.r + v.w) })).filter((p) => p.n >= 3).sort((a, b) => b.ratio - a.ratio)
+  const provAll = Object.entries(provAcc).map(([c, v]) => ({ c, n: v.r + v.w, ratio: v.r / (v.r + v.w) })).filter((p) => p.n >= 3).sort((a, b) => b.ratio - a.ratio)
+  const provList = plus ? provAll : provAll.slice(0, 2)
   const fastest = MODES.map((m) => {
     const clean = hist.filter((g) => g.mode === m && g.total > 0 && g.good / g.total >= 0.8 && g.ms > 0)
     return { mode: m, ms: clean.reduce((a, g) => Math.min(a, g.ms), Infinity) }
@@ -156,7 +158,7 @@ export function Stats({ data, account, plus, onSignOut, onPlus, onDeleted, onNot
             </div>
           </Board>
         )}
-        {plus && provList.length > 0 && (
+        {provList.length > 0 && (
           <Board tone="dark">
             <div className="stats-title">{t('perProvince')}</div>
             <ul className="stats-list">
@@ -169,6 +171,7 @@ export function Stats({ data, account, plus, onSignOut, onPlus, onDeleted, onNot
                   <span className="stats-ratio">{Math.round(p.ratio * 100)}%</span>
                 </li>
               ))}
+              {!plus && provAll.length > 2 && <MoreWithPlus onPlus={onPlus} label={t('morePlus', { n: provAll.length - 2 })} />}
             </ul>
           </Board>
         )}
@@ -234,6 +237,7 @@ export function Stats({ data, account, plus, onSignOut, onPlus, onDeleted, onNot
                   </li>
                 )
               })}
+              {!plus && hardestAll.length > 2 && <MoreWithPlus onPlus={onPlus} label={t('morePlus', { n: hardestAll.length - 2 })} />}
             </ul>
           </Board>
         )}
@@ -371,4 +375,15 @@ function BadgeArt({ id }: { id: BadgeId }) {
         </span>
       )
   }
+}
+
+/** Locked tail of a list: the rest opens with Plus. */
+function MoreWithPlus({ onPlus, label }: { onPlus: () => void; label: string }) {
+  return (
+    <li className="stats-more">
+      <button type="button" className="stats-more-btn" onClick={onPlus}>
+        <IconLock /> {label}
+      </button>
+    </li>
+  )
 }
