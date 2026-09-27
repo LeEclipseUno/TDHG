@@ -396,7 +396,7 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
     // Line widths: a zoom-dependent minimum in px, or the real road width once zoomed in far enough.
     const basePx: Record<RoadKind, number> = { A: Math.min(9, 2.2 + z * 0.9), N: Math.min(6, 1.5 + z * 0.6), P: Math.min(4, 0.8 + z * 0.45) }
     const widths: Record<RoadKind, number> = { A: Math.max(basePx.A, 11 * scale), N: Math.max(basePx.N, 8 * scale), P: Math.max(basePx.P, 7 * scale) }
-    const linkWidth: Record<'A' | 'N', number> = { A: Math.max(basePx.A * 0.55, 5.5 * scale), N: Math.max(basePx.N * 0.6, 5 * scale) }
+    const linkWidth: Record<'A' | 'N' | 'P', number> = { A: Math.max(basePx.A * 0.55, 5.5 * scale), N: Math.max(basePx.N * 0.6, 5 * scale), P: Math.max(basePx.P * 0.7, 4 * scale) }
     const detailed = scale > 0.25 // dark casings so crossings and ramps separate visually
     const smooth = scale > 0.6 // round off the polyline corners at deep zoom
     const vx0 = cx - w / 2 / scale

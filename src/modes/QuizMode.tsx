@@ -4,7 +4,7 @@ import type { Road } from '../data'
 import { useLang } from '../i18n'
 import { HUD } from '../ui/HUD'
 import { Shield } from '../ui/Shield'
-import { BLITZ_BONUS_MS, BLITZ_MS, mulberry32, pickRoads, QUESTION_COUNT, quizOptions, roadsFromPicks, shuffle, streakBonus, TIME_LIMITS, timeBonus, VARIANT_MULT, type QuestionResult } from '../game/session'
+import { BLITZ_BONUS_MS, BLITZ_MS, mulberry32, pickRoads, questionCount, quizOptions, roadsFromPicks, shuffle, streakBonus, TIME_LIMITS, timeBonus, VARIANT_MULT, type QuestionResult } from '../game/session'
 import { roadsForTier } from '../data'
 import { useNow, useTimeout } from '../game/hooks'
 import { haptic, sfx } from '../game/sound'
@@ -16,7 +16,7 @@ export function QuizMode({ data, session, onFinish, onQuit }: ModeProps) {
   const blitz = session.variant === 'blitz'
   const questions = useMemo(() => {
     const rng = mulberry32(session.seed)
-    const roads = blitz ? shuffle(roadsForTier(data, session.tier, session.province), rng) : session.picks ? roadsFromPicks(data, session.picks) : pickRoads(data, session.tier, QUESTION_COUNT, rng, session.province)
+    const roads = blitz ? shuffle(roadsForTier(data, session.tier, session.province), rng) : session.picks ? roadsFromPicks(data, session.picks) : pickRoads(data, session.tier, questionCount(session), rng, session.province)
     return roads.map((road) => ({ road, options: quizOptions(data, session.tier, road, rng, session.province) }))
   }, [data, session.tier, session.seed, blitz])
   const [i, setI] = useState(0)

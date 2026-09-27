@@ -24,9 +24,9 @@ export interface Junction {
   p?: string[]
 }
 
-/** A ramp or connector road of an interchange. k: A = motorway link, N = trunk link. */
+/** A ramp or connector road of an interchange. k: A = motorway link, N = trunk link, P = ramp of a provincial road. */
 export interface Link {
-  k: 'A' | 'N'
+  k: 'A' | 'N' | 'P'
   b: [number, number, number, number]
   l: number[]
 }

@@ -168,13 +168,26 @@ def build_roads():
     return out
 
 def build_links():
-    """Ramps and connector roads of interchanges: motorway_link (drawn like A) and trunk_link (drawn like N)."""
+    """Ramps and connector roads of interchanges: motorway_link (drawn like A), trunk_link (drawn like N),
+    except trunk_link ramps that only touch a provincial road, which are drawn like that road (P)."""
     d = json.load(open(os.path.join(RAW, "links.json"), encoding="utf-8"))["elements"]
-    groups = {"A": [], "N": []}
+    key = lambda p: (round(p[0], 1), round(p[1], 1))
+    main_pts, prov_pts = set(), set()
+    for f in sorted(glob.glob(os.path.join(RAW, "geom_*.json"))):
+        for e in json.load(open(f, encoding="utf-8"))["elements"]:
+            target = prov_pts if kind(e["tags"]["ref"]) == "P" else main_pts
+            for m in e.get("members", []):
+                if m["type"] == "way" and "geometry" in m:
+                    target.update(key(proj(p["lon"], p["lat"])) for p in m["geometry"])
+    groups = {"A": [], "N": [], "P": []}
     for e in d:
         if "geometry" not in e: continue
-        k = "A" if e["tags"].get("highway") == "motorway_link" else "N"
-        groups[k].append([proj(p["lon"], p["lat"]) for p in e["geometry"]])
+        pts = [proj(p["lon"], p["lat"]) for p in e["geometry"]]
+        if e["tags"].get("highway") == "motorway_link": k = "A"
+        else:
+            # Ramps that touch an A or N road belong to it; everything else is a provincial ramp.
+            k = "N" if any(key(p) in main_pts for p in pts) else "P"
+        groups[k].append(pts)
     out = []; pts = 0
     for k, ways in groups.items():
         for line in chain(ways):

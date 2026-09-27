@@ -60,7 +60,7 @@ export const PAPER: Palette = {
   abroadEdge: '#cbc6b0',
   A: '#d9302a',
   N: '#f0b400',
-  P: '#ffffff',
+  P: '#bfb28f',
   correct: '#1f9d55',
   wrong: '#c1121f',
   active: '#1f5fd0',

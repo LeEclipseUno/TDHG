@@ -4,7 +4,7 @@ import { boundsOfPoints, tierIncludes, type Exit } from '../data'
 import { useLang } from '../i18n'
 import { HUD } from '../ui/HUD'
 import { Shield } from '../ui/Shield'
-import { exitsFromPicks, mulberry32, QUESTION_COUNT, shuffle, TIME_LIMITS, timeBonus, VARIANT_MULT, type Grade, type QuestionResult } from '../game/session'
+import { exitsFromPicks, mulberry32, QUESTION_COUNT, questionCount, shuffle, TIME_LIMITS, timeBonus, VARIANT_MULT, type Grade, type QuestionResult } from '../game/session'
 import { useNow, useTimeout } from '../game/hooks'
 import { haptic, sfx } from '../game/sound'
 import type { ModeProps } from './types'
@@ -28,7 +28,7 @@ export function ExitMode({ data, session, onFinish, onQuit }: ModeProps) {
       const r = data.byRef.get(e.road)
       return r && tierIncludes(session.tier, r.kind) && (!session.province || e.p?.includes(session.province))
     })
-    return shuffle(pool, rng).slice(0, QUESTION_COUNT)
+    return shuffle(pool, rng).slice(0, questionCount(session))
   }, [data, session.tier, session.seed, session.province, session.picks])
   const [i, setI] = useState(0)
   const [results, setResults] = useState<QuestionResult[]>([])

@@ -60,6 +60,9 @@ export interface Session {
 }
 
 export const QUESTION_COUNT = 10
+/** The daily is shorter: five questions, one go. */
+export const DAILY_COUNT = 5
+export const questionCount = (s: Session): number => (s.dailyNumber ? DAILY_COUNT : QUESTION_COUNT)
 /** Seconds. drag is a total budget, the others are per question. */
 export const TIME_LIMITS: Record<ModeId, number> = { find: 20, quiz: 15, junction: 30, drag: 180, exit: 25, route: 0, distance: 25, sign: 20 }
 export const HINT_COST = 30
@@ -108,7 +111,7 @@ export function shuffle<T>(arr: readonly T[], rng: () => number): T[] {
 
 export function newSession(mode: ModeId, s: Settings, challenge?: Challenge, daily?: number, extra?: { picks?: string[]; practice?: boolean; seed?: number }): Session {
   if (daily) {
-    return { mode, tier: 'A', timer: true, daily: true, seed: extra?.seed ?? dailySeed(mode, 'A'), variant: 'normal', province: '', dailyNumber: daily, picks: extra?.picks, practice: extra?.practice, startedAt: Date.now(), finishedAt: 0, results: [] }
+    return { mode, tier: 'A', timer: true, daily: true, seed: extra?.seed ?? dailySeed(mode, 'A'), variant: 'normal', province: '', dailyNumber: daily, picks: extra?.picks?.slice(0, DAILY_COUNT), practice: extra?.practice, startedAt: Date.now(), finishedAt: 0, results: [] }
   }
   if (challenge) {
     return { mode: challenge.mode, tier: challenge.tier, timer: challenge.timer, daily: false, seed: challenge.seed, variant: challenge.variant, province: challenge.province, challenge: challenge.score, startedAt: Date.now(), finishedAt: 0, results: [] }

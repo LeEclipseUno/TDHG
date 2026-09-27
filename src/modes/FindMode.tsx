@@ -5,7 +5,7 @@ import { tierIncludes } from '../data'
 import { useLang } from '../i18n'
 import { HUD } from '../ui/HUD'
 import { Shield } from '../ui/Shield'
-import { BLITZ_BONUS_MS, BLITZ_MS, mulberry32, pickRoads, QUESTION_COUNT, roadsFromPicks, shuffle, streakBonus, TIME_LIMITS, timeBonus, VARIANT_MULT, type QuestionResult } from '../game/session'
+import { BLITZ_BONUS_MS, BLITZ_MS, mulberry32, pickRoads, questionCount, roadsFromPicks, shuffle, streakBonus, TIME_LIMITS, timeBonus, VARIANT_MULT, type QuestionResult } from '../game/session'
 import { roadsForTier } from '../data'
 import { useNow, useTimeout, useToast } from '../game/hooks'
 import type { ModeProps } from './types'
@@ -14,7 +14,7 @@ export function FindMode({ data, session, onFinish, onQuit }: ModeProps) {
   const { t } = useLang()
   const mapRef = useRef<MapHandle>(null)
   const blitz = session.variant === 'blitz'
-  const questions = useMemo(() => (blitz ? shuffle(roadsForTier(data, session.tier, session.province), mulberry32(session.seed)) : session.picks ? roadsFromPicks(data, session.picks) : pickRoads(data, session.tier, QUESTION_COUNT, mulberry32(session.seed), session.province)), [data, session.tier, session.seed, blitz, session.picks, session.province])
+  const questions = useMemo(() => (blitz ? shuffle(roadsForTier(data, session.tier, session.province), mulberry32(session.seed)) : session.picks ? roadsFromPicks(data, session.picks) : pickRoads(data, session.tier, questionCount(session), mulberry32(session.seed), session.province)), [data, session.tier, session.seed, blitz, session.picks, session.province])
   const [i, setI] = useState(0)
   const [results, setResults] = useState<QuestionResult[]>([])
   const [phase, setPhase] = useState<'ask' | 'reveal'>('ask')
