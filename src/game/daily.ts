@@ -85,6 +85,61 @@ export interface Streak {
   best: number
   /** Month (YYYY-MM) in which the Plus streak freeze was used, if any. */
   freeze?: string
+  /** Year in which the Plus streak repair was used, if any. */
+  repair?: string
+}
+
+/** A broken streak that Plus may restore: once a year, within two weeks, three days or longer. */
+export function canRepairStreak(): { days: number } | null {
+  try {
+    const s = JSON.parse(localStorage.getItem(STREAK_KEY) ?? 'null') as Streak | null
+    if (!s || s.count < 3 || !s.last) return null
+    const today = dateKey()
+    const yesterday = dateKey(new Date(Date.now() - DAY))
+    if (s.last === today || s.last === yesterday) return null
+    const age = (localMidnight(today) - localMidnight(s.last)) / DAY
+    if (age > 14) return null
+    if (s.repair === today.slice(0, 4)) return null
+    return { days: s.count }
+  } catch {
+    return null
+  }
+}
+
+/** Moves the streak up to yesterday so today's daily continues it. */
+export function repairStreak(): Streak | null {
+  try {
+    const s = JSON.parse(localStorage.getItem(STREAK_KEY) ?? 'null') as Streak | null
+    if (!s) return null
+    const next: Streak = { ...s, last: dateKey(new Date(Date.now() - DAY)), repair: dateKey().slice(0, 4) }
+    localStorage.setItem(STREAK_KEY, JSON.stringify(next))
+    return next
+  } catch {
+    return null
+  }
+}
+
+const PERSONAL_KEY = 'tdhg:v1:personal'
+export interface PersonalResult {
+  date: string
+  score: number
+  good: number
+  total: number
+}
+export function getPersonal(): PersonalResult | null {
+  try {
+    const r = JSON.parse(localStorage.getItem(PERSONAL_KEY) ?? 'null') as PersonalResult | null
+    return r && r.date === dateKey() ? r : null
+  } catch {
+    return null
+  }
+}
+export function savePersonal(r: Omit<PersonalResult, 'date'>) {
+  try {
+    localStorage.setItem(PERSONAL_KEY, JSON.stringify({ ...r, date: dateKey() }))
+  } catch {
+    /* ignore */
+  }
 }
 
 const monthOf = (key: string) => key.slice(0, 7)
@@ -108,7 +163,7 @@ export function getStreak(): Streak {
       }
       return thawed
     }
-    return { count: 0, last: s.last, best: s.best, freeze: s.freeze }
+    return { count: 0, last: s.last, best: s.best, freeze: s.freeze, repair: s.repair }
   } catch {
     return { count: 0, last: '', best: 0 }
   }
@@ -120,7 +175,7 @@ function bumpStreak(): Streak {
   if (s.last === today) return s
   const yesterday = dateKey(new Date(Date.now() - DAY))
   const count = s.last === yesterday ? s.count + 1 : 1
-  const next: Streak = { count, last: today, best: Math.max(s.best, count), freeze: s.freeze }
+  const next: Streak = { count, last: today, best: Math.max(s.best, count), freeze: s.freeze, repair: s.repair }
   try {
     localStorage.setItem(STREAK_KEY, JSON.stringify(next))
   } catch {

@@ -2,7 +2,9 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { loadData, type GameData } from './data'
 import { LangProvider, useLang } from './i18n'
 import { dailySeedOn, dateKey, loadSettings, MODES, newSession, parseChallenge, saveSettings, submitBest, summarize, type Challenge, type ModeId, type Session, type Settings } from './game/session'
-import { dailyDate, dailyMode, dailyNumber, getDailyResult, marksOf, saveDailyResult, updateBadge } from './game/daily'
+import { dailyDate, dailyMode, dailyNumber, getDailyResult, marksOf, repairStreak, saveDailyResult, savePersonal, updateBadge } from './game/daily'
+import { loadLabelStats } from './game/history'
+import { roadsForTier } from './data'
 import { loadArchive, picksFor } from './game/archive'
 import { hasPlus, isPlusMode, rememberPlus, rememberReferral } from './game/premium'
 import { updateBadges, type BadgeId } from './game/achievements'
@@ -139,8 +141,39 @@ function Shell() {
 
   const play = (mode: ModeId) => {
     if (isPlusMode(mode) && !plus) return go('plus')
+    const tierSettings = settings.tier === 'P' && !plus ? { ...settings, tier: 'A' as const } : settings
     setHash(mode)
-    setScreen({ kind: 'game', session: newSession(mode, settings) })
+    const start = () => setScreen({ kind: 'game', session: newSession(mode, tierSettings) })
+    if (tierSettings.tier === 'P' && data) void data.ready.then(start)
+    else start()
+  }
+  /** Plus: five of your weakest roads as a second daily, only after the real one. */
+  const playPersonal = () => {
+    if (!plus || !data || !getDailyResult(dailyNumber())) return
+    const labels = loadLabelStats()
+    const pool = roadsForTier(data, settings.tier === 'N' ? 'N' : 'A')
+    const scored = pool
+      .map((r) => ({ r, s: labels[r.ref] }))
+      .filter((x) => x.s && x.s.r + x.s.w > 0)
+      .sort((a, b) => a.s.r / (a.s.r + a.s.w) - b.s.r / (b.s.r + b.s.w) || b.s.w - a.s.w)
+    const picks = scored.slice(0, 5).map((x) => x.r.ref)
+    const unseen = pool.filter((r) => !labels[r.ref]).sort(() => Math.random() - 0.5)
+    for (const r of unseen) {
+      if (picks.length >= 5) break
+      picks.push(r.ref)
+    }
+    if (picks.length < 5) return
+    setHash('personal')
+    const session = newSession('find', { ...settings, timer: true, variant: 'normal' })
+    setScreen({ kind: 'game', session: { ...session, picks, personal: true } })
+  }
+  const doRepair = () => {
+    if (!plus) return
+    if (repairStreak()) {
+      setNotice(t('repaired'))
+      setTimeout(() => setNotice(null), 2500)
+      setScreen({ kind: 'home' })
+    }
   }
   /** Today's daily, or an earlier one from the archive (Plus). A day already scored replays as practice. */
   const playDaily = async (n?: number) => {
@@ -171,6 +204,10 @@ function Shell() {
     }
     recordSession(session)
     let streak = 0
+    if (session.personal) {
+      const sum = summarize(session)
+      savePersonal({ score: sum.score, good: sum.good, total: sum.total })
+    }
     if (session.dailyNumber) {
       const sum = summarize(session)
       const st = saveDailyResult(session.dailyNumber, { score: sum.score, good: sum.good, total: sum.total, ms: sum.ms, marks: marksOf(session) })
@@ -185,6 +222,7 @@ function Shell() {
   // Deep links: on first load and whenever the hash changes while the app is open (invite links, back button).
   const route = (h: string) => {
     if (h === 'daily') playDaily()
+    else if (h === 'personal') playPersonal()
     else if (MODES.includes(h as ModeId)) play(h as ModeId)
     else if (h === 'stats' || h === 'about' || h === 'groups' || h === 'plus') go(h)
     else if (h === 'archive') go(plus ? 'archive' : 'plus')
@@ -282,6 +320,8 @@ function Shell() {
       plus={plus}
       onPlus={() => go('plus')}
       onArchive={() => go(plus ? 'archive' : 'plus')}
+      onPersonal={playPersonal}
+      onRepair={doRepair}
       onStats={() => go('stats')}
       onAbout={() => go('about')}
       onGroups={() => go('groups')}

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import type { GameData } from '../data'
 import { useLang } from '../i18n'
 import { clearHistory, loadHistory, loadLabelStats } from '../game/history'
-import { formatTime, MODES } from '../game/session'
+import { formatTime, loadSettings, MODES } from '../game/session'
 import { Board, Matrix } from './widgets'
 import { Shield } from './Shield'
 import { IconLock, IconMenu, SeasonIcon, PictStats, PictDrag, PictFind, PictJunction, PictQuiz, PictRoute, PictPost } from './icons'
@@ -92,7 +92,7 @@ export function Stats({ data, account, plus, onSignOut, onPlus, onDeleted, onNot
           <Board className="results-board profile-board">
             <div className="board-title">{t('stats')}</div>
             <div className="profile-body">
-              {account.avatar ? <img className={'avatar-img profile-avatar' + (plus ? ' avatar-plus' : '')} src={account.avatar} alt="" referrerPolicy="no-referrer" /> : plus ? <span className="avatar-img profile-avatar avatar-shield avatar-plus"><InitialsShield text={initials(account)} size={52} /></span> : <span className="avatar-img avatar-fallback profile-avatar">{initials(account).slice(0, 1)}</span>}
+              {account.avatar ? <img className={'avatar-img profile-avatar' + (plus ? ' avatar-plus' : '')} src={account.avatar} alt="" referrerPolicy="no-referrer" /> : plus ? <span className="avatar-img profile-avatar avatar-shield avatar-plus"><InitialsShield text={initials(account)} size={52} style={loadSettings().shieldStyle} /></span> : <span className="avatar-img avatar-fallback profile-avatar">{initials(account).slice(0, 1)}</span>}
               <div className="profile-text">
                 <span className="profile-name">{account.name ?? account.email?.split('@')[0]}</span>
                 <span className="profile-email">{account.email}</span>

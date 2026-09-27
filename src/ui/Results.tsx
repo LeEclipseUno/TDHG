@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLang } from '../i18n'
-import { dateKey, formatTime, rankKey, shareText, summarize, type Session } from '../game/session'
+import { dateKey, formatTime, loadSettings, rankKey, shareText, summarize, type Session } from '../game/session'
 import type { GameData } from '../data'
 import MapView, { type Highlight, type Marker } from '../map/MapView'
 import { Shield } from './Shield'
@@ -146,7 +146,7 @@ export function Results({ data, session, newBest, streak, plus, badges, onAgain,
       <Backdrop data={data} />
       <div className="results-inner">
         <Board className="results-board">
-          <div className="board-title">{session.dailyNumber ? `Wegenkenner #${session.dailyNumber}` : t('results')}</div>
+          <div className="board-title">{session.dailyNumber ? `Wegenkenner #${session.dailyNumber}` : session.personal ? t('personalDaily') : t('results')}</div>
           <div className="results-mode">
             {t(`mode_${session.mode}`)} <span className="sep" /> {t(`tier_${session.tier}_short`)}
             {session.variant !== 'normal' && (
@@ -207,7 +207,7 @@ export function Results({ data, session, newBest, streak, plus, badges, onAgain,
             </div>
             {session.dailyNumber && streak > 0 && (
               <div className="results-streak">
-                {t('streak')} <StreakPosts count={streak} gold={plus} />
+                {t('streak')} <StreakPosts count={streak} style={plus ? loadSettings().postStyle : undefined} />
               </div>
             )}
             {pct && (

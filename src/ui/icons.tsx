@@ -302,12 +302,21 @@ export const PlusMark = (p: P) => (
 )
 
 /** Red road shield with initials: the avatar of a Plus player without a picture. */
-export const InitialsShield = ({ text, size = 38 }: { text: string; size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden>
-    <rect x="3" y="9" width="42" height="30" rx="5" fill="#c8102e" />
-    <rect x="7" y="13" width="34" height="22" rx="3" fill="none" stroke="#fff" strokeWidth="2.2" />
-    <text x="24" y="31" textAnchor="middle" fontFamily="Overpass, 'Barlow Condensed', system-ui, sans-serif" fontSize={text.length > 1 ? 15 : 18} fontWeight="800" fill="#fff">
-      {text}
-    </text>
-  </svg>
-)
+const SHIELD_LOOK: Record<string, { bg: string; ink: string }> = {
+  A: { bg: '#c8102e', ink: '#fff' },
+  N: { bg: '#ffd23f', ink: '#111' },
+  E: { bg: '#1f8f4e', ink: '#fff' },
+  B: { bg: '#0d4a9c', ink: '#fff' },
+}
+export const InitialsShield = ({ text, size = 38, style = 'A' }: { text: string; size?: number; style?: string }) => {
+  const look = SHIELD_LOOK[style] ?? SHIELD_LOOK.A
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden>
+      <rect x="3" y="9" width="42" height="30" rx="5" fill={look.bg} />
+      <rect x="7" y="13" width="34" height="22" rx="3" fill="none" stroke={look.ink} strokeWidth="2.2" />
+      <text x="24" y="31" textAnchor="middle" fontFamily="Overpass, 'Barlow Condensed', system-ui, sans-serif" fontSize={text.length > 1 ? 15 : 18} fontWeight="800" fill={look.ink}>
+        {text}
+      </text>
+    </svg>
+  )
+}

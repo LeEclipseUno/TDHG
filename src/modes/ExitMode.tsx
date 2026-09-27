@@ -26,7 +26,7 @@ export function ExitMode({ data, session, onFinish, onQuit }: ModeProps) {
     const rng = mulberry32(session.seed)
     const pool = data.exits.filter((e) => {
       const r = data.byRef.get(e.road)
-      return r && tierIncludes(session.tier, r.kind) && (!session.province || e.p?.includes(session.province))
+      return r && tierIncludes(session.tier === 'P' ? 'AN' : session.tier, r.kind) && (!session.province || e.p?.includes(session.province))
     })
     return shuffle(pool, rng).slice(0, questionCount(session))
   }, [data, session.tier, session.seed, session.province, session.picks])

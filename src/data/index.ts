@@ -2,7 +2,7 @@
 // Coordinates are metres on a local grid (x grows east, y grows south), produced by scripts/build-data.py.
 
 export type RoadKind = 'A' | 'N' | 'P' // A = motorway, N = national N-road (1-2 digits), P = provincial N-road (3 digits)
-export type Tier = 'A' | 'N' | 'AN' // A-roads, national N-roads, or both. Provincial roads are context only.
+export type Tier = 'A' | 'N' | 'AN' | 'P' // A-roads, national N-roads, both, or (Plus, expert) the provincial N-roads.
 
 export interface Road {
   ref: string
@@ -93,6 +93,7 @@ export interface NearestRoad {
 }
 
 export function tierIncludes(tier: Tier, kind: RoadKind): boolean {
+  if (tier === 'P') return kind === 'P'
   if (kind === 'A') return tier !== 'N'
   if (kind === 'N') return tier !== 'A'
   return false

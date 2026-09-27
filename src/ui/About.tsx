@@ -4,7 +4,6 @@ import { IconMenu } from './icons'
 import { Backdrop } from './Backdrop'
 import type { GameData } from '../data'
 
-export const REPO_URL = 'https://github.com/LeEclipseUno/TDHG'
 export function About({ data, onHome }: { data: GameData; onHome: () => void }) {
   const { t } = useLang()
   return (
@@ -18,11 +17,7 @@ export function About({ data, onHome }: { data: GameData; onHome: () => void }) 
             <p>{t('aboutPrivacy')}</p>
             <p>{t('aboutData')}</p>
             <p>
-              {t('aboutContact')} <a href="mailto:hello@wegenkenner.nl">hello@wegenkenner.nl</a>. {t('aboutBugs')}{' '}
-              <a href={`${REPO_URL}/issues`} target="_blank" rel="noreferrer">
-                GitHub
-              </a>
-              .
+              {t('aboutContact')} <a href="mailto:hello@wegenkenner.nl">hello@wegenkenner.nl</a>.
             </p>
           </div>
         </Board>
@@ -45,9 +40,3 @@ export function About({ data, onHome }: { data: GameData; onHome: () => void }) 
   )
 }
 
-/** A prefilled GitHub issue for a wrong or missing road, exit or interchange. */
-export function reportUrl(mode: string, label: string, detail: string | undefined, lang: string): string {
-  const title = encodeURIComponent(`Data: ${label} (${mode})`)
-  const body = encodeURIComponent(`Mode: ${mode}\nItem: ${label}\nDetail: ${detail ?? ''}\nLanguage: ${lang}\nDate: ${new Date().toISOString().slice(0, 10)}\n\nWhat is wrong:\n`)
-  return `${REPO_URL}/issues/new?title=${title}&body=${body}&labels=data`
-}

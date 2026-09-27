@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react'
 import type { GameData, Tier } from '../data'
 import type { Deck } from '../game/learn'
 import { useLang, type Lang } from '../i18n'
-import { MODES, VARIANTS, dailyShareText, getBest, type Challenge, type ModeId, type Settings, type Variant } from '../game/session'
+import { MODES, POST_STYLES, SHIELD_STYLES, VARIANTS, dailyShareText, getBest, type Challenge, type ModeId, type PostStyle, type Settings, type ShieldStyle, type Variant } from '../game/session'
 import { isPlusMode } from '../game/premium'
 import { disableReminder, enableReminder, getReminder, pushSupported } from '../game/push'
-import { dailyMode, dailyNumber, getDailyResult, getStreak, msUntilNextDaily } from '../game/daily'
+import { canRepairStreak, dailyMode, dailyNumber, getDailyResult, getPersonal, getStreak, msUntilNextDaily } from '../game/daily'
 import { season, SEASON_TEXT } from '../game/season'
 import { Board, Matrix } from './widgets'
 import { IconGoogle, IconLock, IconReplay, IconShare, IconSignArrow, PictDistance, PictSign, PictDrag, PictExit, PictFind, PictGroup, PictJunction, PictLearn, PictQuiz, PictRoute, PictStats, SeasonIcon, IconFreeze } from './icons'
@@ -45,6 +45,8 @@ export interface HomeProps {
   plus: boolean
   onPlus: () => void
   onArchive: () => void
+  onPersonal: () => void
+  onRepair: () => void
 }
 
 const PICTS: Record<ModeId, typeof PictDrag> = { drag: PictDrag, find: PictFind, junction: PictJunction, quiz: PictQuiz, exit: PictExit, route: PictRoute, distance: PictDistance, sign: PictSign }
@@ -97,10 +99,11 @@ function LangPost({ lang, onChange, label }: { lang: Lang; onChange: (l: Lang) =
 }
 
 /** The play streak as a row of hectometre posts. */
-export function StreakPosts({ count, gold = false }: { count: number; gold?: boolean }) {
+export function StreakPosts({ count, gold = false, style }: { count: number; gold?: boolean; style?: PostStyle }) {
   const shown = Math.max(1, Math.min(count, 14))
+  const cls = style ? ` streak-${style}` : gold ? ' streak-gold' : ''
   return (
-    <span className={'streak' + (gold ? ' streak-gold' : '')} title={String(count)}>
+    <span className={'streak' + cls} title={String(count)}>
       {Array.from({ length: shown }, (_, i) => (
         <span key={i} className={'streak-post' + (i < count ? ' streak-post-on' : '')} />
       ))}
@@ -112,12 +115,14 @@ export function StreakPosts({ count, gold = false }: { count: number; gold?: boo
 const isIosSafari = /iphone|ipad|ipod/i.test(navigator.userAgent) && !('standalone' in navigator && (navigator as { standalone?: boolean }).standalone)
 const isStandalone = window.matchMedia('(display-mode: standalone)').matches
 
-export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onStats, onAbout, onGroups, challenge, onChallenge, onInstall, account, onSignIn, plus, onPlus, onArchive }: HomeProps) {
+export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onStats, onAbout, onGroups, challenge, onChallenge, onInstall, account, onSignIn, plus, onPlus, onArchive, onPersonal, onRepair }: HomeProps) {
   const { t, lang, setLang } = useLang()
-  const tiers: Tier[] = ['A', 'N', 'AN']
+  const tiers: Tier[] = ['A', 'N', 'AN', 'P']
   const n = dailyNumber()
   const daily = getDailyResult(n)
   const streak = getStreak()
+  const repair = plus ? canRepairStreak() : null
+  const personal = getPersonal()
   const now = useNow(!!daily, 1000)
   const left = msUntilNextDaily(new Date(now))
   const hh = Math.floor(left / 3_600_000)
@@ -200,7 +205,7 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
           <div className="home-topbar">
             {ONLINE && account.signedIn ? (
               <button type="button" className={'avatar-btn' + (plus ? ' avatar-plus' : '')} onClick={onStats} aria-label={t('stats')}>
-                {account.avatar ? <img className="avatar-img" src={account.avatar} alt="" referrerPolicy="no-referrer" /> : plus ? <span className="avatar-img avatar-shield"><InitialsShield text={initials(account)} /></span> : <span className="avatar-img avatar-fallback">{initials(account).slice(0, 1)}</span>}
+                {account.avatar ? <img className="avatar-img" src={account.avatar} alt="" referrerPolicy="no-referrer" /> : plus ? <span className="avatar-img avatar-shield"><InitialsShield text={initials(account)} style={settings.shieldStyle} /></span> : <span className="avatar-img avatar-fallback">{initials(account).slice(0, 1)}</span>}
                 <span className="avatar-text">
                   <span className="avatar-name">{account.name ?? account.email?.split('@')[0]}</span>
                   <span className="avatar-sub">{t('stats')}</span>
@@ -252,7 +257,7 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
                 </>
               )}
               <span className="daily-streak">
-                {t('streak')} <StreakPosts count={streak.count} gold={plus} />
+                {t('streak')} <StreakPosts count={streak.count} style={plus ? settings.postStyle : undefined} />
                 {plus && streak.freeze === new Date().toISOString().slice(0, 7) && (
                   <small className="frozen-tag" title={t('freezeUsed')}>
                     <IconFreeze /> {t('frozen')}
@@ -264,6 +269,11 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
                   </small>
                 )}
               </span>
+              {repair && (
+                <button type="button" className="repair-btn" onClick={onRepair} title={t('repairHint')}>
+                  {t('repairStreak', { n: repair.days })}
+                </button>
+              )}
             </div>
             {daily ? <Matrix value={daily.score} label={t('score')} /> : null}
           </div>
@@ -289,6 +299,38 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
             </button>
           )}
         </Board>
+
+        {plus && daily && (
+          <Board className="personal-board">
+            <div className="board-title daily-title">
+              <span>{t('personalDaily')}</span>
+              <span className="daily-mode">{t('mode_find')}</span>
+            </div>
+            {personal ? (
+              <div className="daily-body">
+                <span className="sign-pict">
+                  <PictFind />
+                </span>
+                <div className="daily-text">
+                  <span className="daily-line">{t('personalDone', { score: personal.score, good: personal.good, total: personal.total })}</span>
+                  <span className="daily-sub">{t('personalPitch')}</span>
+                </div>
+                <Matrix value={personal.score} label={t('score')} />
+              </div>
+            ) : (
+              <button type="button" className="sign-row" onClick={onPersonal}>
+                <span className="sign-pict">
+                  <PictFind />
+                </span>
+                <span className="sign-text">
+                  <span className="sign-name">{t('playPersonal')}</span>
+                  <span className="sign-desc">{t('personalPitch')}</span>
+                </span>
+                <IconSignArrow className="sign-arrow" />
+              </button>
+            )}
+          </Board>
+        )}
 
         {ONLINE && !account.signedIn && (
           <button type="button" className="google-row" onClick={onSignIn}>
@@ -403,7 +445,7 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
           <div className="board-title">{t('settings')}</div>
           <div className="setting">
             <span className="setting-label">{t('roads')}</span>
-            <Seg<Tier> wide label={t('roads')} value={settings.tier} onChange={(tier) => onSettings({ ...settings, tier })} options={tiers.map((v) => ({ v, label: t(`tier_${v}_short`), title: t(`tier_${v}`) }))} />
+            <Seg<Tier> wide label={t('roads')} value={plus || settings.tier !== 'P' ? settings.tier : 'A'} onChange={(tier) => (tier === 'P' && !plus ? onPlus() : onSettings({ ...settings, tier }))} options={tiers.map((v) => ({ v, label: t(`tier_${v}_short`) + (v === 'P' && !plus ? ' +' : ''), title: t(`tier_${v}`) }))} />
             <span className="setting-hint">{t(`tier_${settings.tier}`)}</span>
           </div>
           <div className="setting-pair">
@@ -426,6 +468,20 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
               {t('theme')} {!plus && <span className="locked-tag">{t('plusTag')}</span>}
             </span>
             <Seg<ThemeName> wide label={t('theme')} value={plus ? settings.theme : 'signage'} onChange={(theme) => (plus || theme === 'signage' ? onSettings({ ...settings, theme }) : onPlus())} options={THEME_NAMES.map((v) => ({ v, label: t(`theme_${v}` as 'theme_signage') }))} />
+          </div>
+          <div className="setting-pair">
+            <div className="setting">
+              <span className="setting-label">
+                {t('postStyle')} {!plus && <span className="locked-tag">{t('plusTag')}</span>}
+              </span>
+              <Seg<PostStyle> wide label={t('postStyle')} value={plus ? settings.postStyle : 'green'} onChange={(postStyle) => (plus ? onSettings({ ...settings, postStyle }) : onPlus())} options={POST_STYLES.map((v) => ({ v, label: t(`post_${v}`) }))} />
+            </div>
+            <div className="setting">
+              <span className="setting-label">
+                {t('shieldStyle')} {!plus && <span className="locked-tag">{t('plusTag')}</span>}
+              </span>
+              <Seg<ShieldStyle> wide label={t('shieldStyle')} value={plus ? settings.shieldStyle : 'A'} onChange={(shieldStyle) => (plus ? onSettings({ ...settings, shieldStyle }) : onPlus())} options={SHIELD_STYLES.map((v) => ({ v, label: v }))} />
+            </div>
           </div>
           <div className="setting">
             <span className="setting-label">{t('colors')}</span>

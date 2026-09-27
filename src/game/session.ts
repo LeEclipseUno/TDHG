@@ -8,6 +8,10 @@ export type ModeId = 'drag' | 'find' | 'junction' | 'quiz' | 'exit' | 'route' | 
 export const MODES: ModeId[] = ['drag', 'find', 'junction', 'quiz', 'exit', 'sign', 'distance', 'route']
 export type Variant = 'normal' | 'nozoom' | 'blind' | 'mirror' | 'blitz'
 export const VARIANTS: Variant[] = ['normal', 'nozoom', 'blind', 'mirror', 'blitz']
+export type PostStyle = 'green' | 'gold' | 'blue' | 'orange'
+export type ShieldStyle = 'A' | 'N' | 'E' | 'B'
+export const POST_STYLES: PostStyle[] = ['green', 'gold', 'blue', 'orange']
+export const SHIELD_STYLES: ShieldStyle[] = ['A', 'N', 'E', 'B']
 /** Score multiplier for the harder variants. */
 export const VARIANT_MULT: Record<Variant, number> = { normal: 1, nozoom: 1.25, blind: 1.5, mirror: 1.25, blitz: 1 }
 export const BLITZ_MS = 60_000
@@ -36,6 +40,9 @@ export interface Settings {
   theme: ThemeName
   /** Blue and orange instead of green and red for right and wrong. */
   colorblind: boolean
+  /** Plus: colour of the streak posts and the style of the initials shield. */
+  postStyle: PostStyle
+  shieldStyle: ShieldStyle
 }
 
 export interface Session {
@@ -54,6 +61,8 @@ export interface Session {
   picks?: string[]
   /** A replay of a daily already scored today: nothing is recorded or posted. */
   practice?: boolean
+  /** The Plus personal daily: five of your weakest roads. */
+  personal?: boolean
   startedAt: number
   finishedAt: number
   results: QuestionResult[]
@@ -139,7 +148,7 @@ export function parseChallenge(search: string): Challenge | null {
   const c = new URLSearchParams(search).get('c')
   if (!c) return null
   const [mode, tier, timer, seed, score, variant, province] = c.split('.')
-  if (!MODES.includes(mode as ModeId) || !['A', 'N', 'AN'].includes(tier)) return null
+  if (!MODES.includes(mode as ModeId) || !['A', 'N', 'AN', 'P'].includes(tier)) return null
   const v = VARIANTS.includes(variant as Variant) ? (variant as Variant) : 'normal'
   const n = Number(seed)
   const sc = Number(score)
@@ -267,13 +276,13 @@ export function loadSettings(): Settings {
     const raw = localStorage.getItem(SETTINGS_KEY)
     if (raw) {
       const p = JSON.parse(raw) as Partial<Settings>
-      const tier: Tier = p.tier === 'AN' || p.tier === 'N' ? p.tier : (p.tier as string) === 'ALL' ? 'AN' : 'A'
-      return { tier, timer: p.timer !== false, daily: p.daily === true, learnDeck: p.learnDeck === 'junctions' ? 'junctions' : 'roads', sound: p.sound !== false, variant: VARIANTS.includes(p.variant as Variant) ? (p.variant as Variant) : 'normal', province: typeof p.province === 'string' && /^[A-Z]{2}$/.test(p.province) ? p.province : '', theme: THEME_NAMES.includes(p.theme as ThemeName) ? (p.theme as ThemeName) : 'signage', colorblind: p.colorblind === true }
+      const tier: Tier = p.tier === 'AN' || p.tier === 'N' || p.tier === 'P' ? p.tier : (p.tier as string) === 'ALL' ? 'AN' : 'A'
+      return { tier, timer: p.timer !== false, daily: p.daily === true, learnDeck: p.learnDeck === 'junctions' ? 'junctions' : 'roads', sound: p.sound !== false, variant: VARIANTS.includes(p.variant as Variant) ? (p.variant as Variant) : 'normal', province: typeof p.province === 'string' && /^[A-Z]{2}$/.test(p.province) ? p.province : '', theme: THEME_NAMES.includes(p.theme as ThemeName) ? (p.theme as ThemeName) : 'signage', colorblind: p.colorblind === true, postStyle: POST_STYLES.includes(p.postStyle as PostStyle) ? (p.postStyle as PostStyle) : 'green', shieldStyle: SHIELD_STYLES.includes(p.shieldStyle as ShieldStyle) ? (p.shieldStyle as ShieldStyle) : 'A' }
     }
   } catch {
     /* ignore */
   }
-  return { tier: 'A', timer: true, daily: false, learnDeck: 'roads', sound: true, variant: 'normal', province: '', theme: 'signage', colorblind: false }
+  return { tier: 'A', timer: true, daily: false, learnDeck: 'roads', sound: true, variant: 'normal', province: '', theme: 'signage', colorblind: false, postStyle: 'green', shieldStyle: 'A' }
 }
 
 export function saveSettings(s: Settings) {
