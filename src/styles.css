@@ -2329,12 +2329,15 @@ body,
   margin: 0 2px;
 }
 
-/* ---------- ads ---------- */
-.ad-slot {
+/* ---------- ads (neutral class name so filter lists do not hide the wrapper) ---------- */
+.strook {
   min-height: 90px;
   border-radius: 8px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.04);
+}
+.strook-leeg {
+  display: none;
 }
 
 /* ---------- streak freeze ---------- */

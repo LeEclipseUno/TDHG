@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 const CLIENT = import.meta.env.VITE_ADSENSE_CLIENT as string | undefined
 const SLOTS: Record<string, string | undefined> = {
@@ -26,6 +26,7 @@ function ensureScript() {
 /** One responsive AdSense unit. Renders nothing without a configured client, for Plus players, or offline. */
 export function AdSlot({ place, plus }: { place: 'home' | 'results'; plus: boolean }) {
   const ref = useRef<HTMLModElement>(null)
+  const [empty, setEmpty] = useState(false)
   const slot = SLOTS[place]
   const show = !!CLIENT && !!slot && !plus && navigator.onLine
   useEffect(() => {
@@ -36,10 +37,21 @@ export function AdSlot({ place, plus }: { place: 'home' | 'results'; plus: boole
     } catch {
       /* blocked */
     }
+    // Google marks the unit filled or unfilled; an unfilled one should not leave a hole in the page.
+    const el = ref.current
+    if (!el) return
+    const check = () => setEmpty(el.getAttribute('data-ad-status') === 'unfilled')
+    const obs = new MutationObserver(check)
+    obs.observe(el, { attributes: true, attributeFilter: ['data-ad-status'] })
+    const timer = window.setTimeout(check, 4000)
+    return () => {
+      obs.disconnect()
+      window.clearTimeout(timer)
+    }
   }, [show])
   if (!show) return null
   return (
-    <div className="ad-slot">
+    <div className={'strook' + (empty ? ' strook-leeg' : '')}>
       <ins ref={ref} className="adsbygoogle" style={{ display: 'block' }} data-ad-client={CLIENT} data-ad-slot={slot} data-ad-format="auto" data-full-width-responsive="true" />
     </div>
   )
