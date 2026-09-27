@@ -246,7 +246,7 @@ a{color:#fff}
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(desc)}">
 <meta property="og:url" content="${canonical}">
-<meta property="og:image" content="${SITE}/og.jpg">
+<meta property="og:image" content="${SITE}/og.jpg?v=3">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.ico">
 ${extraHead}
@@ -254,7 +254,7 @@ ${extraHead}
 </head>
 <body>
 <div class="wrap">
-<div class="top"><a href="/"><img src="/logo.png" alt="Wegenkenner, The Dutch Highway Guesser"></a><span><a href="/wegen/">Alle wegen</a> &middot; <a href="/knooppunten/">Knooppunten</a></span></div>
+<div class="top"><a href="/"><img src="/logo.png" alt="Wegenkenner"></a><span><a href="/wegen/">Alle wegen</a> &middot; <a href="/knooppunten/">Knooppunten</a></span></div>
 ${body}
 <p class="foot"><a href="/">Wegenkenner</a> is een gratis spel over het Nederlandse wegennet. Kaartgegevens: OpenStreetMap, CBS.</p>
 </div>

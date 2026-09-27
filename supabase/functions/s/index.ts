@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
   const target = data?.param ? `${SITE}?c=${encodeURIComponent(data.param)}` : SITE
   const title = data?.title ?? 'Wegenkenner'
   const text = data?.text ?? 'Ken jij het Nederlandse wegennet uit je hoofd?'
-  const image = data?.image ?? `${SITE}og.jpg`
+  const image = data?.image ?? `${SITE}og.jpg?v=3`
   const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
   const html = `<!doctype html><html lang="nl"><head><meta charset="utf-8">
 <title>${esc(title)}</title>
