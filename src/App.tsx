@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { loadData, type GameData } from './data'
 import { LangProvider, useLang } from './i18n'
 import { dailySeedOn, dateKey, loadSettings, MODES, newSession, parseChallenge, rememberMode, saveSettings, submitBest, summarize, type Challenge, type ModeId, type Session, type Settings } from './game/session'
@@ -31,6 +31,7 @@ import { getAccount, ONLINE, signInWithGoogle, signOut, type Account } from './g
 import { pushSoon, syncNow } from './game/sync'
 import { ErrorBoundary } from './ui/ErrorBoundary'
 import { TabBar, type Tab } from './ui/TabBar'
+import { PlusMark } from './ui/icons'
 import { isStandalone } from './ui/Home'
 import { setErrorContext } from './game/errors'
 
@@ -156,6 +157,13 @@ function Shell() {
     setAccount(acc)
   }
   const plus = hasPlus(account)
+  // First time the pass turns up on this device: a short welcome.
+  const plusSeen = useRef(plus)
+  const [welcome, setWelcome] = useState(false)
+  useEffect(() => {
+    if (plus && !plusSeen.current) setWelcome(true)
+    plusSeen.current = plus
+  }, [plus])
 
   useEffect(() => {
     setSoundEnabled(settings.sound)
@@ -283,6 +291,18 @@ function Shell() {
         </div>
       )}
       {node}
+      {welcome && (
+        <div className="modal-backdrop" onClick={() => setWelcome(false)}>
+          <div className="modal welcome-modal" onClick={(e) => e.stopPropagation()}>
+            <PlusMark />
+            <h2>{t('welcomePlus')}</h2>
+            <p>{t('welcomePlusBody')}</p>
+            <button type="button" className="btn btn-primary btn-wide" onClick={() => setWelcome(false)}>
+              {t('welcomeGo')}
+            </button>
+          </div>
+        </div>
+      )}
       {isStandalone && screen.kind !== 'game' && screen.kind !== 'learn' && (
         <TabBar
           active={screen.kind === 'home' || screen.kind === 'stats' || screen.kind === 'groups' ? screen.kind : null}

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import type { GameData } from '../data'
 import { formatDate, formatNumber, useLang } from '../i18n'
 import { clearHistory, loadHistory, loadLabelStats } from '../game/history'
-import { formatTime, MODES, POST_STYLES, SHIELD_STYLES, type PostStyle, type Settings, type ShieldStyle } from '../game/session'
+import { defaultSettings, formatTime, MODES, POST_STYLES, SHIELD_STYLES, type PostStyle, type Settings, type ShieldStyle } from '../game/session'
 import { BackBar, Board, BottomHome, Matrix, Seg } from './widgets'
 import { Shield } from './Shield'
 import { IconLock, IconMenu, IconPencil, PlusMark, SeasonIcon, PictStats, PictDrag, PictFind, PictJunction, PictQuiz, PictRoute, PictPost } from './icons'
@@ -12,7 +12,7 @@ import { Backdrop } from './Backdrop'
 import { deleteAccount, exportAccount, getNickname, ONLINE, setNickname, validNickname, type Account } from '../game/backend'
 import { pushSoon } from '../game/sync'
 import { disableReminder, enableReminder, getReminder, pushSupported, setReminderTime } from '../game/push'
-import { plusUntil } from '../game/premium'
+import { plusDaysLeft, plusUntil, renewUrl } from '../game/premium'
 import { initials, isIosSafari, isStandalone } from './Home'
 import { InitialsShield } from './icons'
 
@@ -104,6 +104,7 @@ export function Stats({ data, account, plus, settings, onSettings, onSignOut, on
   const { t, lang } = useLang()
   const untilMs = plusUntil(account)
   const until = untilMs ? formatDate(untilMs, lang, 'long') : ''
+  const daysLeft = plusDaysLeft(account)
   const [tick, setTick] = useState(0)
   const hist = useMemo(() => loadHistory(), [tick])
   const labels = useMemo(() => loadLabelStats(), [tick])
@@ -178,7 +179,15 @@ export function Stats({ data, account, plus, settings, onSettings, onSignOut, on
                 {t('signOut')}
               </button>
             </div>
-            {plus ? (
+            {plus && daysLeft !== null && daysLeft <= 14 ? (
+              <a className="profile-plus-band profile-plus-ending" href={account.id ? renewUrl(account.id, account.email) : '#plus'}>
+                <PlusMark />
+                <span>
+                  <strong>{t('plus')}</strong> {t('plusEnding', { n: daysLeft })}
+                </span>
+                <span className="renew-tag">{t('renew')}</span>
+              </a>
+            ) : plus ? (
               <div className="profile-plus-band">
                 <PlusMark />
                 <span>
@@ -263,6 +272,18 @@ export function Stats({ data, account, plus, settings, onSettings, onSignOut, on
               <span className="setting-hint">{reminderNote || t('reminderHint')}</span>
             </div>
           )}
+          <div className="setting setting-reset">
+            <button
+              type="button"
+              className="link-btn"
+              onClick={() => {
+                onSettings(defaultSettings())
+                onNotice(t('settingsReset'))
+              }}
+            >
+              {t('resetSettings')}
+            </button>
+          </div>
         </Board>
         <Board className="results-board">
           <div className="board-title">{t('badges')}</div>

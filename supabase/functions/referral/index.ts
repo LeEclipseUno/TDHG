@@ -30,6 +30,27 @@ Deno.serve(async (req) => {
   if (!plus || Date.parse(plus.until as string) < Date.now()) return new Response(JSON.stringify({ error: 'no plus' }), { status: 403, headers: { ...cors, 'content-type': 'application/json' } })
 
   const { data: existing } = await admin.from('referrals').select('code').eq('player_id', user.id).maybeSingle()
+  let action = ''
+  try {
+    action = String(((await req.json()) as { action?: string }).action ?? '')
+  } catch {
+    /* no body */
+  }
+  if (action === 'stats') {
+    // How often the code was redeemed and the total discount given, from the shop's own records.
+    if (!existing?.code) return new Response(JSON.stringify({ uses: 0, saved: 0 }), { headers: { ...cors, 'content-type': 'application/json' } })
+    const hdr = { authorization: `Bearer ${apiKey}`, accept: 'application/vnd.api+json' }
+    const list = await fetch(`https://api.lemonsqueezy.com/v1/discounts?filter[store_id]=${storeId}&page[size]=100`, { headers: hdr })
+    if (!list.ok) return new Response(JSON.stringify({ error: `shop ${list.status}` }), { status: 502, headers: { ...cors, 'content-type': 'application/json' } })
+    const discounts = ((await list.json()) as { data?: { id: string; attributes: { code: string } }[] }).data ?? []
+    const mine = discounts.find((d) => d.attributes.code === existing.code)
+    if (!mine) return new Response(JSON.stringify({ uses: 0, saved: 0 }), { headers: { ...cors, 'content-type': 'application/json' } })
+    const red = await fetch(`https://api.lemonsqueezy.com/v1/discount-redemptions?filter[discount_id]=${mine.id}&page[size]=100`, { headers: hdr })
+    if (!red.ok) return new Response(JSON.stringify({ error: `shop ${red.status}` }), { status: 502, headers: { ...cors, 'content-type': 'application/json' } })
+    const rows = ((await red.json()) as { data?: { attributes: { amount: number } }[] }).data ?? []
+    const saved = rows.reduce((a, r) => a + (Number(r.attributes.amount) || 0), 0)
+    return new Response(JSON.stringify({ uses: rows.length, saved }), { headers: { ...cors, 'content-type': 'application/json' } })
+  }
   if (existing?.code) return new Response(JSON.stringify({ code: existing.code }), { headers: { ...cors, 'content-type': 'application/json' } })
 
   const code = randomCode()

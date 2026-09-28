@@ -232,6 +232,15 @@ export async function getReferralCode(): Promise<{ code?: string; error?: string
   return data ?? { error: 'empty' }
 }
 
+/** How often the referral code was used and what friends saved together, in cents. */
+export async function getReferralStats(): Promise<{ uses: number; saved: number } | null> {
+  const c = await sb()
+  if (!c) return null
+  const { data, error } = await c.functions.invoke<{ uses?: number; saved?: number }>('referral', { body: { action: 'stats' } })
+  if (error || !data || typeof data.uses !== 'number') return null
+  return { uses: data.uses, saved: data.saved ?? 0 }
+}
+
 /** Turns a gift license key into a year of Plus on this account. */
 export async function redeemGift(key: string): Promise<{ until?: string; error?: string }> {
   const c = await sb()

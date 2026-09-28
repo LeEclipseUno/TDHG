@@ -4,8 +4,8 @@ import { formatDate, useLang } from '../i18n'
 import { BackBar, Board, BottomHome } from './widgets'
 import { IconGoogle, IconMenu, IconReplay, PictGroup, PictLearn, PictExit, PictJunction, PictRoute, PictDistance, PictStats, PictFind, PictQuiz } from './icons'
 import { Backdrop } from './Backdrop'
-import { getReferralCode, ONLINE, redeemGift, type Account } from '../game/backend'
-import { checkoutUrl, GIFT_CHECKOUT, hasPlus, pendingReferral, PLUS_PRICE, plusUntil, referralLink } from '../game/premium'
+import { getReferralCode, getReferralStats, ONLINE, redeemGift, type Account } from '../game/backend'
+import { checkoutUrl, GIFT_CHECKOUT, hasPlus, pendingReferral, PLUS_PRICE, plusDaysLeft, plusUntil, referralLink, renewUrl } from '../game/premium'
 import { IconShare } from './icons'
 
 export interface PlusProps {
@@ -23,15 +23,19 @@ export function Plus({ data, account, onSignIn, onRefresh, onNotice, onHome }: P
   const [busy, setBusy] = useState(false)
   const [refCode, setRefCode] = useState<string | null>(null)
   const [refBusy, setRefBusy] = useState(false)
+  const [refStats, setRefStats] = useState<{ uses: number; saved: number } | null>(null)
   const [giftKey, setGiftKey] = useState('')
   const [giftBusy, setGiftBusy] = useState(false)
   const friend = pendingReferral()
+  const daysLeft = plusDaysLeft(account)
   const fetchCode = async () => {
     setRefBusy(true)
     const r = await getReferralCode()
     setRefBusy(false)
-    if (r.code) setRefCode(r.code)
-    else onNotice(r.error === 'not configured' ? t('plusSoon') : t('signInError'))
+    if (r.code) {
+      setRefCode(r.code)
+      void getReferralStats().then(setRefStats)
+    } else onNotice(r.error === 'not configured' ? t('plusSoon') : t('signInError'))
   }
   const shareCode = async () => {
     if (!refCode) return
@@ -133,7 +137,15 @@ export function Plus({ data, account, onSignIn, onRefresh, onNotice, onHome }: P
               </li>
             </ul>
             {!active && friend && <p className="plus-friend">{t('friendDiscount', { code: friend })}</p>}
-            {active ? (
+            {active && daysLeft !== null && daysLeft <= 14 && account.id ? (
+              <>
+                <p className="plus-active">{t('plusEnding', { n: daysLeft })}</p>
+                <a className="btn btn-wide plus-buy" href={renewUrl(account.id, account.email)}>
+                  {t('renewYear')}
+                  {PLUS_PRICE && <span className="plus-price">{PLUS_PRICE}</span>}
+                </a>
+              </>
+            ) : active ? (
               <p className="plus-active">{t('plusActive', { date: until })}</p>
             ) : !ONLINE || !account.signedIn ? (
               <>
@@ -162,6 +174,11 @@ export function Plus({ data, account, onSignIn, onRefresh, onNotice, onHome }: P
               {refCode ? (
                 <>
                   <div className="ref-code">{refCode}</div>
+                  {refStats && (
+                    <p className="plus-note ref-stats">
+                      {refStats.uses === 0 ? t('referralNone') : t('referralStats', { n: refStats.uses, amount: (lang === 'nl' ? '€ ' : '€') + (refStats.saved / 100).toFixed(2).replace('.', lang === 'nl' ? ',' : '.') })}
+                    </p>
+                  )}
                   <button type="button" className="btn btn-primary btn-wide" onClick={shareCode}>
                     <IconShare /> {t('referralSend')}
                   </button>

@@ -299,8 +299,9 @@ export function loadSettings(): Settings {
   } catch {
     /* ignore */
   }
-  return { tier: 'A', timer: true, daily: false, learnDeck: 'roads', sound: true, variant: 'normal', province: '', theme: 'signage', colorblind: false, postStyle: 'green', shieldStyle: 'A' }
+  return defaultSettings()
 }
+export const defaultSettings = (): Settings => ({ tier: 'A', timer: true, daily: false, learnDeck: 'roads', sound: true, variant: 'normal', province: '', theme: 'signage', colorblind: false, postStyle: 'green', shieldStyle: 'A' })
 
 export function saveSettings(s: Settings) {
   try {

@@ -76,3 +76,24 @@ export function referralLink(code: string): string {
 }
 
 export const PLUS_PRICE = (import.meta.env.VITE_PLUS_PRICE as string | undefined) ?? ''
+
+/** Days until the pass ends, or null without a pass. */
+export function plusDaysLeft(account: Account): number | null {
+  const until = plusUntil(account)
+  return until ? Math.ceil((until - Date.now()) / 86400000) : null
+}
+/** The pass ends within two weeks: time to show the renew notice. */
+export const plusEndingSoon = (account: Account): boolean => {
+  const d = plusDaysLeft(account)
+  return d !== null && d <= 14
+}
+/** Checkout for another year, with the returning-player code when one is configured (VITE_PLUS_RENEW_CODE). */
+export function renewUrl(playerId: string, email?: string): string {
+  const base = checkoutUrl(playerId, email)
+  if (!base) return ''
+  const u = new URL(base)
+  const code = import.meta.env.VITE_PLUS_RENEW_CODE as string | undefined
+  if (code) u.searchParams.set('checkout[discount_code]', code)
+  else u.searchParams.delete('checkout[discount_code]')
+  return u.toString()
+}
