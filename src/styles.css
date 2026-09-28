@@ -2637,10 +2637,13 @@ body,
   display: flex;
   gap: 8px;
   align-items: center;
+  width: 100%;
+  min-width: 0;
 }
 .profile-edit input {
+  width: 0;
   min-width: 0;
-  flex: 1;
+  flex: 1 1 auto;
   font: inherit;
   font-family: var(--font-sign);
   font-weight: 700;
@@ -2650,6 +2653,11 @@ body,
   border: 2px solid var(--white);
   background: var(--white);
   color: var(--navy);
+}
+.profile-edit .btn {
+  flex: none;
+  padding-left: 12px;
+  padding-right: 12px;
 }
 .profile-plus-band {
   display: flex;
