@@ -66,6 +66,9 @@ create policy "fellow members" on members for select to authenticated
 drop policy if exists "leave group" on members;
 create policy "leave group" on members for delete to authenticated using (player_id = auth.uid());
 
+-- The service role (edge functions such as account delete) needs explicit grants on these tables too.
+grant all on groups, members, daily_scores, shares to service_role;
+
 drop policy if exists "own shares" on shares;
 create policy "own shares" on shares for insert to authenticated with check (player_id = auth.uid());
 drop policy if exists "read shares" on shares;

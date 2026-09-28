@@ -6,7 +6,7 @@ import { dailyDate, dailyMode, dailyNumber, getDailyResult, marksOf, repairStrea
 import { loadLabelStats } from './game/history'
 import { roadsForTier } from './data'
 import { loadArchive, picksFor } from './game/archive'
-import { hasPlus, isPlusMode, rememberPlus, rememberReferral } from './game/premium'
+import { hasPlus, isPlusMode, plusUntil, rememberPlus, rememberReferral } from './game/premium'
 import { updateBadges, type BadgeId } from './game/achievements'
 import { Plus } from './ui/Plus'
 import { Archive } from './ui/Archive'
@@ -169,6 +169,7 @@ function Shell() {
     await signOut()
     setAccount({ signedIn: false })
     rememberPlus(undefined)
+    go('home')
   }
   const refreshAccount = async () => {
     const acc = await getAccount().then((a) => (rememberPlus(a.plusUntil), a)).catch(() => ({ signedIn: false }) as Account)
@@ -179,9 +180,24 @@ function Shell() {
   const plusSeen = useRef(plus)
   const [welcome, setWelcome] = useState(false)
   useEffect(() => {
-    if (plus && !plusSeen.current) setWelcome(true)
+    // Once per pass: the expiry date identifies the purchase, so signing out and in again does not repeat it.
+    const until = String(plusUntil(account) ?? '')
+    let welcomed = ''
+    try {
+      welcomed = localStorage.getItem('tdhg:v1:plusWelcomed') ?? ''
+    } catch {
+      /* ignore */
+    }
+    if (plus && !plusSeen.current && until && welcomed !== until) {
+      setWelcome(true)
+      try {
+        localStorage.setItem('tdhg:v1:plusWelcomed', until)
+      } catch {
+        /* ignore */
+      }
+    }
     plusSeen.current = plus
-  }, [plus])
+  }, [plus, account])
 
   useEffect(() => {
     setSoundEnabled(settings.sound)
