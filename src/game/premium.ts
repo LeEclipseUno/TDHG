@@ -77,7 +77,8 @@ export function referralLink(code: string): string {
 
 export const PLUS_PRICE = (import.meta.env.VITE_PLUS_PRICE as string | undefined) ?? ''
 /** Which shop takes the money: Lemon Squeezy links, or the Paddle overlay (iDEAL, Wero, Bancontact). */
-export const SHOP: 'lemon' | 'paddle' = (import.meta.env.VITE_SHOP as string | undefined) === 'paddle' ? 'paddle' : 'lemon'
+const shopOverride = new URLSearchParams(location.search).get('shop')
+export const SHOP: 'lemon' | 'paddle' = shopOverride === 'paddle' || shopOverride === 'lemon' ? shopOverride : (import.meta.env.VITE_SHOP as string | undefined) === 'paddle' ? 'paddle' : 'lemon'
 /** Returning-player discount code for a renewal, when configured. */
 export const RENEW_CODE = (import.meta.env.VITE_PLUS_RENEW_CODE as string | undefined) ?? ''
 
