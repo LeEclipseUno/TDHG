@@ -23,7 +23,7 @@ export function About({ data, onHome }: { data: GameData; onHome: () => void }) 
           </div>
         </Board>
         <p className="home-footer about-links">
-          <a href="/wegen/">{t('allRoads')}</a> {'·'} <a href="/plus.html">{t('plus')}</a> {'·'} <a href="/privacy.html">{t('privacyPage')}</a> {'·'} <a href="/voorwaarden.html">{t('termsPage')}</a> {'·'} <a href="/terugbetaling.html">{t('refundPage')}</a>
+          <a href="/wegen/">{t('allRoads')}</a> {'·'} <a href="/plus.html">{t('plus')}</a> {'·'} <a href="/privacy.html">{t('privacyPage')}</a> {'·'} <a href="/voorwaarden.html">{t('termsPage')}</a> {'·'} <a href="/terugbetaling.html">{t('refundPage')}</a> {'·'} <a href="/pers.html">{t('pressPage')}</a>
         </p>
         <p className="home-footer">
           {t('attribution')} {'·'} CBS {'·'} Natural Earth

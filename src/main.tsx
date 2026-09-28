@@ -8,6 +8,9 @@ import { installErrorLog } from './game/errors'
 
 installErrorLog()
 
+// ?press=1: no animations, for still captures of the screens.
+if (new URLSearchParams(location.search).has('press')) document.documentElement.classList.add('no-anim')
+
 setRandomFavicon()
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
