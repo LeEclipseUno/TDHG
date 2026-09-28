@@ -3412,3 +3412,32 @@ body,
     font-size: 18px;
   }
 }
+
+/* ---------- selection: off for the game, on where text is meant to be copied or read closely ---------- */
+body {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+input,
+textarea,
+select,
+[contenteditable],
+.ref-code,
+.group-code,
+.crash-text,
+.offline-bar,
+.notice-bar,
+.setting-hint,
+.field-hint,
+.profile-email,
+.about p,
+.about a,
+.plus-note,
+.learn-note,
+.home-footer,
+.results-detail {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
