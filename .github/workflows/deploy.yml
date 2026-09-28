@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # Daily rebuild at 05:15 Dutch time (03:15 UTC) so the road of the day and the sitemap dates move on.
+  schedule:
+    - cron: '15 3 * * *'
 
 permissions:
   contents: read

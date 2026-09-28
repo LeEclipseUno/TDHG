@@ -119,6 +119,7 @@ function listNl(items) {
 }
 
 export function buildRoadPages(dist) {
+  const dailyParts = []
   const dataDir = path.resolve('public/data')
   const load = (n) => JSON.parse(fs.readFileSync(path.join(dataDir, n), 'utf8'))
   const roads = load('roads-core.json').filter((r) => r.kind === 'A' || r.kind === 'N')
@@ -225,6 +226,11 @@ li .n{display:inline-block;min-width:2.2em;color:var(--dim)}
 .shields{display:flex;flex-wrap:wrap;gap:8px}
 .shield-link{text-decoration:none}
 .cta{display:flex;flex-direction:column;gap:8px}
+.play{display:flex;align-items:center;gap:10px;background:#ffb000;color:#0a1628;text-decoration:none;border-radius:6px;padding:10px 12px;margin:0 0 14px;font-size:14px;border:2px solid #0a1628;box-shadow:0 8px 20px rgba(0,0,0,.35)}
+.play-tag{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:16px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.faq dt{color:#fff;font-weight:600;margin-top:8px}
+.faq dd{margin:2px 0 0}
+.faq{display:block}
 .btn{display:flex;align-items:center;justify-content:space-between;background:#fff;color:var(--blue);text-decoration:none;font-weight:600;padding:12px 14px;border-radius:5px;font-size:17px}
 .btn.alt{background:var(--orange);color:#fff}
 .btn:after{content:'\\2192';font-weight:400}
@@ -254,7 +260,8 @@ ${extraHead}
 </head>
 <body>
 <div class="wrap">
-<div class="top"><a href="/"><img src="/logo.png" alt="Wegenkenner"></a><span><a href="/wegen/">Alle wegen</a> &middot; <a href="/knooppunten/">Knooppunten</a></span></div>
+<div class="top"><a href="/"><img src="/logo.png" alt="Wegenkenner"></a><span><a href="/wegen/">Alle wegen</a> &middot; <a href="/knooppunten/">Knooppunten</a> &middot; <a href="/weg-van-de-dag/">Weg van de dag</a></span></div>
+<a class="play" href="/#daily"><span class="play-tag">Speel mee</span><span>Elke dag vijf vragen over het wegennet. Gratis, geen account nodig.</span></a>
 ${body}
 <p class="foot"><a href="/">Wegenkenner</a> is een gratis spel over het Nederlandse wegennet. Kaartgegevens: OpenStreetMap, CBS.</p>
 </div>
@@ -344,15 +351,27 @@ ${provs.length ? `<dt>Provincies</dt><dd>${esc(listNl(provs))}</dd>` : ''}
       ? `<div class="board"><div class="inner"><h2>Sluit aan op</h2><div class="shields">${neighbours.map((n) => roadLink(n)).join('')}</div></div></div>`
       : ''
 
-    const jsonld = {
-      '@context': 'https://schema.org',
-      '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Wegenkenner', item: `${SITE}/` },
-        { '@type': 'ListItem', position: 2, name: 'Alle wegen', item: `${SITE}/wegen/` },
-        { '@type': 'ListItem', position: 3, name: r.ref, item: `${SITE}/${r.ref}/` },
-      ],
-    }
+    // Questions people type into a search box, answered in one line each.
+    const qa = [
+      [`Hoe lang is de ${r.ref}?`, `De ${r.ref} is ${r.km} km lang${route ? ` en loopt ${route}` : ''}.`],
+      provs.length ? [`Door welke provincies loopt de ${r.ref}?`, `De ${r.ref} loopt door ${listNl(provs)}.`] : null,
+      [`Hoeveel afritten heeft de ${r.ref}?`, myExits.length ? `De ${r.ref} heeft ${myExits.length} ${myExits.length === 1 ? 'afrit' : 'afritten'}${myExits.length > 1 ? `, van ${myExits[0].n} tot ${myExits[myExits.length - 1].n}` : ''}.` : `De ${r.ref} heeft geen genummerde afritten.`],
+      myJunctions.length ? [`Welke knooppunten liggen op de ${r.ref}?`, `${myJunctions.length === 1 ? 'Knooppunt' : 'De knooppunten'} ${listNl(myJunctions.map((j) => j.name))}.`] : null,
+    ].filter(Boolean)
+    const faq = `<div class="board"><div class="inner"><h2>Vragen over de ${esc(r.ref)}</h2><dl class="faq">${qa.map(([q, a]) => `<dt>${esc(q)}</dt><dd>${esc(a)}</dd>`).join('')}</dl></div></div>`
+    const jsonld = [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Wegenkenner', item: `${SITE}/` },
+          { '@type': 'ListItem', position: 2, name: 'Alle wegen', item: `${SITE}/wegen/` },
+          { '@type': 'ListItem', position: 3, name: r.ref, item: `${SITE}/${r.ref}/` },
+        ],
+      },
+      { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: qa.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) },
+    ]
+    dailyParts.push({ r, svg, first, route, provs, exits: myExits.length, junctions: myJunctions.map((j) => j.name) })
 
     const body = `
 <div class="board"><div class="inner">
@@ -362,6 +381,7 @@ ${provs.length ? `<dt>Provincies</dt><dd>${esc(listNl(provs))}</dd>` : ''}
 </div></div>
 <div class="board"><div class="inner">${svg}</div></div>
 <div class="board"><div class="inner"><h2>In het kort</h2>${facts}</div></div>
+${faq}
 ${notes[r.ref] ? `<div class="board"><div class="inner"><h2>Over de ${esc(r.ref)}</h2><p>${esc(notes[r.ref])}</p></div></div>` : ''}
 <div class="board"><div class="inner"><h2>Ken jij de ${esc(r.ref)}?</h2>
 <p>In Wegenkenner krijg je alleen het nummer en wijs je de weg aan op een lege kaart. Geen namen, geen hints.</p>
@@ -428,6 +448,12 @@ ${neighbourList}
     const jfirst = jnotes[j.name] ? jnotes[j.name].split(/(?<=\.)\s/)[0] : ''
     const desc = `${jfirst ? jfirst + ' ' : `Knooppunt ${j.name} verbindt de ${roadNames}${where ? `, ${where}` : ''}${provs.length ? ` in ${listNl(provs)}` : ''}. `}Bekijk de kaart met de verbindingswegen en test of je het knooppunt kunt aanwijzen.`
 
+    const jqa = [
+      [`Waar ligt knooppunt ${j.name}?`, `Knooppunt ${j.name} ligt ${place ? (placeKm < 2 ? `in ${place.n}` : `${placeKm} km van ${place.n}`) : 'in Nederland'}${provs.length ? `, in ${listNl(provs)}` : ''}.`],
+      [`Welke wegen komen samen op knooppunt ${j.name}?`, `Op knooppunt ${j.name} ${j.roads.length === 1 ? 'sluit' : 'sluiten'} de ${roadNames} op elkaar aan.`],
+      near.length ? [`Welk knooppunt ligt het dichtst bij ${j.name}?`, `Knooppunt ${near[0].o.name}, op ${Math.round(near[0].d / 1000)} km.`] : null,
+    ].filter(Boolean)
+    const jfaq = `<div class="board"><div class="inner"><h2>Vragen over knooppunt ${esc(j.name)}</h2><dl class="faq">${jqa.map(([q, a]) => `<dt>${esc(q)}</dt><dd>${esc(a)}</dd>`).join('')}</dl></div></div>`
     const body = `
 <div class="board"><div class="inner">
 <p class="title">Knooppunt</p>
@@ -441,6 +467,7 @@ ${place ? `<dt>Ligging</dt><dd>${placeKm < 2 ? `In ${esc(place.n)}` : `${placeKm
 ${provs.length ? `<dt>Provincie</dt><dd>${esc(listNl(provs))}</dd>` : ''}
 <dt>In de buurt</dt><dd>${near.map(({ o, d }) => `<a href="${junctionUrl(o)}">${esc(o.name)}</a> (${Math.round(d / 1000)} km)`).join(', ')}</dd>
 </dl></div></div>
+${jfaq}
 ${jnotes[j.name] ? `<div class="board"><div class="inner"><h2>Over knooppunt ${esc(j.name)}</h2><p>${esc(jnotes[j.name])}</p></div></div>` : ''}
 <div class="board"><div class="inner"><h2>Weet jij waar ${esc(j.name)} ligt?</h2>
 <p>In Wegenkenner krijg je de naam van een knooppunt en tik je de plek aan op een kaart zonder namen. Hoe dichterbij, hoe meer punten.</p>
@@ -448,15 +475,18 @@ ${jnotes[j.name] ? `<div class="board"><div class="inner"><h2>Over knooppunt ${e
 </div></div>
 ${jr.length ? `<div class="board"><div class="inner"><h2>De wegen van dit knooppunt</h2><ul>${jr.map((r) => `<li><a href="/${r.ref}/">${esc(r.ref)}</a> <span class="n">${r.km} km</span></li>`).join('')}</ul></div></div>` : ''}
 `
-    const jsonld = {
-      '@context': 'https://schema.org',
-      '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Wegenkenner', item: `${SITE}/` },
-        { '@type': 'ListItem', position: 2, name: 'Knooppunten', item: `${SITE}/knooppunten/` },
-        { '@type': 'ListItem', position: 3, name: `Knooppunt ${j.name}`, item: `${SITE}${junctionUrl(j)}` },
-      ],
-    }
+    const jsonld = [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Wegenkenner', item: `${SITE}/` },
+          { '@type': 'ListItem', position: 2, name: 'Knooppunten', item: `${SITE}/knooppunten/` },
+          { '@type': 'ListItem', position: 3, name: `Knooppunt ${j.name}`, item: `${SITE}${junctionUrl(j)}` },
+        ],
+      },
+      { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: jqa.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) },
+    ]
     const dir = path.join(dist, 'knooppunt', slug(j.name))
     fs.mkdirSync(dir, { recursive: true })
     fs.writeFileSync(path.join(dir, 'index.html'), shell(title, desc, `${SITE}${junctionUrl(j)}`, body, `<script type="application/ld+json">${JSON.stringify(jsonld)}</script>`))
@@ -502,6 +532,38 @@ ${jr.length ? `<div class="board"><div class="inner"><h2>De wegen van dit knoopp
     path.join(dist, 'wegen', 'index.html'),
     shell('Alle snelwegen en N-wegen van Nederland op de kaart | Wegenkenner', `Overzicht van alle ${A.length} snelwegen en ${N.length} nationale N-wegen van Nederland, met per weg de loop, de knooppunten en de afritten. Test daarna of je ze op de kaart kunt vinden.`, `${SITE}/wegen/`, indexBody),
   )
+
+  // Road of the day: a different road every day, deterministic from the date, so the daily rebuild changes the page.
+  const dayIndex = Math.floor((Date.now() - Date.UTC(2026, 8, 26)) / 86400000)
+  const pool = [...dailyParts].sort((a, b) => a.r.kind.localeCompare(b.r.kind) || a.r.num - b.r.num)
+  const pick = pool[((dayIndex % pool.length) * 37) % pool.length]
+  if (pick) {
+    const { r, svg, first, route, provs, exits, junctions: jn } = pick
+    const dateNl = new Date().toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+    const dailyBody = `
+<div class="board"><div class="inner">
+<p class="title">Weg van de dag, ${esc(dateNl)}</p>
+<h1>${shieldHtml(r)} <span>${esc(r.ref)}</span></h1>
+<p class="sub">${r.km} km${route ? `, ${esc(route)}` : ''}${provs.length ? `, door ${esc(listNl(provs))}` : ''}</p>
+</div></div>
+<div class="board"><div class="inner">${svg}</div></div>
+<div class="board"><div class="inner"><h2>Drie dingen over de ${esc(r.ref)}</h2><ul style="columns:1">
+<li>${esc(first || `De ${r.ref} is ${r.km} km lang.`)}</li>
+<li>${exits ? `${exits} ${exits === 1 ? 'afrit' : 'afritten'}` : 'Geen genummerde afritten'}${jn.length ? ` en ${jn.length} ${jn.length === 1 ? 'knooppunt' : 'knooppunten'}: ${esc(listNl(jn))}` : ''}.</li>
+<li>Alles over deze weg staat op de <a href="/${esc(r.ref)}/">pagina van de ${esc(r.ref)}</a>.</li>
+</ul></div></div>
+<div class="board"><div class="inner"><h2>Ken jij de ${esc(r.ref)} op de kaart?</h2>
+<p>Morgen staat hier een andere weg. In het spel krijg je elke dag vijf vragen, voor iedereen dezelfde.</p>
+<div class="cta"><a class="btn alt" href="/#daily">Speel de puzzel van vandaag</a><a class="btn" href="/#find">Speel Vind de weg</a></div>
+</div></div>
+`
+    fs.mkdirSync(path.join(dist, 'weg-van-de-dag'), { recursive: true })
+    fs.writeFileSync(
+      path.join(dist, 'weg-van-de-dag', 'index.html'),
+      shell(`Weg van de dag: de ${r.ref} | Wegenkenner`, `Vandaag in de schijnwerper: de ${r.ref}, ${r.km} km${route ? ` ${route}` : ''}. Elke dag een andere Nederlandse snelweg of N-weg, met kaart en feiten.`, `${SITE}/weg-van-de-dag/`, dailyBody),
+    )
+    urls.splice(1, 0, `${SITE}/weg-van-de-dag/`)
+  }
 
   fs.writeFileSync(
     path.join(dist, 'sitemap.xml'),
