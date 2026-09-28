@@ -34,6 +34,8 @@ export function Plus({ data, account, onSignIn, onRefresh, onNotice, onHome }: P
   useEffect(() => {
     if (!paddle) return
     return onPaddleEvent((e) => {
+      // Until Paddle has approved the account, or when a price is wrong, the overlay fails to open.
+      if (e.name === 'checkout.error') onNotice(t('plusSoon'))
       if (e.name !== 'checkout.completed') return
       const txn = e.data?.transaction_id ?? ''
       const kind = e.data?.custom_data?.kind ?? 'plus'
