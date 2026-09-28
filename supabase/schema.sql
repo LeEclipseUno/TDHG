@@ -20,6 +20,7 @@ create table if not exists members (
   primary key (group_id, player_id)
 );
 create index if not exists members_player on members(player_id);
+alter table members add column if not exists avatar text;
 
 create table if not exists daily_scores (
   daily int not null,
@@ -173,11 +174,12 @@ $$;
 
 -- Today's board of one group. Only members can read it.
 drop function if exists group_board(text, int);
+drop function if exists group_board(text, int);
 create or replace function group_board(p_code text, p_daily int)
-returns table (nickname text, score int, good int, total int, ms int, played boolean, is_me boolean, plus boolean)
+returns table (nickname text, score int, good int, total int, ms int, played boolean, is_me boolean, plus boolean, avatar text)
 language sql security definer set search_path = public as $$
   select m.nickname, coalesce(s.score, 0), coalesce(s.good, 0), coalesce(s.total, 0), coalesce(s.ms, 0), s.player_id is not null, m.player_id = auth.uid(),
-         exists (select 1 from premium p where p.player_id = m.player_id and p.until > now())
+         exists (select 1 from premium p where p.player_id = m.player_id and p.until > now()), m.avatar
   from groups g
   join members m on m.group_id = g.id
   left join daily_scores s on s.player_id = m.player_id and s.daily = p_daily
@@ -189,18 +191,36 @@ $$;
 -- Weekly totals of one group (the last 7 dailies including today).
 drop function if exists group_week(text, int);
 create or replace function group_week(p_code text, p_daily int)
-returns table (nickname text, total int, days int, is_me boolean, plus boolean)
+returns table (nickname text, total int, days int, is_me boolean, plus boolean, avatar text)
 language sql security definer set search_path = public as $$
   select m.nickname, coalesce(sum(s.score), 0)::int, count(s.daily)::int, m.player_id = auth.uid(),
-         exists (select 1 from premium p where p.player_id = m.player_id and p.until > now())
+         exists (select 1 from premium p where p.player_id = m.player_id and p.until > now()), m.avatar
   from groups g
   join members m on m.group_id = g.id
   left join daily_scores s on s.player_id = m.player_id and s.daily between p_daily - 6 and p_daily
   where g.code = upper(trim(p_code))
     and exists (select 1 from members me where me.group_id = g.id and me.player_id = auth.uid())
-  group by m.nickname, m.player_id
+  group by m.nickname, m.player_id, m.avatar
   order by 2 desc, m.nickname;
 $$;
+
+-- The player's picture on every board they are on; called when the groups screen opens.
+create or replace function update_member(p_avatar text)
+returns void language sql security definer set search_path = public as $$
+  update members set avatar = nullif(left(p_avatar, 400), '') where player_id = auth.uid();
+$$;
+grant execute on function update_member(text) to authenticated;
+
+-- Newest score by a fellow group member: the home screen shows a dot when it is newer than the last visit.
+create or replace function group_activity()
+returns timestamptz language sql security definer set search_path = public as $$
+  select max(s.created_at)
+  from members me
+  join members m on m.group_id = me.group_id and m.player_id <> me.player_id
+  join daily_scores s on s.player_id = m.player_id
+  where me.player_id = auth.uid();
+$$;
+grant execute on function group_activity() to authenticated;
 
 grant execute on function create_group(text, text), join_group(text, text), my_groups(), submit_daily(int, int, int, int, int, text), daily_percentile(int, int), group_board(text, int), group_week(text, int) to authenticated;
 

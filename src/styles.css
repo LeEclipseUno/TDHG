@@ -2058,7 +2058,43 @@ button {
   opacity: 0.8;
 }
 .group-board li {
-  grid-template-columns: 28px 1fr auto auto;
+  grid-template-columns: 28px 26px minmax(0, 1fr) auto auto;
+}
+.group-avatar {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.group-avatar img {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid rgba(255, 255, 255, 0.7);
+}
+.pull-hint {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
+  color: var(--white);
+}
+.pull-hint svg {
+  width: 24px;
+  height: 24px;
+  margin-bottom: 8px;
+}
+.new-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--amber);
+  margin-left: 8px;
+  vertical-align: middle;
+  box-shadow: 0 0 0 2px var(--sign-blue);
 }
 .group-board .is-me {
   background: rgba(255, 176, 0, 0.08);
@@ -2074,6 +2110,22 @@ button {
 }
 .group-nick {
   font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chip-tab {
+  max-width: 70%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.group-head .stats-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .group-nick small {
   color: var(--muted);

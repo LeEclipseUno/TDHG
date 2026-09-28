@@ -27,7 +27,7 @@ import { SignMode } from './modes/SignMode'
 import { AccessCtx, seasonalTheme, ThemeCtx } from './map/theme'
 import { recordSession } from './game/history'
 import { setSoundEnabled } from './game/sound'
-import { getAccount, ONLINE, signInWithGoogle, signOut, type Account } from './game/backend'
+import { getAccount, groupsHaveNews, markGroupsSeen, ONLINE, signInWithGoogle, signOut, type Account } from './game/backend'
 import { pushSoon, syncNow } from './game/sync'
 import { ErrorBoundary } from './ui/ErrorBoundary'
 import { TabBar, type Tab } from './ui/TabBar'
@@ -226,9 +226,19 @@ function Shell() {
     setChallenge(null)
   }
   const go = (kind: 'home' | 'learn' | 'stats' | 'about' | 'groups' | 'plus' | 'archive') => {
+    if (kind === 'groups') {
+      markGroupsSeen()
+      setGroupsNew(false)
+    }
     setHash(kind === 'home' ? '' : kind)
     setScreen({ kind })
   }
+  // A dot on the groups row when a friend posted a score since the last visit.
+  const [groupsNew, setGroupsNew] = useState(false)
+  useEffect(() => {
+    if (!ONLINE || !account.signedIn) return
+    void groupsHaveNews().then(setGroupsNew)
+  }, [account.signedIn])
   const finish = (session: Session) => {
     if (session.practice) {
       setScreen({ kind: 'results', session, newBest: false, streak: 0, badges: [] })
@@ -373,7 +383,7 @@ function Shell() {
   if (screen.kind === 'about') return wrap('about', <About data={data} onHome={() => go('home')} />)
   if (screen.kind === 'plus') return wrap('plus', <Plus data={data} account={account} onSignIn={signIn} onRefresh={refreshAccount} onNotice={(m) => { setNotice(m); setTimeout(() => setNotice(null), 2500) }} onHome={() => go('home')} />)
   if (screen.kind === 'archive') return wrap('archive', <Archive data={data} onPlay={(n) => void playDaily(n)} onHome={() => go('home')} />)
-  if (screen.kind === 'groups') return wrap('groups', <Groups data={data} plus={plus} onPlus={() => go('plus')} onHome={() => go('home')} joinCode={screen.joinCode} />)
+  if (screen.kind === 'groups') return wrap('groups', <Groups data={data} plus={plus} avatar={account.avatar} onPlus={() => go('plus')} onHome={() => go('home')} joinCode={screen.joinCode} />)
   if (screen.kind === 'results') {
     const again = () => (screen.session.dailyNumber ? void playDaily(screen.session.dailyNumber) : play(screen.session.mode))
     return wrap('results', <Results data={data} session={screen.session} newBest={screen.newBest} streak={screen.streak} badges={screen.badges} plus={plus} onAgain={again} onHome={() => go('home')} />)
@@ -395,6 +405,7 @@ function Shell() {
       onStats={() => go('stats')}
       onAbout={() => go('about')}
       onGroups={() => go('groups')}
+      groupsNew={groupsNew}
       challenge={challenge}
       onChallenge={playChallenge}
       onInstall={installEvt ? () => installEvt.prompt().then(() => setInstallEvt(null)) : undefined}

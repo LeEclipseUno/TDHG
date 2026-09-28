@@ -68,6 +68,7 @@ export interface BoardRow {
   played: boolean
   is_me: boolean
   plus?: boolean
+  avatar?: string | null
 }
 export interface WeekRow {
   nickname: string
@@ -75,6 +76,33 @@ export interface WeekRow {
   days: number
   is_me: boolean
   plus?: boolean
+  avatar?: string | null
+}
+
+/** Puts the player's picture on the boards of every group they are in. */
+export async function updateMemberAvatar(avatar: string | undefined) {
+  await rpc<null>('update_member', { p_avatar: avatar ?? '' })
+}
+
+const GROUPS_SEEN = 'tdhg:v1:groupsSeen'
+export function markGroupsSeen() {
+  try {
+    localStorage.setItem(GROUPS_SEEN, String(Date.now()))
+  } catch {
+    /* ignore */
+  }
+}
+/** True when a fellow group member posted a score since the groups screen was last opened. */
+export async function groupsHaveNews(): Promise<boolean> {
+  const latest = await rpc<string | null>('group_activity', {})
+  if (!latest) return false
+  let seen = 0
+  try {
+    seen = Number(localStorage.getItem(GROUPS_SEEN) ?? 0)
+  } catch {
+    /* ignore */
+  }
+  return Date.parse(latest) > seen
 }
 
 async function rpc<T>(fn: string, args: Record<string, unknown>): Promise<T | null> {

@@ -36,6 +36,7 @@ export interface HomeProps {
   onStats: () => void
   onAbout: () => void
   onGroups: () => void
+  groupsNew?: boolean
   challenge: Challenge | null
   onChallenge: () => void
   onInstall?: () => void
@@ -103,7 +104,7 @@ export const isIosSafari = /iphone|ipad|ipod/i.test(navigator.userAgent) && !('s
 // Installed app, or ?standalone=1 to preview the installed layout in a normal browser.
 export const isStandalone = window.matchMedia('(display-mode: standalone)').matches || new URLSearchParams(location.search).has('standalone')
 
-export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onStats, onAbout, onGroups, challenge, onChallenge, onInstall, account, onSignIn, plus, onPlus, onArchive, onPersonal, onRepair }: HomeProps) {
+export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onStats, onAbout, onGroups, groupsNew, challenge, onChallenge, onInstall, account, onSignIn, plus, onPlus, onArchive, onPersonal, onRepair }: HomeProps) {
   const { t, lang, setLang } = useLang()
   const tiers: Tier[] = ['A', 'N', 'AN', 'P']
   const n = dailyNumber()
@@ -400,8 +401,11 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
                 <PictGroup />
               </span>
               <span className="sign-text">
-                <span className="sign-name">{t('groups')}</span>
-                <span className="sign-desc">{t('groups_desc')}</span>
+                <span className="sign-name">
+                  {t('groups')}
+                  {groupsNew && <span className="new-dot" aria-label={t('newScores')} />}
+                </span>
+                <span className="sign-desc">{groupsNew ? t('newScores') : t('groups_desc')}</span>
               </span>
               <IconSignArrow className="sign-arrow" />
             </button>

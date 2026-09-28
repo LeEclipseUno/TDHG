@@ -1,14 +1,17 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { formatNumber, useLang } from '../i18n'
 import { BackBar, Board, BottomHome } from './widgets'
-import { IconCopy, IconMenu, IconReplay, IconShare, PictGroup, PlusMark } from './icons'
-import { createGroup, getNickname, groupBoard, groupRivals, groupWeek, joinGroup, leaveGroup, myGroups, ONLINE, setNickname, validGroupName, validNickname, type BoardRow, type Group, type WeekRow } from '../game/backend'
+import { IconCopy, IconMenu, IconReplay, IconShare, InitialsShield, PictGroup, PlusMark } from './icons'
+import { isStandalone } from './Home'
+import { createGroup, getNickname, updateMemberAvatar, groupBoard, groupRivals, groupWeek, joinGroup, leaveGroup, myGroups, ONLINE, setNickname, validGroupName, validNickname, type BoardRow, type Group, type WeekRow } from '../game/backend'
 import { dailyNumber } from '../game/daily'
 import { formatTime } from '../game/session'
 import type { GameData } from '../data'
 import { Backdrop } from './Backdrop'
 
-export function Groups({ data, plus, onPlus, onHome, joinCode }: { data: GameData; plus: boolean; onPlus: () => void; onHome: () => void; joinCode?: string }) {
+const initialsOf = (nick: string): string => nick.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join('') || nick.slice(0, 1).toUpperCase()
+
+export function Groups({ data, plus, avatar, onPlus, onHome, joinCode }: { data: GameData; plus: boolean; avatar?: string; onPlus: () => void; onHome: () => void; joinCode?: string }) {
   const { t, lang } = useLang()
   const [nick, setNick] = useState(getNickname())
   const [groups, setGroups] = useState<Group[] | null>(null)
@@ -24,6 +27,22 @@ export function Groups({ data, plus, onPlus, onHome, joinCode }: { data: GameDat
   const [loadingBoard, setLoadingBoard] = useState(false)
   const [codeCopied, setCodeCopied] = useState(false)
   const [tick, setTick] = useState(0)
+  // Pull down at the top of the list to refresh, in the installed app.
+  const [pull, setPull] = useState(0)
+  const pullStart = useRef<number | null>(null)
+  const onTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (isStandalone && e.currentTarget.scrollTop <= 0) pullStart.current = e.touches[0].clientY
+  }
+  const onTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (pullStart.current === null) return
+    const d = e.touches[0].clientY - pullStart.current
+    setPull(d > 0 ? Math.min(90, d * 0.6) : 0)
+  }
+  const onTouchEnd = () => {
+    if (pull >= 60) setTick((x) => x + 1)
+    pullStart.current = null
+    setPull(0)
+  }
   const n = dailyNumber()
   const nickOk = validNickname(nick)
   const nameOk = validGroupName(name)
@@ -35,6 +54,7 @@ export function Groups({ data, plus, onPlus, onHome, joinCode }: { data: GameDat
   }
   useEffect(() => {
     if (ONLINE) void refresh()
+    if (ONLINE) void updateMemberAvatar(avatar)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   useEffect(() => {
@@ -121,8 +141,13 @@ export function Groups({ data, plus, onPlus, onHome, joinCode }: { data: GameDat
   const atLimit = !plus && (groups?.length ?? 0) >= 1
 
   return (
-    <div className="results">
+    <div className="results" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
       <Backdrop data={data} />
+      {pull > 0 && (
+        <div className="pull-hint" style={{ height: pull }}>
+          <IconReplay style={{ transform: `rotate(${pull * 4}deg)`, opacity: Math.min(1, pull / 60) }} />
+        </div>
+      )}
       <div className="results-inner">
         <BackBar label={t('home')} onBack={onHome} />
         <Board className="results-board">
@@ -236,6 +261,7 @@ export function Groups({ data, plus, onPlus, onHome, joinCode }: { data: GameDat
               {board.map((r, i) => (
                 <li key={i} className={r.is_me ? 'is-me' : ''}>
                   <span className="group-rank">{r.played ? i + 1 : '-'}</span>
+                  <span className="group-avatar">{r.avatar ? <img src={r.avatar} alt="" referrerPolicy="no-referrer" /> : <InitialsShield text={initialsOf(r.nickname)} size={26} />}</span>
                   <span className="group-nick">
                     {r.nickname}
                     {r.plus && <PlusMark />}
@@ -256,6 +282,7 @@ export function Groups({ data, plus, onPlus, onHome, joinCode }: { data: GameDat
               {week.map((r, i) => (
                 <li key={i} className={r.is_me ? 'is-me' : ''}>
                   <span className="group-rank">{i + 1}</span>
+                  <span className="group-avatar">{r.avatar ? <img src={r.avatar} alt="" referrerPolicy="no-referrer" /> : <InitialsShield text={initialsOf(r.nickname)} size={26} />}</span>
                   <span className="group-nick">
                     {r.nickname}
                     {r.plus && <PlusMark />}
