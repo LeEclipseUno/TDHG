@@ -22,6 +22,23 @@ Deno.serve(async (req) => {
   } catch {
     /* no body */
   }
+  const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+
+  // Our own gift codes (Paddle purchases): WKG-XXXX-XXXX, single use, kept in the gifts table.
+  if (/^WKG-[A-Z0-9]{4}-[A-Z0-9]{4}$/i.test(key)) {
+    const code = key.toUpperCase()
+    const { data: gift } = await admin.from('gifts').select('code, redeemed_by').eq('code', code).maybeSingle()
+    if (!gift || gift.redeemed_by) return json({ error: 'invalid' }, 400)
+    const { error: mark } = await admin.from('gifts').update({ redeemed_by: user.id, redeemed_at: new Date().toISOString() }).eq('code', code).is('redeemed_by', null)
+    if (mark) return json({ error: mark.message }, 500)
+    const { data: existing } = await admin.from('premium').select('until').eq('player_id', user.id).maybeSingle()
+    const base = Math.max(Date.now(), existing?.until ? Date.parse(existing.until as string) : 0)
+    const until = new Date(base + YEAR).toISOString()
+    const { error } = await admin.from('premium').upsert({ player_id: user.id, until, source: `gift:${code}`, updated_at: new Date().toISOString() })
+    if (error) return json({ error: error.message }, 500)
+    return json({ until })
+  }
+
   if (!/^[0-9A-Fa-f-]{20,}$/.test(key)) return json({ error: 'bad key' }, 400)
 
   const res = await fetch('https://api.lemonsqueezy.com/v1/licenses/activate', {
@@ -32,7 +49,6 @@ Deno.serve(async (req) => {
   const out = (await res.json().catch(() => ({}))) as { activated?: boolean; error?: string }
   if (!res.ok || !out.activated) return json({ error: out.error ?? 'invalid' }, 400)
 
-  const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
   const { data: existing } = await admin.from('premium').select('until').eq('player_id', user.id).maybeSingle()
   const base = Math.max(Date.now(), existing?.until ? Date.parse(existing.until as string) : 0)
   const until = new Date(base + YEAR).toISOString()

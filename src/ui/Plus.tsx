@@ -1,11 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { GameData } from '../data'
 import { formatDate, useLang } from '../i18n'
 import { BackBar, Board, BottomHome } from './widgets'
 import { IconGoogle, IconMenu, IconReplay, PictGroup, PictLearn, PictExit, PictJunction, PictRoute, PictDistance, PictStats, PictFind, PictQuiz } from './icons'
 import { Backdrop } from './Backdrop'
-import { getReferralCode, getReferralStats, ONLINE, redeemGift, type Account } from '../game/backend'
-import { checkoutUrl, GIFT_CHECKOUT, hasPlus, pendingReferral, PLUS_PRICE, plusDaysLeft, plusUntil, referralLink, renewUrl } from '../game/premium'
+import { fetchGiftCode, getReferralCode, getReferralStats, ONLINE, redeemGift, type Account } from '../game/backend'
+import { onPaddleEvent, openCheckout, paddleConfigured, paddleGiftConfigured } from '../game/paddle'
+import { checkoutUrl, GIFT_CHECKOUT, hasPlus, pendingReferral, PLUS_PRICE, plusDaysLeft, plusUntil, referralLink, RENEW_CODE, renewUrl, SHOP } from '../game/premium'
 import { IconShare } from './icons'
 
 export interface PlusProps {
@@ -26,6 +27,56 @@ export function Plus({ data, account, onSignIn, onRefresh, onNotice, onHome }: P
   const [refStats, setRefStats] = useState<{ uses: number; saved: number } | null>(null)
   const [giftKey, setGiftKey] = useState('')
   const [giftBusy, setGiftBusy] = useState(false)
+  const [giftCode, setGiftCode] = useState<string | null>(null)
+  const [paying, setPaying] = useState(false)
+  const paddle = SHOP === 'paddle' && paddleConfigured
+  // Paddle overlay: when a checkout completes, wait for the webhook, then refresh the pass or fetch the gift code.
+  useEffect(() => {
+    if (!paddle) return
+    return onPaddleEvent((e) => {
+      if (e.name !== 'checkout.completed') return
+      const txn = e.data?.transaction_id ?? ''
+      const kind = e.data?.custom_data?.kind ?? 'plus'
+      setPaying(true)
+      void (async () => {
+        for (let i = 0; i < 10; i++) {
+          await new Promise((r) => setTimeout(r, 2000))
+          if (kind === 'gift') {
+            const code = txn ? await fetchGiftCode(txn) : null
+            if (code) {
+              setGiftCode(code)
+              setPaying(false)
+              onNotice(t('giftReady'))
+              return
+            }
+          } else {
+            await onRefresh()
+            if (hasPlus(account)) break
+          }
+        }
+        setPaying(false)
+        if (kind !== 'gift') onNotice(t('paidCheck'))
+      })()
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paddle])
+  const buy = async (kind: 'plus' | 'gift', discount?: string) => {
+    const ok = await openCheckout(kind, { playerId: account.id, email: account.email, discountCode: discount || pendingReferral() || undefined, locale: lang })
+    if (!ok) onNotice(t('shopOffline'))
+  }
+  const shareGift = async () => {
+    if (!giftCode) return
+    const text = t('giftShare', { code: giftCode })
+    try {
+      if (navigator.share) await navigator.share({ text })
+      else {
+        await navigator.clipboard.writeText(text)
+        onNotice(t('copied'))
+      }
+    } catch {
+      /* cancelled */
+    }
+  }
   const friend = pendingReferral()
   const daysLeft = plusDaysLeft(account)
   const fetchCode = async () => {
@@ -140,10 +191,17 @@ export function Plus({ data, account, onSignIn, onRefresh, onNotice, onHome }: P
             {active && daysLeft !== null && daysLeft <= 14 && account.id ? (
               <>
                 <p className="plus-active">{t('plusEnding', { n: daysLeft })}</p>
-                <a className="btn btn-wide plus-buy" href={renewUrl(account.id, account.email)}>
-                  {t('renewYear')}
-                  {PLUS_PRICE && <span className="plus-price">{PLUS_PRICE}</span>}
-                </a>
+                {paddle ? (
+                  <button type="button" className="btn btn-wide plus-buy" onClick={() => void buy('plus', RENEW_CODE)} disabled={paying}>
+                    {paying ? t('paying') : t('renewYear')}
+                    {PLUS_PRICE && !paying && <span className="plus-price">{PLUS_PRICE}</span>}
+                  </button>
+                ) : (
+                  <a className="btn btn-wide plus-buy" href={renewUrl(account.id, account.email)}>
+                    {t('renewYear')}
+                    {PLUS_PRICE && <span className="plus-price">{PLUS_PRICE}</span>}
+                  </a>
+                )}
               </>
             ) : active ? (
               <p className="plus-active">{t('plusActive', { date: until })}</p>
@@ -156,6 +214,11 @@ export function Plus({ data, account, onSignIn, onRefresh, onNotice, onHome }: P
                   </button>
                 )}
               </>
+            ) : paddle ? (
+              <button type="button" className="btn btn-primary btn-wide plus-buy" onClick={() => void buy('plus')} disabled={paying}>
+                {paying ? t('paying') : t('plusBuy')}
+                {PLUS_PRICE && !paying && <span className="plus-price">{PLUS_PRICE}</span>}
+              </button>
             ) : shop ? (
               <a className="btn btn-primary btn-wide plus-buy" href={shop}>
                 {t('plusBuy')}
@@ -191,23 +254,40 @@ export function Plus({ data, account, onSignIn, onRefresh, onNotice, onHome }: P
             </div>
           </Board>
         )}
-        {ONLINE && (GIFT_CHECKOUT || account.signedIn) && (
+        {ONLINE && (GIFT_CHECKOUT || (paddle && paddleGiftConfigured) || account.signedIn) && (
           <Board className="results-board">
             <div className="board-title">{t('giftTitle')}</div>
             <div className="plus-body">
-              {GIFT_CHECKOUT && (
+              {paddle && paddleGiftConfigured ? (
+                <>
+                  <p className="plus-note">{t('giftPitchPaddle')}</p>
+                  {giftCode ? (
+                    <>
+                      <p className="plus-note">{t('giftReadyPitch')}</p>
+                      <div className="ref-code">{giftCode}</div>
+                      <button type="button" className="btn btn-primary btn-wide" onClick={shareGift}>
+                        <IconShare /> {t('giftSend')}
+                      </button>
+                    </>
+                  ) : (
+                    <button type="button" className="btn btn-wide plus-buy" onClick={() => void buy('gift')} disabled={paying}>
+                      {paying ? t('paying') : t('giftBuy')}
+                    </button>
+                  )}
+                </>
+              ) : GIFT_CHECKOUT ? (
                 <>
                   <p className="plus-note">{t('giftPitch')}</p>
                   <a className="btn btn-wide plus-buy" href={GIFT_CHECKOUT}>
                     {t('giftBuy')}
                   </a>
                 </>
-              )}
+              ) : null}
               {account.signedIn && (
                 <>
                   <p className="plus-note">{t('giftRedeemPitch')}</p>
                   <div className="gift-row">
-                    <input className="gift-input" value={giftKey} placeholder="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX" onChange={(e) => setGiftKey(e.target.value)} aria-label={t('giftRedeem')} />
+                    <input className="gift-input" value={giftKey} placeholder={paddle ? 'WKG-XXXX-XXXX' : 'XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX'} onChange={(e) => setGiftKey(e.target.value.toUpperCase())} aria-label={t('giftRedeem')} />
                     <button type="button" className="btn btn-small" onClick={redeem} disabled={giftBusy || !giftKey.trim()}>
                       {t('giftRedeem')}
                     </button>

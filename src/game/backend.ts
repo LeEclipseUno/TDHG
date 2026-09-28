@@ -274,6 +274,15 @@ export async function getReferralStats(): Promise<{ uses: number; saved: number 
   return { uses: data.uses, saved: data.saved ?? 0 }
 }
 
+/** The gift code the webhook made for a Paddle gift transaction; null while it is not there yet. */
+export async function fetchGiftCode(txn: string): Promise<string | null> {
+  const c = await sb()
+  if (!c) return null
+  const { data, error } = await c.functions.invoke<{ code?: string }>('paddle-gift', { body: { txn } })
+  if (error || !data?.code) return null
+  return data.code
+}
+
 /** Turns a gift license key into a year of Plus on this account. */
 export async function redeemGift(key: string): Promise<{ until?: string; error?: string }> {
   const c = await sb()

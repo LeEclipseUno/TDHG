@@ -302,6 +302,19 @@ drop policy if exists "own referral" on referrals;
 create policy "own referral" on referrals for select to authenticated using (player_id = auth.uid());
 grant select on referrals to authenticated;
 grant all on referrals to service_role;
+alter table referrals add column if not exists discount_id text;
+
+-- ---------- gift codes for Paddle purchases (written by paddle-hook, redeemed by the redeem function) ----------
+create table if not exists gifts (
+  code text primary key,
+  txn_id text not null unique,
+  buyer uuid,
+  created_at timestamptz not null default now(),
+  redeemed_by uuid,
+  redeemed_at timestamptz
+);
+alter table gifts enable row level security;
+grant all on gifts to service_role;
 
 -- ---------- crash log (written by the app, read only in the dashboard) ----------
 create table if not exists errors (
