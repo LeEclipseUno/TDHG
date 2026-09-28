@@ -163,6 +163,26 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
       window.clearTimeout(timer)
     }
   }, [data])
+  // Once per day, right after the daily is done, the shield shows the day's number for a moment.
+  const dailyDone = !!daily
+  useEffect(() => {
+    if (!dailyDone) return
+    let seen = ''
+    try {
+      seen = localStorage.getItem('tdhg:v1:logoFlip') ?? ''
+    } catch {
+      /* ignore */
+    }
+    if (seen === String(n)) return
+    try {
+      localStorage.setItem('tdhg:v1:logoFlip', String(n))
+    } catch {
+      /* ignore */
+    }
+    setLogoCode(`#${n}`)
+    const timer = window.setTimeout(() => setLogoCode('A'), 1600)
+    return () => window.clearTimeout(timer)
+  }, [dailyDone, n])
   const cycleLogo = () => {
     // Two-digit numbers only: three digits crowd the shield.
     const pool = data.roads.filter((r) => (r.kind === 'A' || r.kind === 'N') && r.num < 100)

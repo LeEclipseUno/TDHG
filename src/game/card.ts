@@ -1,6 +1,6 @@
 // Renders the shareable result card (square or story) on an offscreen canvas.
 import type { GameData } from '../data'
-import { formatTime, summarize, type Session } from './session'
+import { formatTime, summarize, type PostStyle, type Session, type ShieldStyle } from './session'
 import { translate, type Lang } from '../i18n'
 import { season, SEASON_TEXT } from './season'
 
@@ -35,7 +35,16 @@ function loadImage(src: string): Promise<HTMLImageElement | null> {
   })
 }
 
-export async function renderCard(data: GameData, session: Session, lang: Lang, format: CardFormat, streak = 0): Promise<Blob | null> {
+/** Plus players carry their look onto the card: streak post colour and initials shield. */
+export interface CardLook {
+  postStyle?: PostStyle
+  shieldStyle?: ShieldStyle
+  initials?: string
+}
+const POST_COLOR: Record<PostStyle, string> = { green: '#1a8f5c', gold: '#ffb000', blue: '#0d4a9c', orange: '#f57c00' }
+const SHIELD_COLOR: Record<ShieldStyle, { bg: string; ink: string }> = { A: { bg: '#c8102e', ink: '#fff' }, N: { bg: '#ffd23f', ink: '#111' }, E: { bg: '#1f8f4e', ink: '#fff' }, B: { bg: '#0d4a9c', ink: '#fff' } }
+
+export async function renderCard(data: GameData, session: Session, lang: Lang, format: CardFormat, streak = 0, look: CardLook = {}): Promise<Blob | null> {
   const W = 1080
   const H = format === 'square' ? 1080 : 1920
   const canvas = document.createElement('canvas')
@@ -194,9 +203,64 @@ export async function renderCard(data: GameData, session: Session, lang: Lang, f
   y += 48
   ctx.fillStyle = '#fff'
   ctx.font = '700 40px "Barlow Condensed", system-ui, sans-serif'
-  const line = `${sum.good}${sum.partial ? `+${sum.partial}` : ''}/${sum.total}   ·   ${formatTime(sum.ms)}${streak > 1 ? `   ·   ${t('streak')} ${streak}` : ''}`
+  const line = `${sum.good}${sum.partial ? `+${sum.partial}` : ''}/${sum.total}   ·   ${formatTime(sum.ms)}${streak > 1 && !look.postStyle ? `   ·   ${t('streak')} ${streak}` : ''}`
   ctx.fillText(line, W / 2, y)
   y += 60
+
+  // Plus look: the initials shield and a streak post in the chosen colour, side by side.
+  const items: { w: number; draw: (x: number) => void }[] = []
+  if (look.initials) {
+    const sh = SHIELD_COLOR[look.shieldStyle ?? 'A']
+    items.push({
+      w: 96,
+      draw: (x) => {
+        roundRect(ctx, x, y, 96, 56, 9)
+        ctx.fillStyle = sh.bg
+        ctx.fill()
+        ctx.strokeStyle = '#fff'
+        ctx.lineWidth = 3
+        ctx.stroke()
+        ctx.fillStyle = sh.ink
+        ctx.font = '800 34px Overpass, "Barlow Condensed", system-ui, sans-serif'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(look.initials!.slice(0, 2), x + 48, y + 30)
+        ctx.textBaseline = 'top'
+      },
+    })
+  }
+  if (streak > 1 && look.postStyle) {
+    const label = `${t('streak')} ${streak}`
+    ctx.font = '700 30px "Barlow Condensed", system-ui, sans-serif'
+    const tw = ctx.measureText(label).width + 40
+    items.push({
+      w: tw,
+      draw: (x) => {
+        roundRect(ctx, x, y, tw, 56, 9)
+        ctx.fillStyle = POST_COLOR[look.postStyle!]
+        ctx.fill()
+        ctx.strokeStyle = '#fff'
+        ctx.lineWidth = 3
+        ctx.stroke()
+        ctx.fillStyle = look.postStyle === 'gold' ? '#111' : '#fff'
+        ctx.font = '700 30px "Barlow Condensed", system-ui, sans-serif'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(label, x + tw / 2, y + 30)
+        ctx.textBaseline = 'top'
+      },
+    })
+  }
+  if (items.length) {
+    const total = items.reduce((a, i) => a + i.w, 0) + (items.length - 1) * 16
+    let x = (W - total) / 2
+    for (const it of items) {
+      it.draw(x)
+      x += it.w + 16
+    }
+    ctx.textAlign = 'center'
+    y += 76
+  }
 
   const s = season()
   if (s) {

@@ -386,7 +386,7 @@ function Shell() {
   if (screen.kind === 'groups') return wrap('groups', <Groups data={data} plus={plus} avatar={account.avatar} onPlus={() => go('plus')} onHome={() => go('home')} joinCode={screen.joinCode} />)
   if (screen.kind === 'results') {
     const again = () => (screen.session.dailyNumber ? void playDaily(screen.session.dailyNumber) : play(screen.session.mode))
-    return wrap('results', <Results data={data} session={screen.session} newBest={screen.newBest} streak={screen.streak} badges={screen.badges} plus={plus} onAgain={again} onHome={() => go('home')} />)
+    return wrap('results', <Results data={data} session={screen.session} newBest={screen.newBest} streak={screen.streak} badges={screen.badges} plus={plus} account={account} onAgain={again} onHome={() => go('home')} />)
   }
   return wrap(
     'home',

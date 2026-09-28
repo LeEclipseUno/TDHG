@@ -89,7 +89,7 @@ export function SignMode({ data, session, onFinish, onQuit }: ModeProps) {
 
   return (
     <div className="game">
-      <HUD index={i} total={questions.length} grades={results.map((r) => r.grade)} score={score} remainingMs={remaining} limitMs={limitMs} elapsedMs={limitMs ? undefined : now - session.startedAt} onQuit={onQuit} prompt={<span className="prompt-text">{t('signPrompt')}</span>} />
+      <HUD mode={t(`mode_${session.mode}`)} index={i} total={questions.length} grades={results.map((r) => r.grade)} score={score} remainingMs={remaining} limitMs={limitMs} elapsedMs={limitMs ? undefined : now - session.startedAt} onQuit={onQuit} prompt={<span className="prompt-text">{t('signPrompt')}</span>} />
       <div className="sign-stage">
         <div className="sign-gantry">
           <DirectionSign junction={q.junction.name} ahead={q.ahead} exit={q.exit} />

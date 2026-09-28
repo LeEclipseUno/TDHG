@@ -8,6 +8,8 @@
   "scope": "/",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
+  "launch_handler": { "client_mode": "navigate-existing" },
+  "handle_links": "preferred",
   "orientation": "portrait",
   "background_color": "#0a1628",
   "theme_color": "#091b2c",

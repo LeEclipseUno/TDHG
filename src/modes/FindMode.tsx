@@ -114,6 +114,7 @@ export function FindMode({ data, session, onFinish, onQuit }: ModeProps) {
   return (
     <div className="game">
       <HUD
+        mode={t(`mode_${session.mode}`)}
         index={i}
         total={blitz ? Math.max(10, results.length + 1) : questions.length}
         grades={results.map((r) => r.grade)}

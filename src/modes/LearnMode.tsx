@@ -225,7 +225,7 @@ export function LearnMode({ data, settings, onExit }: Props) {
 
   return (
     <div className="game">
-      <HUD index={i} total={queue.length} grades={grades} score={correctCount} scoreLabel={t('accuracy')} elapsedMs={now - qStart} onQuit={onExit} countLabel={t('cardCount', { n: i + 1, total: queue.length })} prompt={prompt} />
+      <HUD mode={t('learn')} index={i} total={queue.length} grades={grades} score={correctCount} scoreLabel={t('accuracy')} elapsedMs={now - qStart} onQuit={onExit} countLabel={t('cardCount', { n: i + 1, total: queue.length })} prompt={prompt} />
       <MapView ref={mapRef} data={data} tier={settings.tier} highlights={highlights} shields={shields} markers={markers} lines={lines} onTap={phase === 'ask' && card?.kind !== 'rec' ? onTap : undefined} intro>
         {toast && <div className="toast">{toast}</div>}
       </MapView>

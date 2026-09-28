@@ -196,7 +196,7 @@ export function RouteMode({ data, session, onFinish, onQuit }: ModeProps) {
 
   return (
     <div className="game">
-      <HUD index={round} total={ROUNDS} grades={results.map((r) => r.grade)} score={score} elapsedMs={now - session.startedAt} onQuit={onQuit} countLabel={t('roundCount', { n: round + 1, total: ROUNDS })} prompt={<span className="prompt-text">{prompt}</span>} />
+      <HUD mode={t(`mode_${session.mode}`)} index={round} total={ROUNDS} grades={results.map((r) => r.grade)} score={score} elapsedMs={now - session.startedAt} onQuit={onQuit} countLabel={t('roundCount', { n: round + 1, total: ROUNDS })} prompt={<span className="prompt-text">{prompt}</span>} />
       {(phase === 'start' || phase === 'end') && (
         <div className="route-inputs">
           <datalist id="places">

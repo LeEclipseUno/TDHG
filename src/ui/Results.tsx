@@ -7,6 +7,8 @@ import { Shield } from './Shield'
 import { Board, Matrix, RouteStrip } from './widgets'
 import { IconChat, IconCheck, IconClock, IconCross, IconMenu, IconReplay, IconShare, IconTilde } from './icons'
 import { Backdrop } from './Backdrop'
+import { initials } from './Home'
+import type { Account } from '../game/backend'
 import { haptic, sfx } from '../game/sound'
 import { useNow } from '../game/hooks'
 import { renderCard } from '../game/card'
@@ -20,6 +22,7 @@ import type { BadgeId } from '../game/achievements'
 export interface ResultsProps {
   data: GameData
   session: Session
+  account?: Account
   newBest: boolean
   streak: number
   plus: boolean
@@ -33,9 +36,10 @@ const STEP_MS = 160
 const COUNT_MS = 1100
 const RANK_HAPTIC: Record<string, number[]> = { rank_4: [30, 60, 30, 60, 90], rank_3: [30, 60, 30], rank_2: [40], rank_1: [90] }
 
-export function Results({ data, session, newBest, streak, plus, badges, onAgain, onHome }: ResultsProps) {
+export function Results({ data, session, newBest, streak, plus, badges, account, onAgain, onHome }: ResultsProps) {
   const { t, lang } = useLang()
   const sum = summarize(session)
+  const [reveal] = useState(() => Date.now() + 350)
   const [copied, setCopied] = useState(false)
   const [busy, setBusy] = useState(false)
   const url = `${location.origin}${import.meta.env.BASE_URL}`
@@ -108,7 +112,8 @@ export function Results({ data, session, newBest, streak, plus, badges, onAgain,
       let link = preview
       let file: File | null = null
       if (canShareFiles) {
-        const blob = await renderCard(data, session, lang, 'square', streak)
+        const look = plus ? { postStyle: loadSettings().postStyle, shieldStyle: loadSettings().shieldStyle, initials: account?.signedIn ? initials(account) : undefined } : {}
+        const blob = await renderCard(data, session, lang, 'square', streak, look)
         if (blob) {
           file = new File([blob], session.dailyNumber ? `wegenkenner-${session.dailyNumber}.png` : 'wegenkenner.png', { type: 'image/png' })
           if (ONLINE && !link) {
@@ -166,7 +171,7 @@ export function Results({ data, session, newBest, streak, plus, badges, onAgain,
           </div>
           {session.practice && <div className="results-note">{t('practiceNote')}</div>}
           <div className="results-map">
-            <MapView data={data} tier={session.tier} highlights={highlights} markers={markers} interactive={false} />
+            <MapView data={data} tier={session.tier} highlights={highlights} markers={markers} interactive={false} reveal={reveal} />
           </div>
           <RouteStrip grades={grades} total={total} />
           <Matrix big value={shownScore} label={t('points', { n: sum.score })} />

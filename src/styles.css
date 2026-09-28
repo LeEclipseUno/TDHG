@@ -786,6 +786,16 @@ button {
   text-transform: uppercase;
   color: var(--muted-on-dark);
 }
+.hud-mode {
+  text-align: center;
+  font-family: var(--font-sign);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted-on-dark);
+  margin-bottom: -4px;
+}
 .hud-prompt {
   display: flex;
   align-items: center;

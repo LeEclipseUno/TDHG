@@ -62,6 +62,8 @@ export interface MapViewProps {
   data: GameData
   tier: Tier
   highlights?: Record<string, Highlight>
+  /** When set (ms), highlighted roads draw themselves on one after another from this moment. */
+  reveal?: number
   shields?: PlacedShield[]
   markers?: Marker[]
   lines?: MapLine[]
@@ -315,7 +317,7 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
         anim.onDone?.()
       } else live = true
     }
-    const { data, tier, highlights = {}, shields = [], markers = [], lines = [], pulses = [], paths = [], showJunctions, hideRoads } = propsRef.current
+    const { data, tier, highlights = {}, shields = [], markers = [], lines = [], pulses = [], paths = [], showJunctions, hideRoads, reveal } = propsRef.current
     const labels = propsRef.current.labels !== false
     const base = propsRef.current.palette === 'light' ? LIGHT : THEMES[themeRef.current]
     const C: Palette = cbRef.current ? { ...base, correct: CB_CORRECT, wrong: CB_WRONG, active: CB_ACTIVE } : base
@@ -509,10 +511,26 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
     drawKind('N')
     drawKind('A')
     ctx.globalAlpha = 1
+    let revealIdx = 0
     for (const r of later) {
       const color = C[highlights[r.ref]]
+      // Drawn on from the start of the road, staggered per road, when a reveal time is set.
+      let p = 1
+      if (reveal) {
+        p = Math.min(1, (wall - reveal - revealIdx * 140) / 650)
+        revealIdx++
+        if (p < 1) live = true
+        if (p <= 0) continue
+        p = easeOutCubic(p)
+      }
       ctx.beginPath()
       for (const line of r.lines) trace(line)
+      if (p < 1) {
+        let len = 0
+        for (const line of r.lines) for (let i = 2; i < line.length; i += 2) len += Math.hypot((line[i] - line[i - 2]) * scale, (line[i + 1] - line[i - 1]) * scale)
+        ctx.setLineDash([len, len])
+        ctx.lineDashOffset = len * (1 - p)
+      }
       ctx.strokeStyle = color
       ctx.globalAlpha = 0.35
       ctx.lineWidth = widths[r.kind] + 10
@@ -520,6 +538,8 @@ const MapView = forwardRef<MapHandle, MapViewProps>(function MapView(props, ref)
       ctx.globalAlpha = 1
       ctx.lineWidth = widths[r.kind] + 1.5
       ctx.stroke()
+      ctx.setLineDash([])
+      ctx.lineDashOffset = 0
     }
 
     // Bridges get rails, tunnels a dashed casing, once the roads are wide enough to show it.

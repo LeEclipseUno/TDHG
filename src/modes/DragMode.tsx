@@ -152,6 +152,7 @@ export function DragMode({ data, session, onFinish, onQuit }: ModeProps) {
   return (
     <div className="game">
       <HUD
+        mode={t(`mode_${session.mode}`)}
         index={placedCount}
         total={items.length}
         grades={items.map((r) => (placed[r.ref] ? ((attempts[r.ref] ?? 0) > 0 ? 'partial' : 'good') : undefined))}

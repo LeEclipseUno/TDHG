@@ -142,6 +142,7 @@ export function DistanceMode({ data, session, onFinish, onQuit }: ModeProps) {
   return (
     <div className="game">
       <HUD
+        mode={t(`mode_${session.mode}`)}
         index={i}
         total={questions?.length ?? QUESTION_COUNT}
         grades={results.map((r) => r.grade)}

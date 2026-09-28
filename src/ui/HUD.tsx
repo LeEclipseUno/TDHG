@@ -17,9 +17,11 @@ export interface HUDProps {
   prompt: ReactNode
   onQuit: () => void
   countLabel?: string
+  /** Mode name shown in small caps above the prompt. */
+  mode?: string
 }
 
-export function HUD({ index, total, grades, score, scoreLabel, remainingMs, limitMs, elapsedMs, prompt, onQuit, countLabel }: HUDProps) {
+export function HUD({ index, total, grades, score, scoreLabel, remainingMs, limitMs, elapsedMs, prompt, onQuit, countLabel, mode }: HUDProps) {
   const { t } = useLang()
   const [confirm, setConfirm] = useState(false)
   useEffect(() => {
@@ -46,6 +48,7 @@ export function HUD({ index, total, grades, score, scoreLabel, remainingMs, limi
         <Matrix value={score} label={scoreLabel ?? t('score')} />
         {limitMs && remainingMs !== undefined ? <SpeedSign remainingMs={remainingMs} totalMs={limitMs} /> : elapsedMs !== undefined ? <Matrix value={formatTime(elapsedMs)} label={t('time')} /> : null}
       </div>
+      {mode && <div className="hud-mode">{mode}</div>}
       <div className="hud-prompt">{prompt}</div>
       {confirm && (
         <div className="modal-backdrop" onClick={() => setConfirm(false)}>

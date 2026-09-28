@@ -114,6 +114,7 @@ export function ExitMode({ data, session, onFinish, onQuit }: ModeProps) {
   return (
     <div className="game">
       <HUD
+        mode={t(`mode_${session.mode}`)}
         index={i}
         total={questions.length}
         grades={results.map((r) => r.grade)}
