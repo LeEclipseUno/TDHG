@@ -80,7 +80,7 @@ self.addEventListener('push', (e) => {
   } catch {
     /* plain text or empty payload */
   }
-  e.waitUntil(self.registration.showNotification(p.title, { body: p.body, icon: '/icon-192.png', badge: '/icon-64.png', tag: 'daily', data: { url: p.url } }))
+  e.waitUntil(self.registration.showNotification(p.title, { body: p.body, icon: '/icon-192.png', badge: '/badge-96.png', tag: 'daily', data: { url: p.url } }))
 })
 
 self.addEventListener('notificationclick', (e) => {

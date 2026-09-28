@@ -41,6 +41,22 @@ except OSError:
 fd.text((64, 64), "A1", fill=(255, 255, 255), font=font, anchor="mm")
 fav.save(os.path.join(PUB, "favicon.ico"), sizes=[(16, 16), (32, 32), (48, 48), (64, 64)])
 
+# Android status-bar badge for push notifications: white shapes on transparent only, or Android shows a white square.
+# A shield outline with the A cut out, so the letter stays readable at 24 px.
+badge = Image.new("RGBA", (192, 192), (0, 0, 0, 0))
+bd = ImageDraw.Draw(badge)
+bd.rounded_rectangle((8, 44, 184, 148), radius=22, fill=(255, 255, 255, 255))
+bd.rounded_rectangle((22, 58, 170, 134), radius=14, fill=(0, 0, 0, 0))
+bd.rounded_rectangle((30, 66, 162, 126), radius=10, fill=(255, 255, 255, 255))
+try:
+    bfont = ImageFont.truetype("C:/Windows/Fonts/arialbd.ttf", 66)
+except OSError:
+    bfont = ImageFont.load_default()
+cut = Image.new("L", (192, 192), 0)
+ImageDraw.Draw(cut).text((96, 96), "A", fill=255, font=bfont, anchor="mm")
+badge.putalpha(Image.composite(Image.new("L", (192, 192), 0), badge.getchannel("A"), cut))
+badge.resize((96, 96), Image.LANCZOS).save(os.path.join(PUB, "badge-96.png"))
+
 # Share card: logo on the left, the road network on the right, light theme.
 W, H = 1200, 630
 def decode(line):
