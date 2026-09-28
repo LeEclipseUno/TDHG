@@ -95,11 +95,11 @@ export function Stats({ data, account, plus, settings, onSettings, onSignOut, on
   }
   const doDelete = async () => {
     setBusy(true)
-    const ok = await deleteAccount()
+    const r = await deleteAccount()
     setBusy(false)
     setConfirmDelete(false)
-    if (ok) onDeleted()
-    else onNotice(t('signInError'))
+    if (r.ok) onDeleted()
+    else onNotice(t('deleteFail', { code: r.code }))
   }
   const { t, lang } = useLang()
   const untilMs = plusUntil(account)

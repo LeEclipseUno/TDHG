@@ -325,12 +325,29 @@ export async function exportAccount(): Promise<{ ok: true; data: Record<string, 
 }
 
 /** Deletes the server-side account and everything tied to it. The caller clears local storage afterwards. */
-export async function deleteAccount(): Promise<boolean> {
+export async function deleteAccount(): Promise<{ ok: true } | { ok: false; code: string }> {
   const c = await sb()
-  if (!c) return false
-  const { data, error } = await c.functions.invoke<{ deleted?: boolean }>('account', { body: { action: 'delete' } })
-  if (error || !data?.deleted) return false
+  if (!c) return { ok: false, code: 'E1' }
+  const { data: s } = await c.auth.getSession()
+  if (!s.session) return { ok: false, code: 'E2' }
+  try {
+    const { data, error } = await c.functions.invoke<{ deleted?: boolean; error?: string }>('account', { body: { action: 'delete' } })
+    if (error) {
+      const res = (error as { context?: Response }).context
+      if (!res || typeof res.status !== 'number') return { ok: false, code: 'E3' }
+      let msg = ''
+      try {
+        msg = String(((await res.clone().json()) as { error?: string }).error ?? '')
+      } catch {
+        /* no json body */
+      }
+      return { ok: false, code: `E${res.status}${msg ? ' ' + msg : ''}` }
+    }
+    if (!data?.deleted) return { ok: false, code: `E4${data?.error ? ' ' + data.error : ''}` }
+  } catch {
+    return { ok: false, code: 'E3' }
+  }
   await c.auth.signOut().catch(() => {})
   session = null
-  return true
+  return { ok: true }
 }
