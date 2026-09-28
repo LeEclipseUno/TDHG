@@ -202,8 +202,17 @@ export async function getAccount(): Promise<Account> {
   const plus = await c.from('premium').select('until').eq('player_id', u.id).maybeSingle()
   const plusUntil = plus.data?.until ? Date.parse(plus.data.until as string) : undefined
   if (u.is_anonymous) return { signedIn: false, id: u.id, plusUntil }
+  // Name and picture: from the user metadata, or from the Google identity itself when the metadata lacks them
+  // (a re-created account after a deletion, or a sign-in through the identity-already-exists fallback).
   const m = (u.user_metadata ?? {}) as Record<string, unknown>
-  const str = (k: string) => (typeof m[k] === 'string' && (m[k] as string).trim() ? (m[k] as string).trim() : undefined)
+  const idData = ((u.identities ?? []).find((i) => i.provider === 'google')?.identity_data ?? {}) as Record<string, unknown>
+  const str = (k: string) => {
+    for (const src of [m, idData]) {
+      const v = src[k]
+      if (typeof v === 'string' && v.trim()) return v.trim()
+    }
+    return undefined
+  }
   return { signedIn: true, id: u.id, email: u.email ?? undefined, name: str('full_name') ?? str('name') ?? str('given_name'), avatar: str('avatar_url') ?? str('picture'), plusUntil }
 }
 
