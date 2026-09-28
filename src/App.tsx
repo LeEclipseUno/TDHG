@@ -65,6 +65,24 @@ function Shell() {
   const [installEvt, setInstallEvt] = useState<BeforeInstallPromptEvent | null>(null)
   const [online, setOnline] = useState(navigator.onLine)
   const [account, setAccount] = useState<Account>({ signedIn: false })
+  // Bumped when the cloud save changed local data, so screens re-read it.
+  const [syncTick, setSyncTick] = useState(0)
+  useEffect(() => {
+    if (!ONLINE || !account.signedIn) return
+    // Coming back to the app: pull what the other device did meanwhile.
+    const onShow = () => {
+      if (document.visibilityState !== 'visible') return
+      void syncNow()
+        .then((changed) => changed && setSyncTick((x) => x + 1))
+        .catch(() => {})
+    }
+    document.addEventListener('visibilitychange', onShow)
+    window.addEventListener('focus', onShow)
+    return () => {
+      document.removeEventListener('visibilitychange', onShow)
+      window.removeEventListener('focus', onShow)
+    }
+  }, [account.signedIn])
   const [notice, setNotice] = useState<string | null>(null)
   const [challenge, setChallenge] = useState<Challenge | null>(() => {
     // Shared into the installed app (manifest share_target): find the wegenkenner link in the shared text.
@@ -110,7 +128,7 @@ function Shell() {
             const rest = q.toString()
             history.replaceState(null, '', location.pathname + (rest ? '?' + rest : '') + location.hash)
           }
-          if (acc.signedIn) await syncNow().catch(() => {})
+          if (acc.signedIn && (await syncNow().catch(() => false))) setSyncTick((x) => x + 1)
         })()
       })
       .catch((e: unknown) => setError(String(e)))
@@ -391,6 +409,7 @@ function Shell() {
   return wrap(
     'home',
     <Home
+      key={syncTick}
       data={data}
       settings={settings}
       onSettings={setSettings}

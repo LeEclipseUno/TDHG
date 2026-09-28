@@ -236,7 +236,11 @@ export async function signOut() {
 export async function loadRemoteState(): Promise<Record<string, string> | null> {
   const c = await sb()
   if (!c || !(await ensureSession())) return null
-  const { data } = await c.from('player_state').select('state').maybeSingle()
+  const { data, error } = await c.from('player_state').select('state').maybeSingle()
+  if (error) {
+    console.warn('cloud save load', error.message)
+    return null
+  }
   return (data?.state as Record<string, string> | undefined) ?? null
 }
 
@@ -246,6 +250,7 @@ export async function saveRemoteState(state: Record<string, string>): Promise<bo
   const { data: u } = await c.auth.getUser()
   if (!u.user) return false
   const { error } = await c.from('player_state').upsert({ player_id: u.user.id, state, updated_at: new Date().toISOString() })
+  if (error) console.warn('cloud save', error.message)
   return !error
 }
 

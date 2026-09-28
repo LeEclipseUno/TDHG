@@ -241,6 +241,8 @@ alter table player_state enable row level security;
 drop policy if exists "own state" on player_state;
 create policy "own state" on player_state for all to authenticated
   using (player_id = auth.uid()) with check (player_id = auth.uid());
+grant select, insert, update, delete on player_state to authenticated;
+grant all on player_state to service_role;
 
 -- ---------- Wegenkenner Plus (yearly pass, written by the plus-hook function) ----------
 create table if not exists premium (
