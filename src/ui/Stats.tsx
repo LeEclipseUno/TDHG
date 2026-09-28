@@ -287,7 +287,6 @@ export function Stats({ data, account, plus, settings, onSettings, onSignOut, on
         </Board>
         <Board className="results-board">
           <div className="board-title">{t('badges')}</div>
-          {earned.size === 0 && <p className="learn-note badges-empty">{t('badgesEmpty')}</p>}
           <ul className="badge-list">
             {BADGES.map((id) => {
               const on = earned.has(id)
