@@ -14,7 +14,7 @@ export function setErrorContext(key: 'screen' | 'q', value: string) {
 }
 const contextLine = () => Object.entries(context).map(([k, v]) => `${k}=${v}`).join(' ')
 
-const IGNORE = [/ResizeObserver loop/, /extension:\/\//, /chrome-extension/, /moz-extension/, /Script error\.?$/, /Load failed/, /Failed to fetch/, /NetworkError/, /AbortError/]
+const IGNORE = [/adsbygoogle/, /TagError/, /ResizeObserver loop/, /extension:\/\//, /chrome-extension/, /moz-extension/, /Script error\.?$/, /Load failed/, /Failed to fetch/, /NetworkError/, /AbortError/]
 
 async function report(message: string, stack: string | undefined, where: string) {
   if (!ONLINE || !navigator.onLine || sent >= MAX_PER_SESSION) return
