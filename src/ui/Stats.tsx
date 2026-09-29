@@ -5,8 +5,8 @@ import { clearHistory, loadHistory, loadLabelStats } from '../game/history'
 import { defaultSettings, formatTime, MODES, POST_STYLES, SHIELD_STYLES, type PostStyle, type Settings, type ShieldStyle } from '../game/session'
 import { BackBar, Board, BottomHome, Matrix, Seg } from './widgets'
 import { Shield } from './Shield'
-import { IconLock, IconMenu, IconPencil, PlusMark, SeasonIcon, PictStats, PictDrag, PictFind, PictJunction, PictQuiz, PictRoute, PictPost } from './icons'
-import MapView, { type Highlight } from '../map/MapView'
+import { IconClose, IconLock, IconMenu, IconPencil, PlusMark, SeasonIcon, PictStats, PictDrag, PictFind, PictJunction, PictQuiz, PictRoute, PictPost } from './icons'
+import MapView, { type Highlight, type TapInfo } from '../map/MapView'
 import { BADGES, computeBadges, loadBadges, type BadgeId } from '../game/achievements'
 import { Backdrop } from './Backdrop'
 import { deleteAccount, exportAccount, getNickname, ONLINE, setNickname, validNickname, type Account } from '../game/backend'
@@ -18,6 +18,9 @@ import { InitialsShield } from './icons'
 
 export function Stats({ data, account, plus, settings, onSettings, onSignOut, onPlus, onDeleted, onNotice, onHome }: { data: GameData; account: Account; plus: boolean; settings: Settings; onSettings: (s: Settings) => void; onSignOut: () => void; onPlus: () => void; onDeleted: () => void; onNotice: (m: string) => void; onHome: () => void }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
+  // Plus: the known-roads map opened full screen, with the road you tapped.
+  const [mapOpen, setMapOpen] = useState(false)
+  const [picked, setPicked] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   // Display name on the boards: the nickname, or the Google name until one is set.
   const [nick, setNick] = useState(getNickname())
@@ -308,13 +311,58 @@ export function Stats({ data, account, plus, settings, onSettings, onSignOut, on
         {plus && Object.keys(known).length > 0 && (
           <Board className="results-board">
             <div className="board-title">{t('knownRoads')}</div>
-            <div className="results-map profile-map">
+            <button type="button" className="results-map profile-map profile-map-btn" onClick={() => setMapOpen(true)} aria-label={t('openMap')}>
               <MapView data={data} tier="AN" highlights={known} interactive={false} labels={false} />
-            </div>
+              <span className="profile-map-hint">{t('openMap')}</span>
+            </button>
             <div className="legend">
               <span className="legend-dot legend-ok" /> {t('legendKnown')} <span className="legend-dot legend-mid" /> {t('legendMixed')} <span className="legend-dot legend-bad" /> {t('legendUnknown')}
             </div>
           </Board>
+        )}
+        {mapOpen && (
+          <div className="map-full">
+            <div className="map-full-top">
+              <button
+                type="button"
+                className="sign-btn"
+                aria-label={t('closeView')}
+                onClick={() => {
+                  setMapOpen(false)
+                  setPicked(null)
+                }}
+              >
+                <IconClose />
+              </button>
+              <span className="map-full-title">{t('knownRoads')}</span>
+            </div>
+            <div className="map-full-map">
+              <MapView
+                data={data}
+                tier="AN"
+                highlights={known}
+                onTap={(tap: TapInfo) => {
+                  const hit = data.index.nearest(tap.x, tap.y, 28 / tap.scale, (r) => r.kind !== 'P')
+                  setPicked(hit ? hit.road.ref : null)
+                }}
+              />
+            </div>
+            <div className="map-full-foot">
+              {picked && data.byRef.get(picked) ? (
+                <>
+                  <Shield code={picked} kind={data.byRef.get(picked)!.kind} size="md" />
+                  <span>{labels[picked] ? t('roadScore', { r: labels[picked].r, n: labels[picked].r + labels[picked].w }) : t('roadNever')}</span>
+                  <a className="map-full-link" href={`/${picked}/`}>
+                    {t('roadPage')}
+                  </a>
+                </>
+              ) : (
+                <span className="legend">
+                  <span className="legend-dot legend-ok" /> {t('legendKnown')} <span className="legend-dot legend-mid" /> {t('legendMixed')} <span className="legend-dot legend-bad" /> {t('legendUnknown')}
+                </span>
+              )}
+            </div>
+          </div>
         )}
         {provList.length > 0 && (
           <Board tone="dark">
