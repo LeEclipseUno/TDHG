@@ -325,6 +325,29 @@ begin
 end $$;
 grant execute on function bump(text) to anon, authenticated, service_role;
 
+-- ---------- owner's numbers (the #admin screen): who may look is a row in admins, added by hand ----------
+create table if not exists admins (player_id uuid primary key);
+alter table admins enable row level security;
+grant all on admins to service_role;
+create or replace function admin_stats()
+returns json language plpgsql security definer set search_path = public as $$
+declare r json;
+begin
+  if not exists (select 1 from admins where player_id = auth.uid()) then raise exception 'forbidden'; end if;
+  select json_build_object(
+    'active7', (select count(distinct player_id) from daily_scores where created_at > now() - interval '7 days'),
+    'active30', (select count(distinct player_id) from daily_scores where created_at > now() - interval '30 days'),
+    'signed30', (select count(distinct s.player_id) from daily_scores s join auth.users u on u.id = s.player_id where s.created_at > now() - interval '30 days' and coalesce(u.is_anonymous, false) = false),
+    'players', (select count(distinct player_id) from daily_scores),
+    'plus', (select count(*) from premium where until > now()),
+    'plus30', (select count(*) from premium where until > now() and updated_at > now() - interval '30 days'),
+    'groups', (select count(*) from groups),
+    'funnel30', (select coalesce(json_object_agg(event, n), '{}'::json) from (select event, sum(n)::int as n from funnel where day > current_date - 30 group by event) f)
+  ) into r;
+  return r;
+end $$;
+grant execute on function admin_stats() to authenticated;
+
 -- ---------- gift codes for Paddle purchases (written by paddle-hook, redeemed by the redeem function) ----------
 create table if not exists gifts (
   code text primary key,

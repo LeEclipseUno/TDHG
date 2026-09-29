@@ -14,6 +14,7 @@ import { Home } from './ui/Home'
 import { Results } from './ui/Results'
 import { Stats } from './ui/Stats'
 import { About } from './ui/About'
+import { Admin } from './ui/Admin'
 import { Groups } from './ui/Groups'
 import { DragMode } from './modes/DragMode'
 import { FindMode } from './modes/FindMode'
@@ -41,7 +42,7 @@ interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>
 }
 
-type Screen = { kind: 'home' } | { kind: 'learn' } | { kind: 'stats' } | { kind: 'about' } | { kind: 'plus' } | { kind: 'archive' } | { kind: 'groups'; joinCode?: string } | { kind: 'game'; session: Session } | { kind: 'results'; session: Session; newBest: boolean; streak: number; badges: BadgeId[] }
+type Screen = { kind: 'home' } | { kind: 'admin' } | { kind: 'learn' } | { kind: 'stats' } | { kind: 'about' } | { kind: 'plus' } | { kind: 'archive' } | { kind: 'groups'; joinCode?: string } | { kind: 'game'; session: Session } | { kind: 'results'; session: Session; newBest: boolean; streak: number; badges: BadgeId[] }
 
 const MODE_COMPONENTS = { drag: DragMode, find: FindMode, junction: JunctionMode, quiz: QuizMode, exit: ExitMode, route: RouteMode, distance: DistanceMode, sign: SignMode } as const
 
@@ -320,6 +321,7 @@ function Shell() {
     else if (h === 'stats' || h === 'about' || h === 'groups' || h === 'plus') go(h)
     else if (h === 'archive') go(plus ? 'archive' : 'plus')
     else if (h === 'learn') go(plus ? 'learn' : 'plus')
+    else if (h === 'admin') setScreen({ kind: 'admin' })
     else if (h.startsWith('join-')) setScreen({ kind: 'groups', joinCode: h.slice(5).toUpperCase() })
     else if (h.startsWith('plus-')) {
       rememberReferral(h.slice(5).toUpperCase())
@@ -431,6 +433,7 @@ function Shell() {
     go('home')
   }
   if (screen.kind === 'stats') return wrap('stats', <Stats data={data} account={account} plus={plus} settings={settings} onSettings={setSettings} onSignOut={doSignOut} onPlus={() => go('plus')} onDeleted={afterDelete} onNotice={(m) => { setNotice(m); setTimeout(() => setNotice(null), 6000) }} onHome={() => go('home')} />)
+  if (screen.kind === 'admin') return wrap('admin', <Admin data={data} onHome={() => go('home')} />)
   if (screen.kind === 'about') return wrap('about', <About data={data} onHome={() => go('home')} />)
   if (screen.kind === 'plus') return wrap('plus', <Plus data={data} account={account} onSignIn={signIn} onRefresh={refreshAccount} onNotice={(m) => { setNotice(m); setTimeout(() => setNotice(null), 2500) }} onHome={() => go('home')} />)
   if (screen.kind === 'archive') return wrap('archive', <Archive data={data} onPlay={(n) => void playDaily(n)} onHome={() => go('home')} />)

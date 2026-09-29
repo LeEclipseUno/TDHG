@@ -283,6 +283,21 @@ export async function getReferralStats(): Promise<{ uses: number; saved: number 
   return { uses: data.uses, saved: data.saved ?? 0 }
 }
 
+export interface AdminStats {
+  active7: number
+  active30: number
+  signed30: number
+  players: number
+  plus: number
+  plus30: number
+  groups: number
+  funnel30: Record<string, number>
+}
+/** Owner only (table admins): player counts, Plus members and the funnel. Null for everyone else. */
+export async function adminStats(): Promise<AdminStats | null> {
+  return rpc<AdminStats>('admin_stats', {})
+}
+
 /** The gift code the webhook made for a Paddle gift transaction; null while it is not there yet. */
 export async function fetchGiftCode(txn: string): Promise<string | null> {
   const c = await sb()
