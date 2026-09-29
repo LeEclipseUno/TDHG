@@ -60,6 +60,7 @@ Deno.serve(async (req) => {
     // One code per transaction; a repeated delivery of the same event changes nothing.
     const { error } = await supabase.from('gifts').upsert({ code: giftCode(), txn_id: txn, buyer: playerId }, { onConflict: 'txn_id', ignoreDuplicates: true })
     if (error) return new Response(error.message, { status: 500 })
+    await supabase.rpc('bump', { p_event: 'purchase_gift' })
     return new Response('gift', { status: 200 })
   }
 
@@ -71,5 +72,6 @@ Deno.serve(async (req) => {
   const until = new Date(base + YEAR).toISOString()
   const { error } = await supabase.from('premium').upsert({ player_id: playerId, until, source: `paddle:${txn}`, updated_at: new Date().toISOString() })
   if (error) return new Response(error.message, { status: 500 })
+  await supabase.rpc('bump', { p_event: 'purchase' })
   return new Response('ok', { status: 200 })
 })

@@ -185,6 +185,16 @@ export function Results({ data, session, newBest, streak, plus, badges, account,
                 {t('newBadge')}: {t(`badge_${b}`)}
               </div>
             ))}
+            {!plus && session.trial && (
+              <a className="results-plus" href="#plus">
+                <strong>{t('trialDone')}</strong> {t('trialDonePitch')}
+              </a>
+            )}
+            {!plus && !session.trial && !!session.dailyNumber && !session.practice && sum.total > 0 && sum.good === sum.total && session.dailyNumber > 1 && (
+              <a className="results-plus" href="#plus">
+                <strong>{t('perfectPlus', { good: sum.good, total: sum.total })}</strong> {t('perfectPlusPitch', { n: session.dailyNumber - 1 })}
+              </a>
+            )}
             {session.challenge !== undefined && (
               <div className="versus">
                 <span>

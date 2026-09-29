@@ -307,6 +307,24 @@ grant select on referrals to authenticated;
 grant all on referrals to service_role;
 alter table referrals add column if not exists discount_id text;
 
+-- ---------- anonymous funnel counters: one number per day per event, nothing about who ----------
+create table if not exists funnel (
+  day date not null default current_date,
+  event text not null,
+  n int not null default 0,
+  primary key (day, event)
+);
+alter table funnel enable row level security;
+grant all on funnel to service_role;
+create or replace function bump(p_event text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if p_event not in ('home', 'plus_view', 'checkout_open', 'trial', 'gift_open', 'purchase', 'purchase_gift') then return; end if;
+  insert into funnel (day, event, n) values (current_date, p_event, 1)
+  on conflict (day, event) do update set n = funnel.n + 1;
+end $$;
+grant execute on function bump(text) to anon, authenticated, service_role;
+
 -- ---------- gift codes for Paddle purchases (written by paddle-hook, redeemed by the redeem function) ----------
 create table if not exists gifts (
   code text primary key,

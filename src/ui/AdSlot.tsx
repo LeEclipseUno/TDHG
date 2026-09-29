@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useLang } from '../i18n'
 
 const CLIENT = import.meta.env.VITE_ADSENSE_CLIENT as string | undefined
 const SLOTS: Record<string, string | undefined> = {
@@ -25,6 +26,7 @@ function ensureScript() {
 
 /** One responsive AdSense unit. Renders nothing without a configured client, for Plus players, or offline. */
 export function AdSlot({ place, plus }: { place: 'home' | 'results'; plus: boolean }) {
+  const { t } = useLang()
   const ref = useRef<HTMLModElement>(null)
   const [empty, setEmpty] = useState(false)
   const slot = SLOTS[place]
@@ -57,6 +59,11 @@ export function AdSlot({ place, plus }: { place: 'home' | 'results'; plus: boole
   return (
     <div className={'strook' + (empty ? ' strook-leeg' : '')}>
       <ins ref={ref} className="adsbygoogle" style={{ display: 'block' }} data-ad-client={CLIENT} data-ad-slot={slot} data-ad-format="auto" data-full-width-responsive="true" />
+      {!empty && (
+        <a className="strook-plus" href="#plus">
+          {t('noAdsPlus')}
+        </a>
+      )}
     </div>
   )
 }

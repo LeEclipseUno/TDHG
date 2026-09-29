@@ -3460,3 +3460,61 @@ select,
 .loading-fact {
   text-transform: none;
 }
+
+/* ---------- Plus nudges ---------- */
+.trial-tag {
+  background: var(--white) !important;
+  color: var(--sign-blue) !important;
+}
+.results-plus {
+  display: block;
+  margin: 8px auto 0;
+  max-width: 340px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: var(--amber);
+  color: var(--navy);
+  border: 2px solid var(--navy);
+  text-decoration: none;
+  font-size: 14px;
+  text-align: center;
+}
+.results-plus strong {
+  font-family: var(--font-sign);
+  font-size: 17px;
+  margin-right: 4px;
+}
+.strook-plus {
+  display: block;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 4px 0 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.plus-permonth {
+  margin: -4px 0 8px;
+  font-family: var(--font-sign);
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--amber);
+}
+.plus-you {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: rgba(255, 176, 0, 0.12);
+  border: 1px dashed var(--amber);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  text-align: left;
+}
+.plus-pay {
+  text-align: center;
+  font-size: 13px;
+  margin: 6px 0 0;
+}

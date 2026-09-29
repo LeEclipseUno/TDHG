@@ -61,6 +61,8 @@ export interface Session {
   picks?: string[]
   /** A replay of a daily already scored today: nothing is recorded or posted. */
   practice?: boolean
+  /** A free player's weekly trial round in a Plus mode. */
+  trial?: boolean
   /** The Plus personal daily: five of your weakest roads. */
   personal?: boolean
   startedAt: number

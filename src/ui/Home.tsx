@@ -7,6 +7,7 @@ import { isPlusMode } from '../game/premium'
 import { canRepairStreak, dailyMode, dailyNumber, getDailyResult, getPersonal, getStreak, msUntilNextDaily } from '../game/daily'
 import { season, SEASON_TEXT } from '../game/season'
 import { Board, Matrix, Seg } from './widgets'
+import { trialAvailable } from '../game/trial'
 import { IconGoogle, IconLock, IconPlusSign, IconReplay, IconShare, IconSignArrow, PictDistance, PictSign, PictDrag, PictExit, PictFind, PictGroup, PictJunction, PictLearn, PictQuiz, PictRoute, PictStats, SeasonIcon, IconFreeze } from './icons'
 import { AdSlot } from './AdSlot'
 import { InitialsShield } from './icons'
@@ -191,6 +192,7 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
     sfx.tap()
   }
 
+  const trialOpen = !plus && trialAvailable()
   // The mode you played last goes first.
   const lastMode = getLastMode()
   const orderedModes = lastMode ? [lastMode, ...MODES.filter((m) => m !== lastMode)] : MODES
@@ -372,7 +374,9 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
           {orderedModes.map((mode) => {
             const best = getBest(mode, settings.tier, settings.timer, settings.variant, settings.province)
             const Pict = PICTS[mode]
-            const locked = isPlusMode(mode) && !plus
+            const plusOnly = isPlusMode(mode) && !plus
+            const trial = plusOnly && trialOpen
+            const locked = plusOnly && !trial
             const last = mode === lastMode
             return (
               <button key={mode} type="button" className={'sign-row' + (locked ? ' sign-row-locked' : '')} onClick={() => (locked ? onPlus() : onPlay(mode))}>
@@ -383,6 +387,7 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
                   <span className="sign-name">
                     {t(`mode_${mode}`)}
                     {locked && <span className="locked-tag">{t('plusTag')}</span>}
+                    {trial && <span className="locked-tag trial-tag">{t('trialTag')}</span>}
                     {last && !locked && <span className="last-tag">{t('lastPlayed')}</span>}
                   </span>
                   <span className="sign-desc">{t(`mode_${mode}_desc`)}</span>
@@ -407,7 +412,7 @@ export function Home({ data, settings, onSettings, onPlay, onDaily, onLearn, onS
             </span>
             <span className="sign-text">
               <span className="google-row-name">{t('plus')}</span>
-              <span className="google-row-sub">{t('plusPitch')}</span>
+              <span className="google-row-sub">{t('plusPitchBar')}</span>
             </span>
             <IconSignArrow className="sign-arrow" />
           </button>

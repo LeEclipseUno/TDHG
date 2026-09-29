@@ -30,6 +30,8 @@ import { setSoundEnabled } from './game/sound'
 import { getAccount, groupsHaveNews, markGroupsSeen, ONLINE, signInWithGoogle, signOut, type Account } from './game/backend'
 import { pushSoon, syncNow } from './game/sync'
 import { ErrorBoundary } from './ui/ErrorBoundary'
+import { trialAvailable, useTrial } from './game/trial'
+import { bump } from './game/funnel'
 import { TabBar, type Tab } from './ui/TabBar'
 import { PlusMark } from './ui/icons'
 import { isStandalone } from './ui/Home'
@@ -116,11 +118,18 @@ function Shell() {
       .then((d) => {
         // The home screen shows as soon as the map is in; the account lookup and cloud sync follow in the background.
         setData(d)
+        bump('home')
         if (!ONLINE) return
         void (async () => {
           // Only a successful answer may clear a cached Plus pass; offline keeps the last known state.
           const acc = await getAccount().then((a) => (rememberPlus(a.plusUntil), a)).catch(() => ({ signedIn: false }) as Account)
           setAccount(acc)
+          // Signed in because of "Inloggen en Plus nemen": straight on to the Plus page, which opens the checkout.
+          try {
+            if (acc.signedIn && localStorage.getItem('tdhg:v1:buyAfterLogin')) go('plus')
+          } catch {
+            /* ignore */
+          }
           // Back from Google: drop the one-time code (or error) from the address bar.
           const q = new URLSearchParams(location.search)
           if (q.has('code') || q.has('error')) {
@@ -205,11 +214,18 @@ function Shell() {
   }, [])
 
   const play = (mode: ModeId) => {
-    if (isPlusMode(mode) && !plus) return go('plus')
+    // A Plus mode without Plus: one trial round per week, after that the Plus page.
+    let trial = false
+    if (isPlusMode(mode) && !plus) {
+      if (!trialAvailable()) return go('plus')
+      useTrial(mode)
+      bump('trial')
+      trial = true
+    }
     const tierSettings = settings.tier === 'P' && !plus ? { ...settings, tier: 'A' as const } : settings
     rememberMode(mode)
     setHash(mode)
-    const start = () => setScreen({ kind: 'game', session: newSession(mode, tierSettings) })
+    const start = () => setScreen({ kind: 'game', session: { ...newSession(mode, tierSettings), ...(trial ? { trial: true } : {}) } })
     if (tierSettings.tier === 'P' && data) void data.ready.then(start)
     else start()
   }
@@ -260,6 +276,7 @@ function Shell() {
     setChallenge(null)
   }
   const go = (kind: 'home' | 'learn' | 'stats' | 'about' | 'groups' | 'plus' | 'archive') => {
+    if (kind === 'plus') bump('plus_view')
     if (kind === 'groups') {
       markGroupsSeen()
       setGroupsNew(false)

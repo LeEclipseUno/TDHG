@@ -4,7 +4,10 @@ import { formatDate, useLang } from '../i18n'
 import { BackBar, Board, BottomHome } from './widgets'
 import { IconGoogle, IconMenu, IconReplay, PictGroup, PictLearn, PictExit, PictJunction, PictRoute, PictDistance, PictStats, PictFind, PictQuiz } from './icons'
 import { Backdrop } from './Backdrop'
-import { fetchGiftCode, getReferralCode, getReferralStats, ONLINE, redeemGift, type Account } from '../game/backend'
+import { fetchGiftCode, getReferralCode, getReferralStats, groupBoard, myGroups, ONLINE, redeemGift, type Account } from '../game/backend'
+import { allDailyResults, dailyNumber } from '../game/daily'
+import { loadLabelStats } from '../game/history'
+import { bump } from '../game/funnel'
 import { onPaddleEvent, openCheckout, paddleConfigured, paddleGiftConfigured } from '../game/paddle'
 import { checkoutUrl, GIFT_CHECKOUT, hasPlus, pendingReferral, PLUS_PRICE, plusDaysLeft, plusUntil, referralLink, RENEW_CODE, renewUrl, SHOP } from '../game/premium'
 import { IconShare } from './icons'
@@ -62,7 +65,54 @@ export function Plus({ data, account, onSignIn, onRefresh, onNotice, onHome }: P
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paddle])
+  // For you: what Plus would open for this player right now.
+  const today = dailyNumber()
+  const played = Object.keys(allDailyResults()).filter((k) => Number(k) < today).length
+  const missed = Math.max(0, today - 1 - played)
+  const weakest = Object.entries(loadLabelStats())
+    .map(([label, s]) => ({ label, n: s.r + s.w, ratio: s.r / Math.max(1, s.r + s.w) }))
+    .filter((e) => e.n >= 2 && e.ratio < 0.75 && data.byRef.has(e.label))
+    .sort((a, b) => a.ratio - b.ratio || b.n - a.n)
+    .slice(0, 3)
+    .map((e) => e.label)
+  const [mates, setMates] = useState<{ plus: number; all: number } | null>(null)
+  useEffect(() => {
+    if (!ONLINE || !account.signedIn || hasPlus(account)) return
+    let alive = true
+    void (async () => {
+      const groups = await myGroups()
+      if (!groups[0]) return
+      const rows = (await groupBoard(groups[0].code, today)).filter((r) => !r.is_me)
+      if (alive && rows.length) setMates({ plus: rows.filter((r) => r.plus).length, all: rows.length })
+    })()
+    return () => {
+      alive = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [account.signedIn])
+  // "Inloggen en Plus nemen": back from Google, the checkout opens by itself.
+  useEffect(() => {
+    if (!paddle || !account.signedIn || hasPlus(account)) return
+    let wanted = false
+    try {
+      wanted = !!localStorage.getItem('tdhg:v1:buyAfterLogin')
+      localStorage.removeItem('tdhg:v1:buyAfterLogin')
+    } catch {
+      /* ignore */
+    }
+    if (wanted) void buy('plus')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paddle, account.signedIn])
+  const signInAndBuy = () => {
+    try {
+      localStorage.setItem('tdhg:v1:buyAfterLogin', '1')
+    } catch {
+      /* ignore */
+    }
+    onSignIn()
+  }
   const buy = async (kind: 'plus' | 'gift', discount?: string) => {
+    bump(kind === 'gift' ? 'gift_open' : 'checkout_open')
     const ok = await openCheckout(kind, { playerId: account.id, email: account.email, discountCode: discount || pendingReferral() || undefined, locale: lang })
     if (!ok) onNotice(t('shopOffline'))
   }
@@ -133,6 +183,14 @@ export function Plus({ data, account, onSignIn, onRefresh, onNotice, onHome }: P
           <div className="board-title">{t('plus')}</div>
           <div className="plus-body">
             <p className="plus-pitch">{t('plusPitch')}</p>
+            {!active && <p className="plus-permonth">{t('plusPerMonth')}</p>}
+            {!active && (missed > 0 || weakest.length > 0 || (mates && mates.plus > 0)) && (
+              <ul className="plus-you">
+                {missed > 0 && <li>{t('youMissed', { n: missed })}</li>}
+                {weakest.length > 0 && <li>{t('youWeakest', { roads: weakest.join(', ') })}</li>}
+                {mates && mates.plus > 0 && <li>{t('youMates', { n: mates.plus, total: mates.all })}</li>}
+              </ul>
+            )}
             <ul className="plus-list">
               <li>
                 <span className="plus-pict">
@@ -211,16 +269,21 @@ export function Plus({ data, account, onSignIn, onRefresh, onNotice, onHome }: P
               <>
                 <p className="plus-note">{t('plusSignIn')}</p>
                 {ONLINE && (
-                  <button type="button" className="btn btn-primary btn-wide" onClick={onSignIn}>
-                    <IconGoogle /> {t('signInGoogle')}
+                  <button type="button" className="btn btn-primary btn-wide plus-buy" onClick={paddle ? signInAndBuy : onSignIn}>
+                    <IconGoogle /> {paddle ? t('signInAndBuy') : t('signInGoogle')}
+                    {paddle && PLUS_PRICE && <span className="plus-price">{PLUS_PRICE}</span>}
                   </button>
                 )}
+                {paddle && <p className="plus-note plus-pay">{t('plusPayWith')}</p>}
               </>
             ) : paddle ? (
-              <button type="button" className="btn btn-primary btn-wide plus-buy" onClick={() => void buy('plus')} disabled={paying}>
-                {paying ? t('paying') : t('plusBuy')}
-                {PLUS_PRICE && !paying && <span className="plus-price">{PLUS_PRICE}</span>}
-              </button>
+              <>
+                <button type="button" className="btn btn-primary btn-wide plus-buy" onClick={() => void buy('plus')} disabled={paying}>
+                  {paying ? t('paying') : t('plusBuy')}
+                  {PLUS_PRICE && !paying && <span className="plus-price">{PLUS_PRICE}</span>}
+                </button>
+                <p className="plus-note plus-pay">{t('plusPayWith')}</p>
+              </>
             ) : shop ? (
               <a className="btn btn-primary btn-wide plus-buy" href={shop}>
                 {t('plusBuy')}
