@@ -13,7 +13,7 @@ import { deleteAccount, exportAccount, getNickname, ONLINE, setNickname, validNi
 import { pushSoon } from '../game/sync'
 import { disableReminder, enableReminder, getReminder, pushSupported, setReminderTime } from '../game/push'
 import { plusDaysLeft, plusUntil, renewUrl } from '../game/premium'
-import { initials, isIosSafari, isStandalone } from './Home'
+import { initials, isIosSafari, isStandalone, PICTS } from './Home'
 import { InitialsShield } from './icons'
 
 export function Stats({ data, account, plus, settings, onSettings, onSignOut, onPlus, onDeleted, onNotice, onHome }: { data: GameData; account: Account; plus: boolean; settings: Settings; onSettings: (s: Settings) => void; onSignOut: () => void; onPlus: () => void; onDeleted: () => void; onNotice: (m: string) => void; onHome: () => void }) {
@@ -117,8 +117,13 @@ export function Stats({ data, account, plus, settings, onSettings, onSignOut, on
   const played = hist.reduce((a, g) => a + g.ms, 0)
   const perMode = MODES.map((m) => {
     const gs = hist.filter((g) => g.mode === m)
-    return { mode: m, games: gs.length, best: gs.reduce((a, g) => Math.max(a, g.score), 0) }
-  }).filter((m) => m.games > 0)
+    const total = gs.reduce((a, g) => a + g.total, 0)
+    const right = gs.reduce((a, g) => a + g.good, 0)
+    return { mode: m, games: gs.length, best: gs.reduce((a, g) => Math.max(a, g.score), 0), acc: total ? Math.round((right / total) * 100) : 0 }
+  })
+    .filter((m) => m.games > 0)
+    .sort((a, b) => b.games - a.games)
+  const accAll = questions ? Math.round((good / questions) * 100) : 0
   const entries = Object.entries(labels).map(([label, s]) => ({ label, ...s, n: s.r + s.w, ratio: s.r / (s.r + s.w) }))
   const hardestAll = entries.filter((e) => e.n >= 2).sort((a, b) => a.ratio - b.ratio || b.n - a.n).slice(0, 10)
   const hardest = plus ? hardestAll : hardestAll.slice(0, 2)
@@ -396,32 +401,43 @@ export function Stats({ data, account, plus, settings, onSettings, onSignOut, on
         )}
         <Board className="results-board">
           <div className="board-title">{t('statsSection')}</div>
-          <div className="learn-stats">
-            <div>
-              <span className="stat-value">{games}</span>
-              <span className="stat-label">{t('games', { n: games })}</span>
+          <div className="sum-tiles">
+            <div className="sum-tile">
+              <span className="sum-value">{formatNumber(games, lang)}</span>
+              <span className="sum-label">{t('games', { n: games })}</span>
             </div>
-            <div>
-              <span className="stat-value">{questions ? Math.round((good / questions) * 100) : 0}%</span>
-              <span className="stat-label">{t('accuracy')}</span>
+            <div className="sum-tile">
+              <span className="sum-value">{accAll}%</span>
+              <span className="sum-label">{t('accuracy')}</span>
+              <span className="sum-bar">
+                <span style={{ width: `${accAll}%` }} />
+              </span>
             </div>
-            <div>
-              <span className="stat-value">{formatTime(played)}</span>
-              <span className="stat-label">{t('time')}</span>
+            <div className="sum-tile">
+              <span className="sum-value">{formatTime(played)}</span>
+              <span className="sum-label">{t('time')}</span>
             </div>
           </div>
           {perMode.length > 0 && (
-            <div className="stats-modes">
-              {perMode.map((m) => (
-                <div key={m.mode} className="stats-mode">
-                  <span>{t(`mode_${m.mode}`)}</span>
-                  <small>
-                    {m.games} {t('games', { n: m.games }).toLowerCase()}
-                  </small>
-                  <Matrix value={m.best} label={t('best')} />
-                </div>
-              ))}
-            </div>
+            <ul className="mode-stats">
+              {perMode.map((m) => {
+                const Pict = PICTS[m.mode]
+                return (
+                  <li key={m.mode} className="mode-stat">
+                    <span className="mode-stat-pict">
+                      <Pict />
+                    </span>
+                    <span className="mode-stat-text">
+                      <span className="mode-stat-name">{t(`mode_${m.mode}`)}</span>
+                      <span className="mode-stat-sub">
+                        {m.games} {t('games', { n: m.games }).toLowerCase()}, {m.acc}% {t('accuracy').toLowerCase()}
+                      </span>
+                    </span>
+                    <Matrix value={m.best} label={t('best')} />
+                  </li>
+                )
+              })}
+            </ul>
           )}
         </Board>
 

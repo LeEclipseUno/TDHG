@@ -50,7 +50,7 @@ export interface HomeProps {
   onRepair: () => void
 }
 
-const PICTS: Record<ModeId, typeof PictDrag> = { drag: PictDrag, find: PictFind, junction: PictJunction, quiz: PictQuiz, exit: PictExit, route: PictRoute, distance: PictDistance, sign: PictSign }
+export const PICTS: Record<ModeId, typeof PictDrag> = { drag: PictDrag, find: PictFind, junction: PictJunction, quiz: PictQuiz, exit: PictExit, route: PictRoute, distance: PictDistance, sign: PictSign }
 
 /** Language switch drawn as a real hectometerpaal: grey pole, green plates with a white border,
     the small red A-shield with the side letter on top, and the big number field showing the language. */
